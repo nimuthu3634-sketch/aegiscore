@@ -27,3 +27,18 @@ def get_integration_by_tool(tool_name: IntegrationTool | str) -> dict:
         raise ValueError(f"Integration '{tool_name}' not found.")
 
     return integration
+
+
+def get_augmented_integration_by_tool(tool_name: IntegrationTool | str) -> dict:
+    return _augment_integration_status(get_integration_by_tool(tool_name))
+
+
+def get_latest_alert_titles_for_tool(tool_name: IntegrationTool | str, limit: int = 3) -> list[str]:
+    return [
+        alert["title"]
+        for alert in sorted(
+            (item for item in DEMO_ALERTS if item["source_tool"] == tool_name),
+            key=lambda alert: alert["created_at"],
+            reverse=True,
+        )[:limit]
+    ]

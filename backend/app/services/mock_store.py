@@ -535,6 +535,8 @@ DEMO_INTEGRATIONS: list[dict] = [
         "status": IntegrationHealth.CONNECTED,
         "last_sync_at": hours_ago(1),
         "notes": "Primary network alert source.",
+        "last_import_at": hours_ago(1),
+        "last_import_message": "Seeded Suricata lab network alerts available for alert and log workflows.",
     },
     {
         "id": "integration-003",

@@ -1,8 +1,8 @@
 from app.core.enums import AlertSeverity, AlertStatus, IntegrationHealth, IntegrationTool
 from app.services.alerts import create_alert
-from app.services.integrations import get_integration_by_tool
+from app.services.integrations import get_augmented_integration_by_tool, get_integration_by_tool, get_latest_alert_titles_for_tool
 from app.services.logs import create_log_record
-from app.services.mock_store import DEMO_ALERTS, DEMO_LOGS
+from app.services.mock_store import DEMO_LOGS
 from app.utils.log_normalization import normalize_timestamp
 from app.utils.time import utc_now
 
@@ -66,26 +66,11 @@ def _build_alert_description(alert_payload: dict) -> str:
 
 
 def get_wazuh_status() -> dict:
-    integration = get_integration_by_tool(IntegrationTool.WAZUH)
-    latest_titles = [
-        alert["title"]
-        for alert in sorted(
-            (item for item in DEMO_ALERTS if item["source_tool"] == IntegrationTool.WAZUH),
-            key=lambda alert: alert["created_at"],
-            reverse=True,
-        )[:3]
-    ]
-    imported_alert_count = sum(
-        1 for alert in DEMO_ALERTS if alert["source_tool"] == IntegrationTool.WAZUH
-    )
-    imported_log_count = sum(1 for log_entry in DEMO_LOGS if log_entry["source_tool"] == IntegrationTool.WAZUH)
+    integration = get_augmented_integration_by_tool(IntegrationTool.WAZUH)
+    latest_titles = get_latest_alert_titles_for_tool(IntegrationTool.WAZUH)
 
     return {
         **integration,
-        "imported_alert_count": imported_alert_count,
-        "imported_log_count": imported_log_count,
-        "last_import_at": integration.get("last_import_at"),
-        "last_import_message": integration.get("last_import_message"),
         "available_demo_payloads": 3,
         "latest_imported_alert_titles": latest_titles,
     }
@@ -101,6 +86,9 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
     existing_references = {
         alert.get("integration_ref") for alert in DEMO_ALERTS if alert.get("integration_ref")
     }
+    existing_references.update(
+        log_entry.get("integration_ref") for log_entry in DEMO_LOGS if log_entry.get("integration_ref")
+    )
 
     for alert_payload in alerts:
         integration_ref = _wazuh_reference(alert_payload)

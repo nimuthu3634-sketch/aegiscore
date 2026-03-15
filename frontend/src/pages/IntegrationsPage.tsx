@@ -4,15 +4,23 @@ import { PlugIcon, ShieldIcon } from "@/components/Icons";
 import { SectionCard } from "@/components/SectionCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { integrations as integrationMetadata } from "@/data/mock";
+import { suricataDemoEvents } from "@/data/suricataDemoEvents";
 import { wazuhDemoAlerts } from "@/data/wazuhDemoAlerts";
 import { useAuth } from "@/hooks/useAuth";
 import {
   fetchIntegrationStatuses,
+  fetchSuricataIntegrationStatus,
   fetchWazuhIntegrationStatus,
+  importSuricataEvents,
   importWazuhAlerts,
 } from "@/services/api";
 import type { UserRole } from "@/types/auth";
-import type { IntegrationApiRecord, SourceToolKey, WazuhIntegrationStatus } from "@/types/domain";
+import type {
+  IntegrationApiRecord,
+  SourceToolKey,
+  SuricataIntegrationStatus,
+  WazuhIntegrationStatus,
+} from "@/types/domain";
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -27,7 +35,7 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function canImportWazuh(userRole: UserRole | undefined) {
+function canImportPrimaryIntegrations(userRole: UserRole | undefined) {
   return userRole === "admin" || userRole === "analyst";
 }
 
@@ -39,12 +47,15 @@ const toolNameLookup: Record<string, SourceToolKey> = {
   VirtualBox: "virtualbox",
 };
 
+type ImportableTool = "wazuh" | "suricata";
+
 export function IntegrationsPage() {
   const { token, user } = useAuth();
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationApiRecord[]>([]);
   const [wazuhStatus, setWazuhStatus] = useState<WazuhIntegrationStatus | null>(null);
+  const [suricataStatus, setSuricataStatus] = useState<SuricataIntegrationStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isImporting, setIsImporting] = useState(false);
+  const [activeImportTool, setActiveImportTool] = useState<ImportableTool | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -58,14 +69,19 @@ export function IntegrationsPage() {
     setIsLoading(true);
     setError(null);
 
-    void Promise.all([fetchIntegrationStatuses(token), fetchWazuhIntegrationStatus(token)])
-      .then(([statuses, wazuh]) => {
+    void Promise.all([
+      fetchIntegrationStatuses(token),
+      fetchWazuhIntegrationStatus(token),
+      fetchSuricataIntegrationStatus(token),
+    ])
+      .then(([statuses, wazuh, suricata]) => {
         if (!isActive) {
           return;
         }
 
         setIntegrationStatuses(statuses);
         setWazuhStatus(wazuh);
+        setSuricataStatus(suricata);
       })
       .catch((requestError: unknown) => {
         if (!isActive) {
@@ -89,16 +105,20 @@ export function IntegrationsPage() {
     };
   }, [token, reloadKey]);
 
-  const handleImportSampleData = async () => {
+  const handleImportSampleData = async (tool: ImportableTool) => {
     if (!token) {
       return;
     }
 
-    setIsImporting(true);
+    setActiveImportTool(tool);
     setImportMessage(null);
 
     try {
-      const response = await importWazuhAlerts(token, { alerts: wazuhDemoAlerts });
+      const response =
+        tool === "wazuh"
+          ? await importWazuhAlerts(token, { alerts: wazuhDemoAlerts })
+          : await importSuricataEvents(token, { events: suricataDemoEvents });
+
       setImportMessage(
         `${response.message} ${response.skipped_count > 0 ? `${response.skipped_count} duplicate payloads were skipped.` : ""}`.trim(),
       );
@@ -107,10 +127,10 @@ export function IntegrationsPage() {
       setImportMessage(
         requestError instanceof Error
           ? requestError.message
-          : "The Wazuh sample import could not be completed.",
+          : "Sample import could not be completed.",
       );
     } finally {
-      setIsImporting(false);
+      setActiveImportTool(null);
     }
   };
 
@@ -123,13 +143,13 @@ export function IntegrationsPage() {
     }));
   }, [integrationStatuses]);
 
-  const canImport = canImportWazuh(user?.role);
+  const canImport = canImportPrimaryIntegrations(user?.role);
 
   return (
     <div className="space-y-6">
       <SectionCard
         title="Integration readiness"
-        description="Monitor connection posture across telemetry sources and use the Wazuh demo import workflow to populate alerts and logs for presentations."
+        description="Monitor primary telemetry sources and import safe demo data from Wazuh and Suricata to populate alerts and logs for presentations."
         eyebrow="Integrations"
         action={
           <button
@@ -156,8 +176,10 @@ export function IntegrationsPage() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {mergedIntegrations.map((integration) => {
-            const isWazuh = integration.name === "Wazuh";
             const liveStatus = integration.apiStatus;
+            const isWazuh = integration.name === "Wazuh";
+            const isSuricata = integration.name === "Suricata";
+            const detailedStatus = isWazuh ? wazuhStatus : isSuricata ? suricataStatus : null;
 
             return (
               <div
@@ -186,24 +208,24 @@ export function IntegrationsPage() {
                     {liveStatus ? formatDateTime(liveStatus.last_sync_at) : integration.lastSync}
                   </p>
 
-                  {isWazuh && wazuhStatus ? (
+                  {detailedStatus ? (
                     <div className="mt-4 space-y-3 text-sm text-brand-black/70">
                       <div className="flex justify-between gap-4">
                         <span>Imported alerts</span>
                         <span className="font-semibold text-brand-black">
-                          {wazuhStatus.imported_alert_count}
+                          {detailedStatus.imported_alert_count}
                         </span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span>Imported logs</span>
                         <span className="font-semibold text-brand-black">
-                          {wazuhStatus.imported_log_count}
+                          {detailedStatus.imported_log_count}
                         </span>
                       </div>
                       <div className="flex justify-between gap-4">
                         <span>Last import</span>
                         <span className="font-semibold text-brand-black">
-                          {formatDateTime(wazuhStatus.last_import_at)}
+                          {formatDateTime(detailedStatus.last_import_at)}
                         </span>
                       </div>
                     </div>
@@ -216,24 +238,31 @@ export function IntegrationsPage() {
                   ) : null}
                 </div>
 
-                {isWazuh && wazuhStatus ? (
+                {detailedStatus ? (
                   <div className="mt-5 space-y-3">
                     <button
                       type="button"
-                      onClick={handleImportSampleData}
+                      onClick={() => handleImportSampleData(isWazuh ? "wazuh" : "suricata")}
                       className="btn-primary w-full"
-                      disabled={!canImport || isImporting}
+                      disabled={
+                        !canImport ||
+                        activeImportTool !== null
+                      }
                     >
-                      {isImporting ? "Importing sample data..." : "Import sample data"}
+                      {activeImportTool === (isWazuh ? "wazuh" : "suricata")
+                        ? "Importing sample data..."
+                        : "Import sample data"}
                     </button>
                     <p className="text-xs leading-5 text-brand-black/55">
                       {canImport
-                        ? `${wazuhStatus.available_demo_payloads} Wazuh-style demo alerts are ready to import into alerts and logs.`
-                        : "Viewer accounts can inspect status, but only admins and analysts can run the demo import."}
+                        ? `${detailedStatus.available_demo_payloads} ${integration.name}-style demo ${
+                            isWazuh ? "alerts" : "events"
+                          } are ready to import into alerts and logs.`
+                        : "Viewer accounts can inspect status, but only admins and analysts can run demo imports."}
                     </p>
-                    {wazuhStatus.last_import_message ? (
+                    {detailedStatus.last_import_message ? (
                       <div className="rounded-[1.25rem] border border-brand-black/8 bg-brand-light/60 px-4 py-3 text-xs leading-5 text-brand-black/65">
-                        {wazuhStatus.last_import_message}
+                        {detailedStatus.last_import_message}
                       </div>
                     ) : null}
                   </div>
@@ -245,25 +274,21 @@ export function IntegrationsPage() {
       </SectionCard>
 
       <SectionCard
-        title="Wazuh demo status"
-        description="A simple academic-project-friendly Wazuh workflow focused on importing sample alert JSON and mapping it into AegisCore alerts and normalized logs."
+        title="Primary telemetry workflow"
+        description="Wazuh and Suricata remain the main demo-ready import paths for host and network visibility inside AegisCore."
         tone="dark"
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
             <div className="flex items-center gap-3">
               <ShieldIcon className="h-5 w-5 text-brand-orange" />
-              <p className="font-semibold text-white">Demo-friendly import flow</p>
+              <p className="font-semibold text-white">Wazuh host telemetry</p>
             </div>
             <p className="mt-3 text-sm leading-6 text-brand-muted">
-              Wazuh-style alert JSON can be imported on demand from the Integrations page. Each
-              imported payload creates an AegisCore alert and a normalized log entry.
+              Wazuh-style alert JSON can be imported on demand to create AegisCore alerts and
+              normalized log entries from endpoint and agent events.
             </p>
-          </div>
-
-          <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
-            <p className="font-semibold text-white">Latest imported Wazuh alerts</p>
-            <div className="mt-3 space-y-2 text-sm text-brand-muted">
+            <div className="mt-4 space-y-2 text-sm text-brand-muted">
               {wazuhStatus?.latest_imported_alert_titles.length ? (
                 wazuhStatus.latest_imported_alert_titles.map((title) => (
                   <div key={title} className="rounded-[1rem] bg-brand-white/5 px-3 py-2">
@@ -272,6 +297,25 @@ export function IntegrationsPage() {
                 ))
               ) : (
                 <p>No imported Wazuh demo alerts yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
+            <p className="font-semibold text-white">Suricata network telemetry</p>
+            <p className="mt-3 text-sm leading-6 text-brand-muted">
+              Suricata EVE-style network events can be imported as demo data to create normalized
+              logs and network alert records for threat-hunting presentations.
+            </p>
+            <div className="mt-4 space-y-2 text-sm text-brand-muted">
+              {suricataStatus?.latest_imported_alert_titles.length ? (
+                suricataStatus.latest_imported_alert_titles.map((title) => (
+                  <div key={title} className="rounded-[1rem] bg-brand-white/5 px-3 py-2">
+                    {title}
+                  </div>
+                ))
+              ) : (
+                <p>No imported Suricata demo alerts yet.</p>
               )}
             </div>
           </div>

@@ -36,6 +36,23 @@ class WazuhStatusResponse(IntegrationRead):
     latest_imported_alert_titles: list[str]
 
 
+class SuricataImportRequest(BaseModel):
+    events: list[dict[str, Any]]
+
+
+class SuricataImportResponse(BaseModel):
+    imported_alert_count: int
+    imported_log_count: int
+    skipped_count: int
+    last_import_at: datetime
+    message: str
+
+
+class SuricataStatusResponse(IntegrationRead):
+    available_demo_payloads: int
+    latest_imported_alert_titles: list[str]
+
+
 class WazuhSampleAlertRead(BaseModel):
     timestamp: str
     agent: dict[str, Any]

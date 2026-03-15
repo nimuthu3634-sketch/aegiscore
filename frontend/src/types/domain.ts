@@ -279,6 +279,23 @@ export interface WazuhImportResponse {
   message: string;
 }
 
+export interface SuricataIntegrationStatus extends IntegrationApiRecord {
+  available_demo_payloads: number;
+  latest_imported_alert_titles: string[];
+}
+
+export interface SuricataImportPayload {
+  events: Record<string, unknown>[];
+}
+
+export interface SuricataImportResponse {
+  imported_alert_count: number;
+  imported_log_count: number;
+  skipped_count: number;
+  last_import_at: string;
+  message: string;
+}
+
 export interface SettingsItem {
   label: string;
   value: string;

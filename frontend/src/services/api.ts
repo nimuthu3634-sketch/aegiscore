@@ -17,6 +17,9 @@ import type {
   LogEntryRecord,
   LogIngestPayload,
   LogListResponse,
+  SuricataImportPayload,
+  SuricataImportResponse,
+  SuricataIntegrationStatus,
   WazuhImportPayload,
   WazuhImportResponse,
   WazuhIntegrationStatus,
@@ -273,6 +276,25 @@ export async function fetchWazuhIntegrationStatus(token: string) {
 
 export async function importWazuhAlerts(token: string, payload: WazuhImportPayload) {
   return request<WazuhImportResponse>("/integrations/wazuh/import", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchSuricataIntegrationStatus(token: string) {
+  return request<SuricataIntegrationStatus>("/integrations/suricata/status", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function importSuricataEvents(token: string, payload: SuricataImportPayload) {
+  return request<SuricataImportResponse>("/integrations/suricata/import", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
