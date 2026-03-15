@@ -2,8 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
-import logoUrl from "@repo-assets/aegiscore-logo.svg";
-
+import { BrandMark } from "@/components/BrandMark";
 import { BellIcon, ChevronDownIcon, MenuIcon, SearchIcon } from "@/components/Icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -63,7 +62,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-20 px-4 py-4 sm:px-6 lg:px-8">
-      <div className="panel flex flex-col gap-4 border border-white/70 bg-white/84 px-4 py-4 shadow-premium backdrop-blur-xl sm:px-5">
+      <div className="panel flex flex-col gap-4 border border-white/70 bg-white/90 px-4 py-4 shadow-premium backdrop-blur-xl sm:px-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -75,11 +74,11 @@ export function Header({ onMenuClick }: HeaderProps) {
               <MenuIcon className="h-5 w-5" />
             </button>
 
-            <div className="hidden h-12 w-12 items-center justify-center rounded-[1.15rem] bg-gradient-to-br from-brand-orange to-[#ffb071] p-[1px] shadow-float lg:flex">
-              <div className="flex h-full w-full items-center justify-center rounded-[1.05rem] bg-white">
-                <img src={logoUrl} alt="AegisCore mark" className="h-8 w-8 object-contain" />
-              </div>
-            </div>
+            <BrandMark
+              size="xs"
+              tone="light"
+              className="lg:h-12 lg:w-12 lg:rounded-[1.15rem] lg:p-2.5"
+            />
 
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-orange">

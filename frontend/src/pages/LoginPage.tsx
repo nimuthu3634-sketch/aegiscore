@@ -1,11 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import logoUrl from "@repo-assets/aegiscore-logo.svg";
-
+import { BrandMark } from "@/components/BrandMark";
 import { ArrowRightIcon, ShieldIcon, UserIcon } from "@/components/Icons";
-import { useAuth } from "@/hooks/useAuth";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types/auth";
 
 export function LoginPage() {
@@ -54,13 +53,9 @@ export function LoginPage() {
             <div className="pointer-events-none absolute -right-12 top-0 h-48 w-48 rounded-full bg-brand-orange/16 blur-3xl" />
             <div className="pointer-events-none absolute left-0 top-32 h-40 w-40 rounded-full bg-white/5 blur-3xl" />
 
-            <div className="flex items-center gap-4">
-              <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.8rem] bg-gradient-to-br from-brand-orange to-[#ffb071] p-[1px] shadow-float">
-                <div className="flex h-full w-full items-center justify-center rounded-[1.7rem] bg-white">
-                  <img src={logoUrl} alt="AegisCore logo" className="h-11 w-11 object-contain" />
-                </div>
-              </div>
-              <div className="relative">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <BrandMark size="xl" tone="dark" className="shadow-[0_22px_48px_-30px_rgba(255,122,26,0.4)]" />
+              <div className="relative min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-brand-muted">
                   AI-integrated SOC
                 </p>
@@ -119,14 +114,10 @@ export function LoginPage() {
 
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[1.15rem] bg-gradient-to-br from-brand-orange to-[#ffb071] p-[1px] shadow-float">
-                  <div className="flex h-full w-full items-center justify-center rounded-[1.05rem] bg-white">
-                    <img src={logoUrl} alt="AegisCore mark" className="h-7 w-7 object-contain" />
-                  </div>
-                </div>
+                <BrandMark size="sm" tone="light" />
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-orange">
-                  Sign in
+                    Sign in
                   </p>
                   <h2 className="mt-2 text-3xl font-semibold tracking-tight text-brand-black">
                     Access the SOC

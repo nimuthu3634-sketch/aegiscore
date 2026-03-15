@@ -1,7 +1,6 @@
 import { NavLink } from "react-router-dom";
 
-import logoUrl from "@repo-assets/aegiscore-logo.svg";
-
+import { BrandMark } from "@/components/BrandMark";
 import {
   AlertTriangleIcon,
   DashboardIcon,
@@ -51,12 +50,8 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         <div className="pointer-events-none absolute left-0 top-28 h-32 w-32 rounded-full bg-white/5 blur-3xl" />
 
         <div className="relative flex items-center gap-4 border-b border-brand-white/10 px-6 py-6">
-          <div className="flex h-14 w-14 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-brand-orange to-[#ffb071] p-[1px] shadow-float">
-            <div className="flex h-full w-full items-center justify-center rounded-[1.3rem] bg-white">
-              <img src={logoUrl} alt="AegisCore logo" className="h-9 w-9 object-contain" />
-            </div>
-          </div>
-          <div>
+          <BrandMark size="md" tone="dark" />
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-muted">
               Final-year project
             </p>
