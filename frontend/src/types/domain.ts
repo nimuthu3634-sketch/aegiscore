@@ -10,6 +10,59 @@ export type ReportStatus = "draft" | "scheduled" | "ready";
 
 export type IntegrationStatus = "connected" | "degraded" | "pending" | "offline";
 
+export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra" | "virtualbox";
+
+export interface DashboardSummaryResponse {
+  total_alerts: number;
+  critical_alerts: number;
+  open_incidents: number;
+  resolved_incidents: number;
+}
+
+export interface DashboardAlertsOverTimePoint {
+  label: string;
+  total: number;
+}
+
+export interface DashboardSeverityChartPoint {
+  severity: SeverityLevel;
+  count: number;
+}
+
+export interface DashboardSourceToolChartPoint {
+  source_tool: SourceToolKey;
+  count: number;
+}
+
+export interface DashboardChartsResponse {
+  alerts_over_time: DashboardAlertsOverTimePoint[];
+  alerts_by_severity: DashboardSeverityChartPoint[];
+  alerts_by_source_tool: DashboardSourceToolChartPoint[];
+}
+
+export interface DashboardRecentAlert {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  source_tool: SourceToolKey;
+  severity: SeverityLevel;
+  status: AlertStatus;
+  confidence_score: number;
+  created_at: string;
+}
+
+export interface DashboardRecentIncident {
+  id: string;
+  title: string;
+  priority: SeverityLevel;
+  status: IncidentStatus;
+  analyst_name: string | null;
+  affected_asset: string;
+  summary: string;
+  updated_at: string;
+}
+
 export interface DashboardStat {
   label: string;
   value: string;
