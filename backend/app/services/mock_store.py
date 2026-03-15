@@ -10,6 +10,7 @@ from app.core.enums import (
     ReportStatus,
     ReportType,
     UserRole,
+    VirtualMachineStatus,
 )
 from app.core.security import get_password_hash
 from app.utils.time import utc_now
@@ -561,7 +562,48 @@ DEMO_INTEGRATIONS: list[dict] = [
         "tool_name": IntegrationTool.VIRTUALBOX,
         "status": IntegrationHealth.DEGRADED,
         "last_sync_at": hours_ago(2),
-        "notes": "Classroom VM baseline monitoring requires analyst review.",
+        "notes": "VirtualBox lab inventory tracking and classroom readiness monitoring.",
+        "last_import_at": hours_ago(2),
+        "last_import_message": "Tracking 4 seeded lab VMs for presentation and validation.",
+    },
+]
+
+DEMO_VIRTUAL_MACHINES: list[dict] = [
+    {
+        "id": "vm-001",
+        "vm_name": "aegiscore-soc-01",
+        "role": "SOC Server",
+        "os_type": "Ubuntu Server 22.04",
+        "ip_address": "10.10.0.10",
+        "status": VirtualMachineStatus.RUNNING,
+        "notes": "Hosts the AegisCore frontend, backend API, PostgreSQL, and Redis services for the lab demo.",
+    },
+    {
+        "id": "vm-002",
+        "vm_name": "lab-web-target-01",
+        "role": "Web Target VM",
+        "os_type": "Ubuntu 22.04",
+        "ip_address": "10.10.0.21",
+        "status": VirtualMachineStatus.RUNNING,
+        "notes": "Presentation target used to generate host telemetry, web alerts, and controlled validation findings.",
+    },
+    {
+        "id": "vm-003",
+        "vm_name": "lab-attack-sim-01",
+        "role": "Attacker Simulation VM",
+        "os_type": "Kali Linux (authorized lab simulation)",
+        "ip_address": "10.10.0.31",
+        "status": VirtualMachineStatus.PAUSED,
+        "notes": "Kept paused between demonstrations and used only for approved classroom simulation artifacts.",
+    },
+    {
+        "id": "vm-004",
+        "vm_name": "lab-log-collector-01",
+        "role": "Log Collector VM",
+        "os_type": "Debian 12",
+        "ip_address": "10.10.0.12",
+        "status": VirtualMachineStatus.RUNNING,
+        "notes": "Aggregates Wazuh and Suricata lab data before review inside the AegisCore dashboard.",
     },
 ]
 

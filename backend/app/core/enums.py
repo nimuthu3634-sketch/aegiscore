@@ -54,3 +54,10 @@ class IntegrationHealth(str, Enum):
     DEGRADED = "degraded"
     PENDING = "pending"
     OFFLINE = "offline"
+
+
+class VirtualMachineStatus(str, Enum):
+    RUNNING = "running"
+    STOPPED = "stopped"
+    PAUSED = "paused"
+    PROVISIONING = "provisioning"

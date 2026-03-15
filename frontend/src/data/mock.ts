@@ -275,7 +275,7 @@ export const integrations: IntegrationRecord[] = [
     name: "VirtualBox",
     vendor: "Lab infrastructure",
     status: "degraded",
-    description: "Tracks VM baseline state, snapshot drift, and classroom environment readiness.",
+    description: "Tracks the classroom VM inventory, baseline state, and demo environment readiness without direct VM control.",
     lastSync: "15 minutes ago",
   },
 ];

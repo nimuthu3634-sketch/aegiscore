@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.core.enums import AlertSeverity, IntegrationHealth, IntegrationTool
+from app.core.enums import IntegrationHealth, IntegrationTool, VirtualMachineStatus
 from app.schemas.base import ORMModel
 
 
@@ -101,6 +101,34 @@ class HydraImportResponse(DemoImportResponse):
 
 class HydraStatusResponse(DemoIntegrationStatusResponse):
     pass
+
+
+class VirtualMachineRead(ORMModel):
+    id: str
+    vm_name: str
+    role: str
+    os_type: str
+    ip_address: str
+    status: VirtualMachineStatus
+    notes: str
+
+
+class VirtualMachineCreateRequest(BaseModel):
+    vm_name: str
+    role: str
+    os_type: str
+    ip_address: str
+    status: VirtualMachineStatus = VirtualMachineStatus.PROVISIONING
+    notes: str = ""
+
+
+class VirtualMachineUpdateRequest(BaseModel):
+    vm_name: str | None = None
+    role: str | None = None
+    os_type: str | None = None
+    ip_address: str | None = None
+    status: VirtualMachineStatus | None = None
+    notes: str | None = None
 
 
 class WazuhSampleAlertRead(BaseModel):

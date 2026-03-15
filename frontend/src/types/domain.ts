@@ -12,6 +12,8 @@ export type IntegrationStatus = "connected" | "degraded" | "pending" | "offline"
 
 export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra" | "virtualbox";
 
+export type VirtualMachineStatus = "running" | "stopped" | "paused" | "provisioning";
+
 export interface DashboardSummaryResponse {
   total_alerts: number;
   critical_alerts: number;
@@ -329,6 +331,34 @@ export interface HydraImportPayload {
 export interface HydraIntegrationStatus extends IntegrationImportStatus {}
 
 export interface HydraImportResponse extends IntegrationImportResponse {}
+
+export interface VirtualMachineRecord {
+  id: string;
+  vm_name: string;
+  role: string;
+  os_type: string;
+  ip_address: string;
+  status: VirtualMachineStatus;
+  notes: string;
+}
+
+export interface VirtualMachineCreatePayload {
+  vm_name: string;
+  role: string;
+  os_type: string;
+  ip_address: string;
+  status: VirtualMachineStatus;
+  notes: string;
+}
+
+export interface VirtualMachineUpdatePayload {
+  vm_name?: string;
+  role?: string;
+  os_type?: string;
+  ip_address?: string;
+  status?: VirtualMachineStatus;
+  notes?: string;
+}
 
 export interface SettingsItem {
   label: string;

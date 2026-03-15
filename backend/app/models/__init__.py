@@ -6,5 +6,6 @@ from app.models.integration_status import IntegrationStatus
 from app.models.log_entry import LogEntry
 from app.models.report import Report
 from app.models.user import User
+from app.models.virtual_machine import VirtualMachine
 
-__all__ = ["Alert", "Incident", "IntegrationStatus", "LogEntry", "Report", "User"]
+__all__ = ["Alert", "Incident", "IntegrationStatus", "LogEntry", "Report", "User", "VirtualMachine"]

@@ -15,7 +15,11 @@ type StatusBadgeProps = {
     | "connected"
     | "degraded"
     | "offline"
-    | "pending";
+    | "pending"
+    | "running"
+    | "stopped"
+    | "paused"
+    | "provisioning";
   children: string;
 };
 
@@ -36,6 +40,10 @@ const variantClasses: Record<StatusBadgeProps["variant"], string> = {
   degraded: "bg-amber-100 text-amber-700 ring-amber-200",
   offline: "bg-red-100 text-red-700 ring-red-200",
   pending: "bg-brand-black/5 text-brand-black/70 ring-brand-black/10",
+  running: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+  stopped: "bg-brand-black/5 text-brand-black/70 ring-brand-black/10",
+  paused: "bg-amber-100 text-amber-700 ring-amber-200",
+  provisioning: "bg-sky-100 text-sky-700 ring-sky-200",
 };
 
 export function StatusBadge({ variant, children }: StatusBadgeProps) {

@@ -26,6 +26,9 @@ import type {
   SuricataImportPayload,
   SuricataImportResponse,
   SuricataIntegrationStatus,
+  VirtualMachineCreatePayload,
+  VirtualMachineRecord,
+  VirtualMachineUpdatePayload,
   WazuhImportPayload,
   WazuhImportResponse,
   WazuhIntegrationStatus,
@@ -340,6 +343,39 @@ export async function fetchHydraIntegrationStatus(token: string) {
 export async function importHydraResults(token: string, payload: HydraImportPayload) {
   return request<HydraImportResponse>("/integrations/hydra/import", {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchVirtualLabMachines(token: string) {
+  return request<VirtualMachineRecord[]>("/integrations/virtualbox/lab", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function createVirtualLabMachine(token: string, payload: VirtualMachineCreatePayload) {
+  return request<VirtualMachineRecord>("/integrations/virtualbox/lab", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchVirtualLabMachine(
+  token: string,
+  vmId: string,
+  payload: VirtualMachineUpdatePayload,
+) {
+  return request<VirtualMachineRecord>(`/integrations/virtualbox/lab/${vmId}`, {
+    method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
     },

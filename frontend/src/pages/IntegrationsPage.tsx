@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { VirtualLabSection } from "@/components/VirtualLabSection";
 import { PlugIcon, ShieldIcon } from "@/components/Icons";
 import { SectionCard } from "@/components/SectionCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -245,7 +246,7 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Integration readiness"
-        description="Monitor host telemetry, network telemetry, and authorized lab assessment-result imports across Wazuh, Suricata, Nmap, and Hydra."
+        description="Monitor host telemetry, network telemetry, authorized lab assessment-result imports, and the VirtualBox classroom environment from one presentation-ready workspace."
         eyebrow="Integrations"
         action={
           <button
@@ -276,6 +277,7 @@ export function IntegrationsPage() {
             const toolKey = integration.toolKey;
             const importableTool = isImportableTool(toolKey) ? toolKey : null;
             const detailedStatus = importableTool ? detailedStatusLookup[importableTool] : null;
+            const isVirtualBox = toolKey === "virtualbox";
 
             return (
               <div
@@ -305,6 +307,17 @@ export function IntegrationsPage() {
                     </span>
                     <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
                       No offensive automation
+                    </span>
+                  </div>
+                ) : null}
+
+                {isVirtualBox ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-orange">
+                      Visualization and tracking
+                    </span>
+                    <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
+                      No direct VM control
                     </span>
                   </div>
                 ) : null}
@@ -417,6 +430,13 @@ export function IntegrationsPage() {
           })}
         </div>
       </SectionCard>
+
+      <VirtualLabSection
+        token={token ?? null}
+        canManage={canImport}
+        refreshKey={reloadKey}
+        onLabUpdated={() => setReloadKey((currentValue) => currentValue + 1)}
+      />
     </div>
   );
 }

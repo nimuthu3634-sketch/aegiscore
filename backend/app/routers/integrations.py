@@ -12,6 +12,9 @@ from app.schemas.integrations import (
     SuricataImportRequest,
     SuricataImportResponse,
     SuricataStatusResponse,
+    VirtualMachineCreateRequest,
+    VirtualMachineRead,
+    VirtualMachineUpdateRequest,
     WazuhImportRequest,
     WazuhImportResponse,
     WazuhStatusResponse,
@@ -20,6 +23,7 @@ from app.services.hydra_integration import get_hydra_status, import_hydra_result
 from app.services.integrations import list_integrations
 from app.services.nmap_integration import get_nmap_status, import_nmap_results
 from app.services.suricata_integration import get_suricata_status, import_suricata_events
+from app.services.virtualbox_lab import create_virtual_machine, list_virtual_machines, update_virtual_machine
 from app.services.wazuh_integration import get_wazuh_status, import_wazuh_alerts
 from app.utils.auth import get_current_active_user, require_roles
 
@@ -99,3 +103,27 @@ def import_hydra_demo_data(
 ) -> HydraImportResponse:
     result = import_hydra_results([item.model_dump() for item in payload.results])
     return HydraImportResponse.model_validate(result)
+
+
+@router.get("/virtualbox/lab", response_model=list[VirtualMachineRead])
+def get_virtualbox_lab_environment(
+    current_user: dict = Depends(get_current_active_user),
+) -> list[VirtualMachineRead]:
+    return [VirtualMachineRead.model_validate(item) for item in list_virtual_machines()]
+
+
+@router.post("/virtualbox/lab", response_model=VirtualMachineRead, status_code=status.HTTP_201_CREATED)
+def create_virtualbox_lab_asset(
+    payload: VirtualMachineCreateRequest,
+    current_user: dict = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+) -> VirtualMachineRead:
+    return VirtualMachineRead.model_validate(create_virtual_machine(payload.model_dump()))
+
+
+@router.patch("/virtualbox/lab/{id}", response_model=VirtualMachineRead)
+def update_virtualbox_lab_asset(
+    id: str,
+    payload: VirtualMachineUpdateRequest,
+    current_user: dict = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+) -> VirtualMachineRead:
+    return VirtualMachineRead.model_validate(update_virtual_machine(id, payload.model_dump()))
