@@ -161,7 +161,7 @@ def import_suricata_events(events: list[dict]) -> dict:
     integration["last_import_message"] = (
         f"Imported {imported_alert_count} Suricata alerts and {imported_log_count} logs."
     )
-    integration["notes"] = "Suricata demo import ready for lab network threat scenarios."
+    integration["notes"] = "Suricata import ready for network threat review."
 
     return {
         "imported_alert_count": imported_alert_count,

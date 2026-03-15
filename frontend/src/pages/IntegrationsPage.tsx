@@ -97,27 +97,27 @@ const workflowCards: WorkflowCard[] = [
     title: "Wazuh host telemetry",
     description:
       "Wazuh-style alert JSON can be imported on demand to create AegisCore alerts and normalized host log entries.",
-    emptyState: "No imported Wazuh demo alerts yet.",
+    emptyState: "No imported Wazuh alerts yet.",
   },
   {
     tool: "suricata",
     title: "Suricata network telemetry",
     description:
-      "Suricata EVE-style events can be imported as demo data to generate network alerts and normalized logs for presentation flows.",
-    emptyState: "No imported Suricata demo alerts yet.",
+      "Suricata EVE-style events can be imported to generate network alerts and normalized logs for operational review.",
+    emptyState: "No imported Suricata alerts yet.",
   },
   {
     tool: "nmap",
     title: "Nmap assessment results",
     description:
-      "Authorized lab-only Nmap result files are parsed into findings for service-exposure review. AegisCore does not run scans.",
+      "Authorized Nmap result files are parsed into findings for service-exposure review. AegisCore does not run scans.",
     emptyState: "No imported Nmap assessment findings yet.",
   },
   {
     tool: "hydra",
     title: "Hydra assessment results",
     description:
-      "Authorized lab-only Hydra result artifacts are imported as credential-assessment findings. No offensive automation is supported.",
+      "Authorized Hydra result artifacts are imported as credential-assessment findings. No offensive automation is supported.",
     emptyState: "No imported Hydra assessment findings yet.",
   },
 ];
@@ -246,7 +246,7 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Integration readiness"
-        description="Monitor host telemetry, network telemetry, authorized lab assessment-result imports, and the VirtualBox classroom environment from one presentation-ready workspace."
+        description="Monitor host telemetry, network telemetry, authorized assessment-result imports, and the VirtualBox environment from one unified workspace."
         eyebrow="Integrations"
         action={
           <button
@@ -303,7 +303,7 @@ export function IntegrationsPage() {
                 {integration.labOnly ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-orange">
-                      {integration.note ?? "Authorized lab-only result ingestion"}
+                      {integration.note ?? "Authorized assessment result ingestion"}
                     </span>
                     <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
                       No offensive automation
@@ -361,13 +361,13 @@ export function IntegrationsPage() {
                       disabled={!canImport || activeImportTool !== null}
                     >
                       {activeImportTool === importableTool
-                        ? "Importing sample data..."
-                        : "Import sample data"}
+                        ? "Importing data..."
+                        : "Import available data"}
                     </button>
                     <p className="text-xs leading-5 text-brand-black/55">
                       {canImport
-                        ? `${detailedStatus.available_demo_payloads} ${getDemoPayloadLabel(importableTool)} are ready to import for ${integration.name} demo workflows.`
-                        : "Viewer accounts can inspect status, but only admins and analysts can run demo imports."}
+                        ? `${detailedStatus.available_demo_payloads} ${getDemoPayloadLabel(importableTool)} are ready to import for ${integration.name} workflows.`
+                        : "Viewer accounts can inspect status, but only admins and analysts can run imports."}
                     </p>
                     {detailedStatus.last_import_message ? (
                       <div className="rounded-[1.25rem] border border-brand-black/8 bg-brand-light/60 px-4 py-3 text-xs leading-5 text-brand-black/65">
@@ -384,7 +384,7 @@ export function IntegrationsPage() {
 
       <SectionCard
         title="Telemetry and assessment workflows"
-        description="AegisCore keeps operational telemetry and lab validation imports in one presentation-ready view while preserving clear safety boundaries."
+        description="AegisCore keeps operational telemetry and authorized assessment imports in one unified view while preserving clear safety boundaries."
         tone="dark"
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -406,7 +406,7 @@ export function IntegrationsPage() {
                 {isLabOnly ? (
                   <div className="mt-4 space-y-2">
                     <div className="rounded-[1rem] bg-brand-orange/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-orange">
-                      Authorized lab-only result ingestion
+                      Authorized assessment result ingestion
                     </div>
                     <div className="rounded-[1rem] bg-brand-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-muted">
                       No offensive automation

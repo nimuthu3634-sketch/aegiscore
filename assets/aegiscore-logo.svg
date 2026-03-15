@@ -1,6 +1,66 @@
-<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="160" height="160" rx="32" fill="#111111"/>
-  <path d="M80 20L122 38V75C122 103.5 105.1 129.4 80 140C54.9 129.4 38 103.5 38 75V38L80 20Z" fill="#FF7A1A"/>
-  <path d="M80 38L108 50V73.5C108 92.5 97.1 110.1 80 117.6C62.9 110.1 52 92.5 52 73.5V50L80 38Z" fill="#111111"/>
-  <path d="M80 54L95.5 86H86.8L83.5 78.7H76.4L73.1 86H64.5L80 54ZM80 69.8L78.9 72.2H81.1L80 69.8Z" fill="#FF7A1A"/>
+<svg width="900" height="260" viewBox="0 0 900 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>AegisCore logo</title>
+  <path
+    d="M62 198L176 44"
+    stroke="#111111"
+    stroke-width="32"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M243 81L185 160H307L355 219H123"
+    stroke="#FF7A1A"
+    stroke-width="27"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M403 32V224"
+    stroke="#111111"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+  <text
+    x="450"
+    y="121"
+    fill="none"
+    stroke="#111111"
+    stroke-width="5"
+    stroke-linejoin="round"
+    paint-order="stroke fill"
+    font-family="Arial Rounded MT Bold, Segoe UI, Arial, sans-serif"
+    font-size="92"
+    font-weight="700"
+    letter-spacing="1"
+    textLength="307"
+    lengthAdjust="spacingAndGlyphs"
+  >
+    AEGIS
+  </text>
+  <text
+    x="443"
+    y="205"
+    fill="#FF7A1A"
+    font-family="Impact, Bahnschrift, Arial Black, sans-serif"
+    font-size="116"
+    font-weight="900"
+    letter-spacing="2"
+    textLength="316"
+    lengthAdjust="spacingAndGlyphs"
+  >
+    CORE
+  </text>
+  <path
+    d="M771 194L792 159"
+    stroke="#111111"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <path
+    d="M807 194L828 159"
+    stroke="#111111"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <circle cx="852" cy="194" r="9" fill="#FF7A1A" />
 </svg>

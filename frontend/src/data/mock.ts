@@ -38,7 +38,7 @@ export const dashboardStats: DashboardStat[] = [
     label: "Resolved Incidents",
     value: "34",
     change: "+8 this week",
-    helper: "Presentation-ready closure trend",
+    helper: "Operational closure trend",
     tone: "success",
   },
 ];
@@ -95,7 +95,7 @@ export const alerts: AlertRecord[] = [
     analyst: "K. Fernando",
     createdAt: "2026-03-15 09:48",
     description:
-      "Safe lab-only Hydra result ingestion produced elevated failed-attempt counts for demo review.",
+      "Authorized Hydra result ingestion produced elevated failed-attempt counts for analyst review.",
   },
   {
     id: "ALT-1004",
@@ -119,7 +119,7 @@ export const alerts: AlertRecord[] = [
     analyst: "R. Jayasinghe",
     createdAt: "2026-03-15 08:56",
     description:
-      "A VirtualBox training image snapshot drifted from the approved classroom baseline.",
+      "A VirtualBox training image snapshot drifted from the approved secure baseline.",
   },
   {
     id: "ALT-1006",
@@ -158,7 +158,7 @@ export const incidents: IncidentRecord[] = [
     affectedAsset: "sensor-east-02",
     updatedAt: "32 minutes ago",
     summary:
-      "Review traffic telemetry, correlate with Suricata alerts, and prepare an analyst narrative for presentation.",
+      "Review traffic telemetry, correlate with Suricata alerts, and prepare an analyst narrative for reporting.",
   },
   {
     id: "INC-203",
@@ -188,7 +188,7 @@ export const incidents: IncidentRecord[] = [
 
 export const reportMetrics: ReportMetric[] = [
   { label: "Reports Generated", value: "24", detail: "Last 30 days" },
-  { label: "Avg. Build Time", value: "02m 14s", detail: "Presentation exports" },
+  { label: "Avg. Build Time", value: "02m 14s", detail: "Export generation" },
   { label: "Critical Cases Included", value: "11", detail: "Executive focus" },
 ];
 
@@ -258,7 +258,7 @@ export const integrations: IntegrationRecord[] = [
     description: "Parses authorized lab scan-result imports for assessment visualization only.",
     lastSync: "Awaiting sample file",
     labOnly: true,
-    note: "Authorized lab-only result ingestion",
+    note: "Authorized assessment result ingestion",
   },
   {
     id: "INT-04",
@@ -268,14 +268,14 @@ export const integrations: IntegrationRecord[] = [
     description: "Displays authorized lab credential-assessment imports from controlled simulations only.",
     lastSync: "Awaiting sample file",
     labOnly: true,
-    note: "Authorized lab-only result ingestion",
+    note: "Authorized assessment result ingestion",
   },
   {
     id: "INT-05",
     name: "VirtualBox",
     vendor: "Lab infrastructure",
     status: "degraded",
-    description: "Tracks the classroom VM inventory, baseline state, and demo environment readiness without direct VM control.",
+    description: "Tracks the VirtualBox VM inventory, baseline state, and environment readiness without direct VM control.",
     lastSync: "15 minutes ago",
   },
 ];
@@ -302,7 +302,7 @@ export const accountSettings: SettingsItem[] = [
   {
     label: "Display Name",
     value: "Admin Console",
-    description: "Placeholder account profile for the current presentation session.",
+    description: "Placeholder account profile for the current operating session.",
   },
   {
     label: "Role",
@@ -311,8 +311,8 @@ export const accountSettings: SettingsItem[] = [
   },
   {
     label: "Workspace",
-    value: "AegisCore Lab SOC",
-    description: "Current team environment for cybersecurity lab monitoring demos.",
+    value: "AegisCore SOC",
+    description: "Current team environment for cybersecurity operations monitoring.",
   },
 ];
 
@@ -330,6 +330,6 @@ export const systemConfig: SettingsItem[] = [
   {
     label: "Export Mode",
     value: "Manual trigger",
-    description: "Presentation reports are scaffolded with UI controls and mock output rows.",
+    description: "Reports are scaffolded with UI controls and mock output rows.",
   },
 ];

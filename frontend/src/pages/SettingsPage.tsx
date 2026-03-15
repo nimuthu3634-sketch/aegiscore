@@ -6,7 +6,7 @@ export function SettingsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Settings and brand controls"
-        description="Presentation-ready configuration panels for branding, account placeholders, and future system controls."
+        description="Configuration panels for branding, account placeholders, and future system controls."
         eyebrow="Settings"
         action={<button className="btn-primary">Save placeholder</button>}
       >
@@ -21,7 +21,9 @@ export function SettingsPage() {
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Logo source</p>
             <p className="mt-3 text-lg font-semibold text-brand-black">assets/aegiscore-logo.svg</p>
-            <p className="mt-2 text-sm text-brand-black/60">Shared across login, header, and sidebar.</p>
+            <p className="mt-2 text-sm text-brand-black/60">
+              Shared finalized wordmark asset used across the app branding surfaces and favicon.
+            </p>
           </div>
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Status</p>
@@ -50,7 +52,7 @@ export function SettingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Account" description="Current presentation-session identity placeholders.">
+        <SectionCard title="Account" description="Current session identity placeholders.">
           <div className="space-y-4">
             {accountSettings.map((item) => (
               <div key={item.label} className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">

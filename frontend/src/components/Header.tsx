@@ -77,7 +77,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             <BrandMark
               size="xs"
               tone="light"
-              className="lg:h-12 lg:w-12 lg:rounded-[1.15rem] lg:p-2.5"
             />
 
             <div className="space-y-1">
@@ -93,7 +92,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
           <div className="hidden items-center gap-3 lg:flex">
             <div className="inline-flex items-center rounded-full bg-brand-black/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-black/65">
-              academic demo workspace
+              security operations workspace
             </div>
             <div
               className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.12em] ${liveStatusTone}`}

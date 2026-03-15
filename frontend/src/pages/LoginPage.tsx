@@ -53,21 +53,25 @@ export function LoginPage() {
             <div className="pointer-events-none absolute -right-12 top-0 h-48 w-48 rounded-full bg-brand-orange/16 blur-3xl" />
             <div className="pointer-events-none absolute left-0 top-32 h-40 w-40 rounded-full bg-white/5 blur-3xl" />
 
-            <div className="flex items-center gap-4 sm:gap-5">
-              <BrandMark size="xl" tone="dark" className="shadow-[0_22px_48px_-30px_rgba(255,122,26,0.4)]" />
+            <div className="flex flex-col items-start gap-4 sm:gap-5">
+              <BrandMark
+                size="xl"
+                tone="dark"
+                className="shadow-[0_22px_48px_-30px_rgba(255,122,26,0.4)]"
+              />
               <div className="relative min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-brand-muted">
                   AI-integrated SOC
                 </p>
                 <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-[3.4rem]">
-                  AegisCore
+                  Operational security workspace
                 </h1>
               </div>
             </div>
 
             <p className="relative mt-8 max-w-2xl text-lg leading-8 text-brand-muted">
-              A polished Security Operations Center dashboard for lab-based monitoring, incident
-              handling, and presentation-ready cybersecurity reporting.
+              A polished Security Operations Center dashboard for monitoring, incident handling,
+              and cybersecurity reporting.
             </p>
 
             <div className="relative mt-10 grid gap-4 sm:grid-cols-3">
@@ -90,17 +94,17 @@ export function LoginPage() {
               <div className="rounded-[1.6rem] border border-brand-white/10 bg-brand-white/6 p-5 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
                   <ShieldIcon className="h-5 w-5 text-brand-orange" />
-                  <p className="font-semibold text-white">Lab-safe workflow</p>
+                  <p className="font-semibold text-white">Controlled ingestion</p>
                 </div>
                 <p className="mt-3 text-sm leading-7 text-brand-muted">
-                  Supports Wazuh and Suricata monitoring plus safe classroom ingestion for Nmap and
-                  Hydra result files.
+                  Supports Wazuh and Suricata monitoring plus authorized result ingestion for Nmap
+                  and Hydra data files.
                 </p>
               </div>
               <div className="rounded-[1.6rem] border border-brand-white/10 bg-brand-white/6 p-5 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
                   <UserIcon className="h-5 w-5 text-brand-orange" />
-                  <p className="font-semibold text-white">Presentation-ready layout</p>
+                  <p className="font-semibold text-white">Operational interface</p>
                 </div>
                 <p className="mt-3 text-sm leading-7 text-brand-muted">
                   Branded sidebar, executive dashboard cards, clean tables, and drill-down panels.
@@ -124,12 +128,12 @@ export function LoginPage() {
                   </h2>
                 </div>
               </div>
-              <StatusBadge variant="ready">demo mode</StatusBadge>
+              <StatusBadge variant="ready">secure access</StatusBadge>
             </div>
 
             <p className="mt-5 text-sm leading-7 text-brand-black/65">
-              Sign in with seeded demo credentials or create a new local demo account through the
-              backend auth scaffold.
+              Sign in with an existing account or create a new local account through the
+              authentication service.
             </p>
 
             <div className="mt-8 inline-flex rounded-full border border-brand-black/8 bg-brand-light/80 p-1 shadow-soft">
@@ -201,7 +205,7 @@ export function LoginPage() {
               ) : null}
 
               <div className="rounded-[1.6rem] border border-brand-black/8 bg-brand-light/60 p-4 shadow-soft">
-                <p className="text-sm font-semibold text-brand-black">Demo credentials</p>
+                <p className="text-sm font-semibold text-brand-black">Default access accounts</p>
                 <ul className="mt-3 space-y-2 text-sm text-brand-black/65">
                   <li className="rounded-2xl bg-white/70 px-3 py-2 font-mono text-[13px]">admin@aegiscore.local / password</li>
                   <li className="rounded-2xl bg-white/70 px-3 py-2 font-mono text-[13px]">analyst@aegiscore.local / password</li>
@@ -225,7 +229,7 @@ export function LoginPage() {
                   <ArrowRightIcon className="h-4 w-4" />
                 </button>
                 <button type="button" className="btn-secondary">
-                  Demo mode active
+                  RBAC enabled
                 </button>
               </div>
             </form>

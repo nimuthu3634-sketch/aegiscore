@@ -35,7 +35,7 @@ def _map_hydra_severity(summary: str, notes: str | None) -> AlertSeverity:
 
 
 def _build_hydra_title(target_system: str, protocol: str) -> str:
-    return f"Authorized Hydra lab result imported for {target_system} ({protocol})"
+    return f"Authorized Hydra result imported for {target_system} ({protocol})"
 
 
 def _build_hydra_description(
@@ -45,7 +45,7 @@ def _build_hydra_description(
     notes: str | None,
 ) -> str:
     details = [
-        f"Authorized lab-only Hydra result ingestion for {target_system} using {protocol}.",
+        f"Authorized Hydra result ingestion for {target_system} using {protocol}.",
         f"Summary: {result_summary.strip()}.",
     ]
 
@@ -118,8 +118,8 @@ def import_hydra_results(results: list[dict]) -> dict:
             "timestamp": timestamp.isoformat(),
             "result_summary": result_summary,
             "notes": notes,
-            "message": f"Authorized lab-only Hydra assessment result imported for {target_system}.",
-            "assessment_scope": "Authorized lab-only result ingestion",
+            "message": f"Authorized Hydra assessment result imported for {target_system}.",
+            "assessment_scope": "Authorized assessment result ingestion",
             "usage_boundary": "No offensive automation",
         }
 
@@ -155,10 +155,10 @@ def import_hydra_results(results: list[dict]) -> dict:
     integration["last_sync_at"] = last_import_at
     integration["last_import_at"] = last_import_at
     integration["last_import_message"] = (
-        f"Imported {imported_alert_count} Hydra lab findings and {imported_log_count} logs."
+        f"Imported {imported_alert_count} Hydra findings and {imported_log_count} logs."
     )
     integration["notes"] = (
-        "Authorized lab-only credential assessment result ingestion. No offensive automation."
+        "Authorized credential-assessment result ingestion. No offensive automation."
     )
 
     return {

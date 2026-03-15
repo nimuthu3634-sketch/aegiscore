@@ -105,12 +105,12 @@ def _map_nmap_severity(open_ports: list[dict], service_names: list[str]) -> Aler
 
 def _build_nmap_title(host: str, open_ports: list[dict]) -> str:
     if not open_ports:
-        return f"Authorized Nmap lab result imported for {host}"
+        return f"Authorized Nmap result imported for {host}"
 
     top_port_labels = ", ".join(
         f"{port_record['protocol']}/{port_record['port']}" for port_record in open_ports[:3]
     )
-    return f"Authorized Nmap lab result: {host} exposes {top_port_labels}"
+    return f"Authorized Nmap result: {host} exposes {top_port_labels}"
 
 
 def _build_nmap_description(host: str, open_ports: list[dict], service_names: list[str], notes: str | None) -> str:
@@ -121,7 +121,7 @@ def _build_nmap_description(host: str, open_ports: list[dict], service_names: li
     service_details = ", ".join(service_names) if service_names else "No service names supplied"
 
     details = [
-        f"Authorized lab-only Nmap result ingestion for {host}.",
+        f"Authorized Nmap result ingestion for {host}.",
         f"Open ports: {port_details or 'none reported'}.",
         f"Services: {service_details}.",
     ]
@@ -135,10 +135,10 @@ def _build_nmap_description(host: str, open_ports: list[dict], service_names: li
 
 def _build_nmap_message(host: str, open_ports: list[dict]) -> str:
     if not open_ports:
-        return f"Authorized lab-only Nmap result import for {host} recorded no open ports."
+        return f"Authorized Nmap result import for {host} recorded no open ports."
 
     return (
-        f"Authorized lab-only Nmap result import for {host} identified "
+        f"Authorized Nmap result import for {host} identified "
         f"{len(open_ports)} open ports for validation."
     )
 
@@ -207,7 +207,7 @@ def import_nmap_results(results: list[dict]) -> dict:
             "service_names": service_names,
             "scan_notes": scan_notes,
             "message": message,
-            "assessment_scope": "Authorized lab-only result ingestion",
+            "assessment_scope": "Authorized assessment result ingestion",
             "usage_boundary": "No offensive automation",
         }
 
@@ -243,9 +243,9 @@ def import_nmap_results(results: list[dict]) -> dict:
     integration["last_sync_at"] = last_import_at
     integration["last_import_at"] = last_import_at
     integration["last_import_message"] = (
-        f"Imported {imported_alert_count} Nmap lab findings and {imported_log_count} logs."
+        f"Imported {imported_alert_count} Nmap findings and {imported_log_count} logs."
     )
-    integration["notes"] = "Authorized lab-only result ingestion for scan findings. No offensive automation."
+    integration["notes"] = "Authorized assessment result ingestion for scan findings. No offensive automation."
 
     return {
         "imported_alert_count": imported_alert_count,

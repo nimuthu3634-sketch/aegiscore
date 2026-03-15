@@ -8,7 +8,7 @@ export const logIngestSamples: LogIngestPayload[] = [
     raw_log: {
       host: "lab-web-02",
       message: "Multiple SSH login failures detected from 10.0.0.35",
-      user: "student_admin",
+      user: "ops_admin",
       source_ip: "10.0.0.35",
       severity: "high",
     },
@@ -18,7 +18,7 @@ export const logIngestSamples: LogIngestPayload[] = [
     raw_log: {
       timestamp: "2026-03-15T14:48:00Z",
       sensor: "sensor-north-01",
-      message: "Suspicious outbound DNS volume exceeded the classroom baseline.",
+      message: "Suspicious outbound DNS volume exceeded the expected baseline.",
       src_ip: "10.10.22.12",
       dest_ip: "1.1.1.1",
       severity: "medium",
@@ -40,7 +40,7 @@ export const logIngestSamples: LogIngestPayload[] = [
     raw_log: {
       timestamp: "2026-03-15T12:58:00Z",
       asset: "simulation-node-02",
-      message: "Imported Hydra lab result recorded repeated successful matches for demo credentials.",
+      message: "Imported Hydra assessment result recorded repeated successful matches for managed credentials.",
       username: "test_user",
       attempts: 9,
       severity: "high",

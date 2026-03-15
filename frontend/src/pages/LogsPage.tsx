@@ -191,13 +191,13 @@ export function LogsPage() {
       const ingestedLogs = await Promise.all(logIngestSamples.map((sample) => ingestLog(token, sample)));
       const latestLog = ingestedLogs[ingestedLogs.length - 1];
       setSelectedLogId(latestLog?.id ?? null);
-      setIngestMessage(`${ingestedLogs.length} demo payloads ingested into the log feed.`);
+      setIngestMessage(`${ingestedLogs.length} payloads ingested into the log feed.`);
       setReloadKey((currentValue) => currentValue + 1);
     } catch (requestError) {
       setIngestMessage(
         requestError instanceof Error
           ? requestError.message
-          : "Demo payload ingestion could not be completed.",
+          : "Payload ingestion could not be completed.",
       );
     } finally {
       setIngestLoading(false);
@@ -214,7 +214,7 @@ export function LogsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Log ingestion and normalization"
-        description="Review the live security event feed, compare raw versus normalized payloads, and demo ingestion using safe classroom events."
+        description="Review the live security event feed, compare raw versus normalized payloads, and import authorized sample events."
         eyebrow="Logs"
         tone="dark"
         action={
@@ -225,7 +225,7 @@ export function LogsPage() {
               className="btn-primary inline-flex items-center gap-2"
               disabled={!canIngest || ingestLoading}
             >
-              {ingestLoading ? "Ingesting..." : "Ingest demo payloads"}
+              {ingestLoading ? "Ingesting..." : "Ingest payloads"}
               <ArrowUpRightIcon className="h-4 w-4" />
             </button>
             <button type="button" onClick={handleRefresh} className="btn-secondary" disabled={listLoading}>
@@ -238,12 +238,12 @@ export function LogsPage() {
           <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-muted">Stored logs</p>
             <p className="mt-3 text-3xl font-semibold text-white">{logsResponse?.total_items ?? 0}</p>
-            <p className="mt-2 text-sm text-brand-muted">Normalized lab events ready for analyst review</p>
+            <p className="mt-2 text-sm text-brand-muted">Normalized events ready for analyst review</p>
           </div>
           <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-muted">Source tools</p>
             <p className="mt-3 text-3xl font-semibold text-white">{sourceToolCount}</p>
-            <p className="mt-2 text-sm text-brand-muted">Coverage across telemetry and safe imported lab artifacts</p>
+            <p className="mt-2 text-sm text-brand-muted">Coverage across telemetry and imported assessment artifacts</p>
           </div>
           <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-muted">Latest ingest</p>
@@ -273,7 +273,7 @@ export function LogsPage() {
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <SectionCard
           title="Log feed"
-          description="Source tool, normalized event type, severity, and timestamp for ingested lab events."
+          description="Source tool, normalized event type, severity, and timestamp for ingested events."
         >
           {listError ? (
             <div className="space-y-4">
@@ -343,8 +343,8 @@ export function LogsPage() {
 
               {selectedLabOnlyNote ? (
                 <div className="rounded-[1.5rem] border border-brand-orange/20 bg-brand-orange/5 px-4 py-4 text-sm text-brand-black/70">
-                  {selectedLabOnlyNote}. This log is presented as a safe imported classroom result, not an
-                  offensive automation workflow.
+                  {selectedLabOnlyNote}. This log is presented as a safe imported assessment result,
+                  not an offensive automation workflow.
                 </div>
               ) : null}
 

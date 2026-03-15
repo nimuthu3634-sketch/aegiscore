@@ -10,7 +10,7 @@ export const nmapDemoResults: NmapImportItem[] = [
     ],
     service_names: ["ssh", "ms-wbt-server", "winrm"],
     scan_timestamp: "2026-03-15T08:15:00Z",
-    scan_notes: "Authorized lab perimeter validation import from a scheduled classroom hardening review.",
+    scan_notes: "Authorized perimeter validation import from a scheduled hardening review.",
   },
   {
     host: "lab-db-01",
@@ -31,6 +31,6 @@ export const nmapDemoResults: NmapImportItem[] = [
     ],
     service_names: ["http", "https", "https-alt"],
     scan_timestamp: "2026-03-15T08:48:00Z",
-    scan_notes: "Safe lab-only result import for web service baseline comparison.",
+    scan_notes: "Authorized result import for web service baseline comparison.",
   },
 ];

@@ -45,7 +45,7 @@ def train_demo_anomaly_model(force_retrain: bool = True) -> dict[str, Any]:
         "feature_labels": metadata.feature_labels,
         "vectorized_feature_count": metadata.vectorized_feature_count,
         "trained_at": metadata.trained_at,
-        "message": "IsolationForest retrained on seeded demo SOC events.",
+        "message": "IsolationForest retrained on the seeded SOC event set.",
     }
 
 

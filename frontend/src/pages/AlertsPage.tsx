@@ -493,8 +493,8 @@ export function AlertsPage() {
 
               {selectedSourceNote ? (
                 <div className="rounded-[1.5rem] border border-brand-orange/20 bg-brand-orange/5 px-4 py-4 text-sm text-brand-black/70">
-                  {selectedSourceNote}. This alert is displayed as a safe imported classroom artifact,
-                  not as an offensive automation workflow.
+                  {selectedSourceNote}. This alert is displayed as a safe imported assessment
+                  artifact, not as an offensive automation workflow.
                 </div>
               ) : null}
 
@@ -611,7 +611,7 @@ export function AlertsPage() {
 
                 <p className="mt-3 text-xs text-brand-black/55">
                   {canEditStatus
-                    ? "Status changes update the live in-memory demo backend."
+                    ? "Status changes update the live in-memory backend."
                     : "Viewer accounts can review alerts but cannot change alert status."}
                 </p>
 

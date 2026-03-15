@@ -318,10 +318,10 @@ export function DashboardPage() {
       >
         <div className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
-            <p className="text-sm font-semibold text-white">Presentation focus</p>
+            <p className="text-sm font-semibold text-white">Operational visibility</p>
             <p className="mt-2 text-sm leading-6 text-brand-muted">
               Highlight real summary counts, alert patterns, anomaly scoring, and incident posture
-              while keeping all data limited to safe, lab-only monitoring and simulation artifacts.
+              while keeping imported assessment results read-only and safely scoped.
             </p>
           </div>
 
@@ -358,7 +358,7 @@ export function DashboardPage() {
               label="Total Alerts"
               value={dashboard.summary.total_alerts.toString()}
               change={`${dashboard.recentAlerts.length} latest queued`}
-              helper="Across all seeded lab telemetry sources"
+              helper="Across all active telemetry sources"
               tone="orange"
               icon={statIcons[0]}
             />
@@ -386,7 +386,7 @@ export function DashboardPage() {
               label="Resolved Incidents"
               value={dashboard.summary.resolved_incidents.toString()}
               change={`${dashboard.recentIncidents.filter((incident) => incident.status === "resolved").length} recently closed`}
-              helper="Ready for reporting and presentation follow-up"
+              helper="Ready for reporting and follow-up"
               tone="success"
               icon={statIcons[3]}
             />
@@ -395,7 +395,7 @@ export function DashboardPage() {
           <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
             <ChartCard
               title="Alerts over time"
-              description="Daily alert volume over the latest seven-day presentation window."
+              description="Daily alert volume over the latest seven-day reporting window."
               data={dashboard.charts.alerts_over_time.map((point) => ({
                 name: point.label,
                 total: point.total,
@@ -407,7 +407,7 @@ export function DashboardPage() {
             <div className="grid gap-6">
               <ChartCard
                 title="Alerts by severity"
-                description="Current priority distribution across the seeded alert queue."
+                description="Current priority distribution across the alert queue."
                 data={dashboard.charts.alerts_by_severity.map((point) => ({
                   label: formatSeverityLabel(point.severity),
                   count: point.count,
@@ -419,7 +419,7 @@ export function DashboardPage() {
 
               <ChartCard
                 title="Alerts by source tool"
-                description="Signal volume split across telemetry sources and lab imports."
+                description="Signal volume split across telemetry sources and authorized imports."
                 data={dashboard.charts.alerts_by_source_tool.map((point) => ({
                   label: formatToolName(point.source_tool),
                   count: point.count,
@@ -443,7 +443,7 @@ export function DashboardPage() {
                     {dashboard.anomalySummary.model_name}
                   </p>
                   <p className="mt-2 text-sm text-brand-black/65">
-                    Trained on {dashboard.anomalySummary.trained_on_events} demo events
+                    Trained on {dashboard.anomalySummary.trained_on_events} historical events
                   </p>
                 </div>
 
@@ -467,7 +467,7 @@ export function DashboardPage() {
                     {dashboard.anomalySummary.anomalous_alert_count}
                   </p>
                   <p className="mt-2 text-sm text-brand-black/65">
-                    Marked above the demo anomaly threshold
+                    Marked above the anomaly threshold
                   </p>
                 </div>
 
@@ -491,7 +491,7 @@ export function DashboardPage() {
 
             <SectionCard
               title="Top anomalous events"
-              description="Most unusual alerts currently in the queue, with simple explanation text for project demonstrations."
+              description="Most unusual alerts currently in the queue, with simple explanation text for analyst review."
             >
               <DataTable
                 columns={anomalousAlertColumns}

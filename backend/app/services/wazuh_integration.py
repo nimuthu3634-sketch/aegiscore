@@ -142,7 +142,7 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
     integration["last_import_message"] = (
         f"Imported {imported_alert_count} Wazuh alerts and {imported_log_count} logs."
     )
-    integration["notes"] = "Wazuh demo import ready for lab alert and log ingestion."
+    integration["notes"] = "Wazuh import ready for alert and log ingestion."
 
     return {
         "imported_alert_count": imported_alert_count,

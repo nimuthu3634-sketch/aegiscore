@@ -236,8 +236,8 @@ export function VirtualLabSection({
 
   return (
     <SectionCard
-      title="Virtual lab environment"
-      description="Track the VirtualBox-based classroom topology used for AegisCore validation, incident walkthroughs, and demo readiness."
+      title="Virtual environment"
+      description="Track the VirtualBox-based environment topology used for AegisCore operations and infrastructure readiness."
       eyebrow="VirtualBox"
     >
       {labError ? (
@@ -305,11 +305,12 @@ export function VirtualLabSection({
             rowKey={(row) => row.id}
             selectedRowKey={selectedVmId ?? undefined}
             onRowClick={(row) => setSelectedVmId(row.id)}
-            emptyMessage={isLoading ? "Loading lab inventory..." : "No lab VMs have been recorded yet."}
+            emptyMessage={isLoading ? "Loading VM inventory..." : "No VirtualBox VMs have been recorded yet."}
           />
 
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 px-4 py-4 text-sm leading-6 text-brand-black/65">
-            VirtualBox support is limited to inventory tracking and environment visualization for the authorized lab. AegisCore does not directly control, start, stop, or orchestrate VMs in this scaffold.
+            VirtualBox support is limited to inventory tracking and environment visualization.
+            AegisCore does not directly control, start, stop, or orchestrate VMs in this scaffold.
           </div>
         </div>
 
@@ -454,11 +455,11 @@ export function VirtualLabSection({
 
           <form className="panel p-5" onSubmit={handleCreateVm}>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-orange">
-              Register lab VM
+              Register environment VM
             </p>
             <h3 className="mt-2 text-xl font-semibold text-brand-black">Add to inventory</h3>
             <p className="mt-3 text-sm leading-6 text-brand-black/65">
-              Capture presentation-ready VM metadata for the classroom environment. This records inventory details only.
+              Capture VM metadata for the managed environment. This records inventory details only.
             </p>
 
             <div className="mt-5 space-y-4">
@@ -566,17 +567,18 @@ export function VirtualLabSection({
                   rows={4}
                   className="input-shell mt-2 w-full resize-none bg-brand-light outline-none"
                   disabled={!canManage}
-                  placeholder="Hosts archived logs for the weekly project presentation."
+                  placeholder="Hosts archived logs for weekly operations review."
                 />
               </label>
 
               {canManage ? (
                 <button type="submit" className="btn-secondary w-full" disabled={activeAction !== null}>
-                  {activeAction === "create" ? "Adding lab VM..." : "Add lab VM"}
+                  {activeAction === "create" ? "Adding VM..." : "Add VM"}
                 </button>
               ) : (
                 <div className="rounded-[1.25rem] border border-brand-black/8 bg-brand-light/60 px-4 py-4 text-sm leading-6 text-brand-black/65">
-                  Viewer accounts can inspect the seeded lab topology, while admins and analysts can add new inventory entries for demos.
+                  Viewer accounts can inspect the tracked environment, while admins and analysts can
+                  add new inventory entries.
                 </div>
               )}
             </div>

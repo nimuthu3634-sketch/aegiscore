@@ -34,7 +34,7 @@ def _sync_virtualbox_integration(last_message: str | None = None) -> None:
 
     sync_time = utc_now()
     integration["last_sync_at"] = sync_time
-    integration["notes"] = "VirtualBox lab inventory tracking and classroom readiness monitoring."
+    integration["notes"] = "VirtualBox inventory tracking and environment readiness monitoring."
 
     if last_message:
         integration["last_import_at"] = sync_time
@@ -66,7 +66,7 @@ def create_virtual_machine(payload: dict) -> dict:
     }
     DEMO_VIRTUAL_MACHINES.append(vm_record)
     _sync_virtualbox_integration(
-        f"Lab inventory updated. {len(DEMO_VIRTUAL_MACHINES)} VirtualBox VMs are now tracked."
+        f"Inventory updated. {len(DEMO_VIRTUAL_MACHINES)} VirtualBox VMs are now tracked."
     )
     return vm_record
 
@@ -79,5 +79,5 @@ def update_virtual_machine(vm_id: str, payload: dict) -> dict:
             value = payload[field]
             vm_record[field] = value.strip() if isinstance(value, str) else value
 
-    _sync_virtualbox_integration(f"Lab VM {vm_record['vm_name']} was updated for presentation tracking.")
+    _sync_virtualbox_integration(f"VirtualBox VM {vm_record['vm_name']} was updated in the inventory.")
     return vm_record

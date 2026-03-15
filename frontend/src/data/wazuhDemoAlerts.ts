@@ -59,7 +59,7 @@ export const wazuhDemoAlerts = [
       description: "Malware quarantine action reported by endpoint tooling",
       groups: ["malware", "windows", "defender"],
     },
-    full_log: "Windows Defender quarantined Trojan:Script/Wacatac.B!ml on classroom endpoint.",
+    full_log: "Windows Defender quarantined Trojan:Script/Wacatac.B!ml on managed endpoint.",
     data: {
       file: "C:\\Users\\Student\\Downloads\\payload.exe",
       action: "quarantined",

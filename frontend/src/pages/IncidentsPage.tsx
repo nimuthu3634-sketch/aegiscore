@@ -301,7 +301,7 @@ export function IncidentsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Incident workflow board"
-        description="Manage live cases linked to alert activity, route them to analysts, and keep notes and status updates ready for a clean project presentation."
+        description="Manage live cases linked to alert activity, route them to analysts, and keep notes and status updates aligned across the workflow."
         eyebrow="Incidents"
         action={
           <button
@@ -460,7 +460,7 @@ export function IncidentsPage() {
                 {getSourceNote(selectedIncident.source_tool) ? (
                   <div className="rounded-[1.5rem] border border-brand-orange/20 bg-brand-orange/5 px-4 py-4 text-sm text-brand-black/70">
                     {getSourceNote(selectedIncident.source_tool)}. This incident is linked to a safe
-                    imported classroom artifact rather than an offensive automation workflow.
+                    imported assessment artifact rather than an offensive automation workflow.
                   </div>
                 ) : null}
 
@@ -588,7 +588,7 @@ export function IncidentsPage() {
 
                 <p className="text-xs text-brand-black/55">
                   {canEdit
-                    ? "Analysts and admins can update the in-memory demo workflow for live presentations."
+                    ? "Analysts and admins can update the live in-memory workflow state."
                     : "Viewer accounts can inspect incidents but cannot edit assignment, notes, or status."}
                 </p>
 

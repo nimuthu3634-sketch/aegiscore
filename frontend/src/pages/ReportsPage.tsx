@@ -98,7 +98,7 @@ function formatRangeLabel(dateFrom: string | null | undefined, dateTo: string | 
     return `Through ${dateTo}`;
   }
 
-  return "All available demo data";
+  return "All available data";
 }
 
 function canGenerateReports(userRole: UserRole | undefined) {
@@ -126,7 +126,7 @@ function ReportsLoadingState() {
             label={label}
             value="--"
             change="Loading reporting feed"
-            helper="Preparing demo-ready reporting metrics"
+            helper="Preparing reporting metrics"
             tone="orange"
             icon={<ReportIcon className="h-5 w-5" />}
           />
@@ -256,7 +256,7 @@ export function ReportsPage() {
       {
         key: "owner",
         header: "Owner",
-        render: (report) => <span>{report.generated_by_name ?? "AegisCore Demo"}</span>,
+        render: (report) => <span>{report.generated_by_name ?? "AegisCore Operations"}</span>,
       },
       {
         key: "range",
@@ -499,7 +499,7 @@ export function ReportsPage() {
             <p className="mt-2 text-sm leading-6 text-brand-muted">
               {formatRangeLabel(appliedFilters.date_from ?? null, appliedFilters.date_to ?? null)}.
               This snapshot combines live alert counts, source coverage, incident status, and AI
-              anomaly indicators for the current demo range.
+              anomaly indicators for the current selected range.
             </p>
           </div>
 
@@ -513,7 +513,7 @@ export function ReportsPage() {
             </div>
             <p className="mt-3 text-sm leading-6 text-brand-muted">
               Admin and analyst roles can generate stored report snapshots. Viewer accounts can
-              still review summaries and export JSON for presentation use.
+              still review summaries and export JSON as needed.
             </p>
           </div>
         </div>
@@ -566,7 +566,7 @@ export function ReportsPage() {
               label="AI Flagged"
               value={summary?.anomaly_summary.anomalous_alert_count.toString() ?? "--"}
               change={`${summary?.anomaly_summary.high_anomaly_alert_count ?? 0} high anomaly`}
-              helper="Alerts marked as unusual by the demo model"
+              helper="Alerts marked as unusual by the anomaly model"
               tone="success"
               icon={<ShieldIcon className="h-5 w-5" />}
             />
@@ -613,7 +613,7 @@ export function ReportsPage() {
           <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
             <SectionCard
               title="Anomaly summary"
-              description="Explainable AI indicators that can be referenced directly in project demonstrations."
+              description="Explainable AI indicators that can be referenced directly in analyst review and reporting."
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
@@ -622,7 +622,7 @@ export function ReportsPage() {
                     {summary?.anomaly_summary.model_name}
                   </p>
                   <p className="mt-2 text-sm text-brand-black/65">
-                    Trained on {summary?.anomaly_summary.trained_on_events ?? 0} demo events
+                    Trained on {summary?.anomaly_summary.trained_on_events ?? 0} historical events
                   </p>
                 </div>
 
@@ -684,7 +684,7 @@ export function ReportsPage() {
 
           <SectionCard
             title="Generated reports"
-            description={`${reports.length} report snapshots are currently available for export and presentation review.`}
+            description={`${reports.length} report snapshots are currently available for export and review.`}
           >
             <DataTable
               columns={reportColumns}
