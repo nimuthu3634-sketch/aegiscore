@@ -24,6 +24,10 @@ import type {
   NmapImportPayload,
   NmapImportResponse,
   NmapIntegrationStatus,
+  ReportApiRecord,
+  ReportFilters,
+  ReportGeneratePayload,
+  ReportsSummaryResponse,
   SuricataImportPayload,
   SuricataImportResponse,
   SuricataIntegrationStatus,
@@ -267,6 +271,58 @@ export async function fetchLogById(token: string, logId: string) {
 
 export async function ingestLog(token: string, payload: LogIngestPayload) {
   return request<LogEntryRecord>("/logs/ingest", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchReports(token: string, filters: ReportFilters = {}) {
+  const queryParams = new URLSearchParams();
+
+  if (filters.date_from) {
+    queryParams.set("date_from", filters.date_from);
+  }
+
+  if (filters.date_to) {
+    queryParams.set("date_to", filters.date_to);
+  }
+
+  const queryString = queryParams.toString();
+
+  return request<ReportApiRecord[]>(`/reports${queryString ? `?${queryString}` : ""}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function fetchReportsSummary(token: string, filters: ReportFilters = {}) {
+  const queryParams = new URLSearchParams();
+
+  if (filters.date_from) {
+    queryParams.set("date_from", filters.date_from);
+  }
+
+  if (filters.date_to) {
+    queryParams.set("date_to", filters.date_to);
+  }
+
+  const queryString = queryParams.toString();
+
+  return request<ReportsSummaryResponse>(`/reports/summary${queryString ? `?${queryString}` : ""}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function generateReport(token: string, payload: ReportGeneratePayload) {
+  return request<ReportApiRecord>("/reports/generate", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

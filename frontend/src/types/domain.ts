@@ -8,6 +8,8 @@ export type AssignmentStatus = "assigned" | "unassigned" | "escalated";
 
 export type ReportStatus = "draft" | "scheduled" | "ready";
 
+export type ReportType = "executive" | "incident" | "operations" | "analytics";
+
 export type IntegrationStatus = "connected" | "degraded" | "pending" | "offline";
 
 export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra" | "virtualbox";
@@ -231,6 +233,92 @@ export interface IncidentRecord {
   affectedAsset: string;
   updatedAt: string;
   summary: string;
+}
+
+export interface ReportSeverityPoint {
+  severity: SeverityLevel;
+  count: number;
+}
+
+export interface ReportSourceToolPoint {
+  source_tool: SourceToolKey;
+  count: number;
+}
+
+export interface ReportIncidentStatusPoint {
+  status: IncidentStatus;
+  count: number;
+}
+
+export interface ReportsAnomalySummary {
+  model_name: string;
+  trained_on_events: number;
+  feature_labels: string[];
+  trained_at: string;
+  average_anomaly_score: number;
+  anomalous_alert_count: number;
+  high_anomaly_alert_count: number;
+  top_anomalous_alerts: AlertApiRecord[];
+}
+
+export interface ReportsSummaryResponse {
+  date_from: string | null;
+  date_to: string | null;
+  reports_generated: number;
+  draft_reports: number;
+  ready_reports: number;
+  filtered_alert_count: number;
+  filtered_incident_count: number;
+  alerts_by_severity: ReportSeverityPoint[];
+  alerts_by_source_tool: ReportSourceToolPoint[];
+  incidents_by_status: ReportIncidentStatusPoint[];
+  anomaly_summary: ReportsAnomalySummary;
+}
+
+export interface ReportSummarySnapshot {
+  reports_generated: number;
+  draft_reports: number;
+  ready_reports: number;
+  filtered_alert_count: number;
+  filtered_incident_count: number;
+  anomalous_alert_count: number;
+  high_anomaly_alert_count: number;
+  average_anomaly_score: number;
+}
+
+export interface ReportContentDateRange {
+  date_from: string | null;
+  date_to: string | null;
+}
+
+export interface ReportContentSnapshot {
+  date_range: ReportContentDateRange;
+  summary: ReportSummarySnapshot;
+  alerts_by_severity: ReportSeverityPoint[];
+  alerts_by_source_tool: ReportSourceToolPoint[];
+  incidents_by_status: ReportIncidentStatusPoint[];
+  anomaly_summary: ReportsAnomalySummary;
+}
+
+export interface ReportApiRecord {
+  id: string;
+  title: string;
+  report_type: ReportType;
+  generated_by_user_id: string | null;
+  generated_by_name: string | null;
+  content_json: ReportContentSnapshot;
+  status: ReportStatus;
+  created_at: string;
+}
+
+export interface ReportFilters {
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface ReportGeneratePayload extends ReportFilters {
+  title?: string;
+  report_type: ReportType;
 }
 
 export interface ReportMetric {
