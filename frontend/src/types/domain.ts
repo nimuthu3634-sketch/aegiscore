@@ -52,6 +52,39 @@ export interface DashboardRecentAlert {
   created_at: string;
 }
 
+export interface AlertApiRecord {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  source_tool: SourceToolKey;
+  severity: SeverityLevel;
+  status: AlertStatus;
+  confidence_score: number;
+  created_at: string;
+}
+
+export interface AlertListResponse {
+  items: AlertApiRecord[];
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+}
+
+export interface AlertFilters {
+  search?: string;
+  severity?: SeverityLevel;
+  status?: AlertStatus;
+  source_tool?: SourceToolKey;
+  page?: number;
+  page_size?: number;
+}
+
+export interface AlertStatusUpdatePayload {
+  status: AlertStatus;
+}
+
 export interface DashboardRecentIncident {
   id: string;
   title: string;

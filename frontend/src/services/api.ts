@@ -1,5 +1,9 @@
 import type { AuthResponse, AuthUser, LoginPayload, RegisterPayload } from "@/types/auth";
 import type {
+  AlertApiRecord,
+  AlertFilters,
+  AlertListResponse,
+  AlertStatusUpdatePayload,
   DashboardChartsResponse,
   DashboardRecentAlert,
   DashboardRecentIncident,
@@ -95,6 +99,59 @@ export async function fetchDashboardRecentIncidents(token: string) {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+}
+
+export async function fetchAlerts(token: string, filters: AlertFilters = {}) {
+  const queryParams = new URLSearchParams();
+
+  if (filters.search) {
+    queryParams.set("search", filters.search);
+  }
+
+  if (filters.severity) {
+    queryParams.set("severity", filters.severity);
+  }
+
+  if (filters.status) {
+    queryParams.set("status", filters.status);
+  }
+
+  if (filters.source_tool) {
+    queryParams.set("source_tool", filters.source_tool);
+  }
+
+  queryParams.set("page", String(filters.page ?? 1));
+  queryParams.set("page_size", String(filters.page_size ?? 8));
+
+  return request<AlertListResponse>(`/alerts?${queryParams.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function fetchAlertById(token: string, alertId: string) {
+  return request<AlertApiRecord>(`/alerts/${alertId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function patchAlertStatus(
+  token: string,
+  alertId: string,
+  payload: AlertStatusUpdatePayload,
+) {
+  return request<AlertApiRecord>(`/alerts/${alertId}/status`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
   });
 }
 
