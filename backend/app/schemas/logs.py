@@ -1,16 +1,32 @@
+from datetime import datetime
 from typing import Any
 
-from datetime import datetime
+from pydantic import BaseModel
 
+from app.core.enums import AlertSeverity
 from app.schemas.base import ORMModel
+
+
+class LogIngestRequest(BaseModel):
+    source: str | None = None
+    source_tool: str
+    raw_log: dict[str, Any]
+    timestamp: str | int | float | None = None
+    severity: str | int | float | None = None
+    event_type: str | None = None
 
 
 class LogEntryRead(ORMModel):
     id: str
     source: str
     source_tool: str
-    raw_log: str
+    raw_log: dict[str, Any]
     normalized_log: dict[str, Any]
     event_type: str
-    severity: str
+    severity: AlertSeverity
     created_at: datetime
+
+
+class LogListResponse(BaseModel):
+    items: list[LogEntryRead]
+    total_items: int

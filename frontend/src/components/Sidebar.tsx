@@ -6,6 +6,7 @@ import {
   AlertTriangleIcon,
   DashboardIcon,
   IncidentIcon,
+  LogIcon,
   PlugIcon,
   ReportIcon,
   SettingsIcon,
@@ -24,6 +25,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     dashboard: DashboardIcon,
     alerts: AlertTriangleIcon,
     incidents: IncidentIcon,
+    logs: LogIcon,
     reports: ReportIcon,
     integrations: PlugIcon,
     settings: SettingsIcon,
@@ -123,8 +125,8 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               </span>
             </div>
             <p className="mt-3 text-xs leading-5 text-brand-black/70">
-              Auth is live for demo access. Dashboard and workflow data still use student-friendly
-              mock content for presentation flow.
+              Auth, dashboard, alerts, incidents, and logs are live for demo access. Reports,
+              integrations, and settings remain scaffolded for presentation flow.
             </p>
           </div>
         </div>

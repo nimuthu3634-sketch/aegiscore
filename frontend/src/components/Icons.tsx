@@ -120,6 +120,18 @@ export function PlugIcon(props: IconProps) {
   );
 }
 
+export function LogIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M7 4h8l4 4v12H7z" />
+      <path d="M15 4v4h4" />
+      <path d="M10 11h6" />
+      <path d="M10 15h6" />
+      <path d="M10 19h4" />
+    </BaseIcon>
+  );
+}
+
 export function SettingsIcon(props: IconProps) {
   return (
     <BaseIcon {...props}>

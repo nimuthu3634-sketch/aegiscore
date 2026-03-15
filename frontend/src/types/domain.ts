@@ -147,6 +147,31 @@ export interface IncidentUpdatePayload {
   notes?: string;
 }
 
+export interface LogEntryRecord {
+  id: string;
+  source: string;
+  source_tool: string;
+  raw_log: Record<string, unknown>;
+  normalized_log: Record<string, unknown>;
+  event_type: string;
+  severity: SeverityLevel;
+  created_at: string;
+}
+
+export interface LogListResponse {
+  items: LogEntryRecord[];
+  total_items: number;
+}
+
+export interface LogIngestPayload {
+  source?: string;
+  source_tool: string;
+  raw_log: Record<string, unknown>;
+  timestamp?: string | number;
+  severity?: string | number;
+  event_type?: string;
+}
+
 export interface DashboardStat {
   label: string;
   value: string;

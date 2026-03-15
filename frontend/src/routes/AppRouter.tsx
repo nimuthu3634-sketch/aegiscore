@@ -13,6 +13,7 @@ const AlertsPage = lazy(async () => ({ default: (await import("@/pages/AlertsPag
 const IncidentsPage = lazy(async () => ({
   default: (await import("@/pages/IncidentsPage")).IncidentsPage,
 }));
+const LogsPage = lazy(async () => ({ default: (await import("@/pages/LogsPage")).LogsPage }));
 const ReportsPage = lazy(async () => ({ default: (await import("@/pages/ReportsPage")).ReportsPage }));
 const IntegrationsPage = lazy(async () => ({
   default: (await import("@/pages/IntegrationsPage")).IntegrationsPage,
@@ -45,6 +46,7 @@ export function AppRouter() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
+            <Route path="/logs" element={<LogsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

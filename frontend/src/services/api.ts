@@ -13,6 +13,9 @@ import type {
   IncidentListResponse,
   IncidentApiRecord,
   IncidentUpdatePayload,
+  LogEntryRecord,
+  LogIngestPayload,
+  LogListResponse,
 } from "@/types/domain";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -211,6 +214,34 @@ export async function patchIncident(
 ) {
   return request<IncidentApiRecord>(`/incidents/${incidentId}`, {
     method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchLogs(token: string) {
+  return request<LogListResponse>("/logs", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function fetchLogById(token: string, logId: string) {
+  return request<LogEntryRecord>(`/logs/${logId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function ingestLog(token: string, payload: LogIngestPayload) {
+  return request<LogEntryRecord>("/logs/ingest", {
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
     },
