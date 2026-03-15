@@ -2,7 +2,7 @@ from app.core.enums import AlertSeverity, AlertStatus, IntegrationHealth, Integr
 from app.services.alerts import create_alert
 from app.services.integrations import get_augmented_integration_by_tool, get_integration_by_tool, get_latest_alert_titles_for_tool
 from app.services.logs import create_log_record
-from app.services.mock_store import DEMO_LOGS
+from app.services.mock_store import DEMO_ALERTS, DEMO_LOGS
 from app.utils.log_normalization import normalize_timestamp
 from app.utils.time import utc_now
 

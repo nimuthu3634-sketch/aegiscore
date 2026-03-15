@@ -19,11 +19,7 @@ class IntegrationRead(ORMModel):
     last_import_message: str | None = None
 
 
-class WazuhImportRequest(BaseModel):
-    alerts: list[dict[str, Any]]
-
-
-class WazuhImportResponse(BaseModel):
+class DemoImportResponse(BaseModel):
     imported_alert_count: int
     imported_log_count: int
     skipped_count: int
@@ -31,26 +27,80 @@ class WazuhImportResponse(BaseModel):
     message: str
 
 
-class WazuhStatusResponse(IntegrationRead):
+class DemoIntegrationStatusResponse(IntegrationRead):
     available_demo_payloads: int
     latest_imported_alert_titles: list[str]
+
+
+class WazuhImportRequest(BaseModel):
+    alerts: list[dict[str, Any]]
+
+
+class WazuhImportResponse(DemoImportResponse):
+    pass
+
+
+class WazuhStatusResponse(DemoIntegrationStatusResponse):
+    pass
 
 
 class SuricataImportRequest(BaseModel):
     events: list[dict[str, Any]]
 
 
-class SuricataImportResponse(BaseModel):
-    imported_alert_count: int
-    imported_log_count: int
-    skipped_count: int
-    last_import_at: datetime
-    message: str
+class SuricataImportResponse(DemoImportResponse):
+    pass
 
 
-class SuricataStatusResponse(IntegrationRead):
-    available_demo_payloads: int
-    latest_imported_alert_titles: list[str]
+class SuricataStatusResponse(DemoIntegrationStatusResponse):
+    pass
+
+
+class NmapPortResult(BaseModel):
+    port: int
+    service_name: str | None = None
+    protocol: str = "tcp"
+    state: str = "open"
+
+
+class NmapImportItem(BaseModel):
+    host: str
+    open_ports: list[NmapPortResult]
+    service_names: list[str] = []
+    scan_timestamp: str | int | float | datetime | None = None
+    scan_notes: str | None = None
+
+
+class NmapImportRequest(BaseModel):
+    results: list[NmapImportItem]
+
+
+class NmapImportResponse(DemoImportResponse):
+    pass
+
+
+class NmapStatusResponse(DemoIntegrationStatusResponse):
+    pass
+
+
+class HydraImportItem(BaseModel):
+    target_system: str
+    protocol: str
+    result_summary: str
+    timestamp: str | int | float | datetime | None = None
+    notes: str | None = None
+
+
+class HydraImportRequest(BaseModel):
+    results: list[HydraImportItem]
+
+
+class HydraImportResponse(DemoImportResponse):
+    pass
+
+
+class HydraStatusResponse(DemoIntegrationStatusResponse):
+    pass
 
 
 class WazuhSampleAlertRead(BaseModel):

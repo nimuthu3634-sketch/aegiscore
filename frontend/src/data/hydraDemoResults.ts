@@ -1,0 +1,28 @@
+import type { HydraImportItem } from "@/types/domain";
+
+export const hydraDemoResults: HydraImportItem[] = [
+  {
+    target_system: "lab-ssh-01",
+    protocol: "ssh",
+    result_summary:
+      "Authorized classroom credential assessment import recorded a valid credential match for analyst_demo during the approved validation window.",
+    timestamp: "2026-03-15T09:05:00Z",
+    notes: "Imported result artifact from a controlled lab exercise. AegisCore does not run Hydra.",
+  },
+  {
+    target_system: "lab-vpn-01",
+    protocol: "http-post-form",
+    result_summary:
+      "Imported lab assessment summary recorded repeated failed attempts and a lockout threshold event for test accounts.",
+    timestamp: "2026-03-15T09:18:00Z",
+    notes: "Authorized lab-only review of credential policy resilience for presentation.",
+  },
+  {
+    target_system: "lab-db-01",
+    protocol: "ftp",
+    result_summary:
+      "Authorized credential assessment notes show password reuse indicators across multiple demo accounts.",
+    timestamp: "2026-03-15T09:26:00Z",
+    notes: "Result import only. No offensive automation or remote control is supported.",
+  },
+];

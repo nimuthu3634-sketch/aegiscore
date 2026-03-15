@@ -13,10 +13,16 @@ import type {
   IncidentListResponse,
   IncidentApiRecord,
   IncidentUpdatePayload,
+  HydraImportPayload,
+  HydraImportResponse,
+  HydraIntegrationStatus,
   IntegrationApiRecord,
   LogEntryRecord,
   LogIngestPayload,
   LogListResponse,
+  NmapImportPayload,
+  NmapImportResponse,
+  NmapIntegrationStatus,
   SuricataImportPayload,
   SuricataImportResponse,
   SuricataIntegrationStatus,
@@ -295,6 +301,44 @@ export async function fetchSuricataIntegrationStatus(token: string) {
 
 export async function importSuricataEvents(token: string, payload: SuricataImportPayload) {
   return request<SuricataImportResponse>("/integrations/suricata/import", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchNmapIntegrationStatus(token: string) {
+  return request<NmapIntegrationStatus>("/integrations/nmap/status", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function importNmapResults(token: string, payload: NmapImportPayload) {
+  return request<NmapImportResponse>("/integrations/nmap/import", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchHydraIntegrationStatus(token: string) {
+  return request<HydraIntegrationStatus>("/integrations/hydra/status", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function importHydraResults(token: string, payload: HydraImportPayload) {
+  return request<HydraImportResponse>("/integrations/hydra/import", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

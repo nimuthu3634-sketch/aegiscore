@@ -262,39 +262,73 @@ export interface IntegrationApiRecord {
   last_import_message: string | null;
 }
 
-export interface WazuhIntegrationStatus extends IntegrationApiRecord {
+export interface IntegrationImportStatus extends IntegrationApiRecord {
   available_demo_payloads: number;
   latest_imported_alert_titles: string[];
 }
+
+export interface IntegrationImportResponse {
+  imported_alert_count: number;
+  imported_log_count: number;
+  skipped_count: number;
+  last_import_at: string;
+  message: string;
+}
+
+export interface WazuhIntegrationStatus extends IntegrationImportStatus {}
 
 export interface WazuhImportPayload {
   alerts: Record<string, unknown>[];
 }
 
-export interface WazuhImportResponse {
-  imported_alert_count: number;
-  imported_log_count: number;
-  skipped_count: number;
-  last_import_at: string;
-  message: string;
-}
+export interface WazuhImportResponse extends IntegrationImportResponse {}
 
-export interface SuricataIntegrationStatus extends IntegrationApiRecord {
-  available_demo_payloads: number;
-  latest_imported_alert_titles: string[];
-}
+export interface SuricataIntegrationStatus extends IntegrationImportStatus {}
 
 export interface SuricataImportPayload {
   events: Record<string, unknown>[];
 }
 
-export interface SuricataImportResponse {
-  imported_alert_count: number;
-  imported_log_count: number;
-  skipped_count: number;
-  last_import_at: string;
-  message: string;
+export interface SuricataImportResponse extends IntegrationImportResponse {}
+
+export interface NmapPortResult {
+  port: number;
+  service_name?: string | null;
+  protocol?: string;
+  state?: string;
 }
+
+export interface NmapImportItem {
+  host: string;
+  open_ports: NmapPortResult[];
+  service_names: string[];
+  scan_timestamp?: string | number | null;
+  scan_notes?: string | null;
+}
+
+export interface NmapImportPayload {
+  results: NmapImportItem[];
+}
+
+export interface NmapIntegrationStatus extends IntegrationImportStatus {}
+
+export interface NmapImportResponse extends IntegrationImportResponse {}
+
+export interface HydraImportItem {
+  target_system: string;
+  protocol: string;
+  result_summary: string;
+  timestamp?: string | number | null;
+  notes?: string | null;
+}
+
+export interface HydraImportPayload {
+  results: HydraImportItem[];
+}
+
+export interface HydraIntegrationStatus extends IntegrationImportStatus {}
+
+export interface HydraImportResponse extends IntegrationImportResponse {}
 
 export interface SettingsItem {
   label: string;

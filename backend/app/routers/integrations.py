@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, status
 
 from app.core.enums import UserRole
 from app.schemas.integrations import (
+    HydraImportRequest,
+    HydraImportResponse,
+    HydraStatusResponse,
     IntegrationRead,
+    NmapImportRequest,
+    NmapImportResponse,
+    NmapStatusResponse,
     SuricataImportRequest,
     SuricataImportResponse,
     SuricataStatusResponse,
@@ -10,7 +16,9 @@ from app.schemas.integrations import (
     WazuhImportResponse,
     WazuhStatusResponse,
 )
+from app.services.hydra_integration import get_hydra_status, import_hydra_results
 from app.services.integrations import list_integrations
+from app.services.nmap_integration import get_nmap_status, import_nmap_results
 from app.services.suricata_integration import get_suricata_status, import_suricata_events
 from app.services.wazuh_integration import get_wazuh_status, import_wazuh_alerts
 from app.utils.auth import get_current_active_user, require_roles
@@ -59,3 +67,35 @@ def import_suricata_demo_data(
 ) -> SuricataImportResponse:
     result = import_suricata_events(payload.events)
     return SuricataImportResponse.model_validate(result)
+
+
+@router.get("/nmap/status", response_model=NmapStatusResponse)
+def get_nmap_integration_status(
+    current_user: dict = Depends(get_current_active_user),
+) -> NmapStatusResponse:
+    return NmapStatusResponse.model_validate(get_nmap_status())
+
+
+@router.post("/nmap/import", response_model=NmapImportResponse, status_code=status.HTTP_201_CREATED)
+def import_nmap_demo_data(
+    payload: NmapImportRequest,
+    current_user: dict = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+) -> NmapImportResponse:
+    result = import_nmap_results([item.model_dump() for item in payload.results])
+    return NmapImportResponse.model_validate(result)
+
+
+@router.get("/hydra/status", response_model=HydraStatusResponse)
+def get_hydra_integration_status(
+    current_user: dict = Depends(get_current_active_user),
+) -> HydraStatusResponse:
+    return HydraStatusResponse.model_validate(get_hydra_status())
+
+
+@router.post("/hydra/import", response_model=HydraImportResponse, status_code=status.HTTP_201_CREATED)
+def import_hydra_demo_data(
+    payload: HydraImportRequest,
+    current_user: dict = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+) -> HydraImportResponse:
+    result = import_hydra_results([item.model_dump() for item in payload.results])
+    return HydraImportResponse.model_validate(result)

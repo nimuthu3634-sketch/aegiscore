@@ -3,20 +3,30 @@ import { useEffect, useMemo, useState } from "react";
 import { PlugIcon, ShieldIcon } from "@/components/Icons";
 import { SectionCard } from "@/components/SectionCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { hydraDemoResults } from "@/data/hydraDemoResults";
 import { integrations as integrationMetadata } from "@/data/mock";
+import { nmapDemoResults } from "@/data/nmapDemoResults";
 import { suricataDemoEvents } from "@/data/suricataDemoEvents";
 import { wazuhDemoAlerts } from "@/data/wazuhDemoAlerts";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  fetchHydraIntegrationStatus,
   fetchIntegrationStatuses,
+  fetchNmapIntegrationStatus,
   fetchSuricataIntegrationStatus,
   fetchWazuhIntegrationStatus,
+  importHydraResults,
+  importNmapResults,
   importSuricataEvents,
   importWazuhAlerts,
 } from "@/services/api";
 import type { UserRole } from "@/types/auth";
 import type {
+  HydraIntegrationStatus,
   IntegrationApiRecord,
+  IntegrationImportResponse,
+  IntegrationImportStatus,
+  NmapIntegrationStatus,
   SourceToolKey,
   SuricataIntegrationStatus,
   WazuhIntegrationStatus,
@@ -39,6 +49,30 @@ function canImportPrimaryIntegrations(userRole: UserRole | undefined) {
   return userRole === "admin" || userRole === "analyst";
 }
 
+function isImportableTool(value: SourceToolKey): value is ImportableTool {
+  return value === "wazuh" || value === "suricata" || value === "nmap" || value === "hydra";
+}
+
+function isLabAssessmentTool(value: SourceToolKey) {
+  return value === "nmap" || value === "hydra";
+}
+
+function getImportMetricLabel(tool: SourceToolKey) {
+  return isLabAssessmentTool(tool) ? "Imported findings" : "Imported alerts";
+}
+
+function getDemoPayloadLabel(tool: ImportableTool) {
+  if (tool === "wazuh") {
+    return "alerts";
+  }
+
+  if (tool === "suricata") {
+    return "events";
+  }
+
+  return "assessment result sets";
+}
+
 const toolNameLookup: Record<string, SourceToolKey> = {
   Wazuh: "wazuh",
   Suricata: "suricata",
@@ -47,13 +81,53 @@ const toolNameLookup: Record<string, SourceToolKey> = {
   VirtualBox: "virtualbox",
 };
 
-type ImportableTool = "wazuh" | "suricata";
+type ImportableTool = "wazuh" | "suricata" | "nmap" | "hydra";
+
+type WorkflowCard = {
+  tool: ImportableTool;
+  title: string;
+  description: string;
+  emptyState: string;
+};
+
+const workflowCards: WorkflowCard[] = [
+  {
+    tool: "wazuh",
+    title: "Wazuh host telemetry",
+    description:
+      "Wazuh-style alert JSON can be imported on demand to create AegisCore alerts and normalized host log entries.",
+    emptyState: "No imported Wazuh demo alerts yet.",
+  },
+  {
+    tool: "suricata",
+    title: "Suricata network telemetry",
+    description:
+      "Suricata EVE-style events can be imported as demo data to generate network alerts and normalized logs for presentation flows.",
+    emptyState: "No imported Suricata demo alerts yet.",
+  },
+  {
+    tool: "nmap",
+    title: "Nmap assessment results",
+    description:
+      "Authorized lab-only Nmap result files are parsed into findings for service-exposure review. AegisCore does not run scans.",
+    emptyState: "No imported Nmap assessment findings yet.",
+  },
+  {
+    tool: "hydra",
+    title: "Hydra assessment results",
+    description:
+      "Authorized lab-only Hydra result artifacts are imported as credential-assessment findings. No offensive automation is supported.",
+    emptyState: "No imported Hydra assessment findings yet.",
+  },
+];
 
 export function IntegrationsPage() {
   const { token, user } = useAuth();
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationApiRecord[]>([]);
   const [wazuhStatus, setWazuhStatus] = useState<WazuhIntegrationStatus | null>(null);
   const [suricataStatus, setSuricataStatus] = useState<SuricataIntegrationStatus | null>(null);
+  const [nmapStatus, setNmapStatus] = useState<NmapIntegrationStatus | null>(null);
+  const [hydraStatus, setHydraStatus] = useState<HydraIntegrationStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeImportTool, setActiveImportTool] = useState<ImportableTool | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +147,10 @@ export function IntegrationsPage() {
       fetchIntegrationStatuses(token),
       fetchWazuhIntegrationStatus(token),
       fetchSuricataIntegrationStatus(token),
+      fetchNmapIntegrationStatus(token),
+      fetchHydraIntegrationStatus(token),
     ])
-      .then(([statuses, wazuh, suricata]) => {
+      .then(([statuses, wazuh, suricata, nmap, hydra]) => {
         if (!isActive) {
           return;
         }
@@ -82,6 +158,8 @@ export function IntegrationsPage() {
         setIntegrationStatuses(statuses);
         setWazuhStatus(wazuh);
         setSuricataStatus(suricata);
+        setNmapStatus(nmap);
+        setHydraStatus(hydra);
       })
       .catch((requestError: unknown) => {
         if (!isActive) {
@@ -114,10 +192,17 @@ export function IntegrationsPage() {
     setImportMessage(null);
 
     try {
-      const response =
-        tool === "wazuh"
-          ? await importWazuhAlerts(token, { alerts: wazuhDemoAlerts })
-          : await importSuricataEvents(token, { events: suricataDemoEvents });
+      let response: IntegrationImportResponse;
+
+      if (tool === "wazuh") {
+        response = await importWazuhAlerts(token, { alerts: wazuhDemoAlerts });
+      } else if (tool === "suricata") {
+        response = await importSuricataEvents(token, { events: suricataDemoEvents });
+      } else if (tool === "nmap") {
+        response = await importNmapResults(token, { results: nmapDemoResults });
+      } else {
+        response = await importHydraResults(token, { results: hydraDemoResults });
+      }
 
       setImportMessage(
         `${response.message} ${response.skipped_count > 0 ? `${response.skipped_count} duplicate payloads were skipped.` : ""}`.trim(),
@@ -139,9 +224,20 @@ export function IntegrationsPage() {
 
     return integrationMetadata.map((integration) => ({
       ...integration,
+      toolKey: toolNameLookup[integration.name],
       apiStatus: statusLookup.get(toolNameLookup[integration.name]),
     }));
   }, [integrationStatuses]);
+
+  const detailedStatusLookup = useMemo<Record<ImportableTool, IntegrationImportStatus | null>>(
+    () => ({
+      wazuh: wazuhStatus,
+      suricata: suricataStatus,
+      nmap: nmapStatus,
+      hydra: hydraStatus,
+    }),
+    [hydraStatus, nmapStatus, suricataStatus, wazuhStatus],
+  );
 
   const canImport = canImportPrimaryIntegrations(user?.role);
 
@@ -149,7 +245,7 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Integration readiness"
-        description="Monitor primary telemetry sources and import safe demo data from Wazuh and Suricata to populate alerts and logs for presentations."
+        description="Monitor host telemetry, network telemetry, and authorized lab assessment-result imports across Wazuh, Suricata, Nmap, and Hydra."
         eyebrow="Integrations"
         action={
           <button
@@ -177,9 +273,9 @@ export function IntegrationsPage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {mergedIntegrations.map((integration) => {
             const liveStatus = integration.apiStatus;
-            const isWazuh = integration.name === "Wazuh";
-            const isSuricata = integration.name === "Suricata";
-            const detailedStatus = isWazuh ? wazuhStatus : isSuricata ? suricataStatus : null;
+            const toolKey = integration.toolKey;
+            const importableTool = isImportableTool(toolKey) ? toolKey : null;
+            const detailedStatus = importableTool ? detailedStatusLookup[importableTool] : null;
 
             return (
               <div
@@ -202,6 +298,17 @@ export function IntegrationsPage() {
 
                 <p className="mt-4 text-sm leading-6 text-brand-black/70">{integration.description}</p>
 
+                {integration.labOnly ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-orange">
+                      {integration.note ?? "Authorized lab-only result ingestion"}
+                    </span>
+                    <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
+                      No offensive automation
+                    </span>
+                  </div>
+                ) : null}
+
                 <div className="mt-5 rounded-[1.25rem] bg-brand-light/70 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Last sync</p>
                   <p className="mt-2 text-sm font-medium text-brand-black">
@@ -211,7 +318,7 @@ export function IntegrationsPage() {
                   {detailedStatus ? (
                     <div className="mt-4 space-y-3 text-sm text-brand-black/70">
                       <div className="flex justify-between gap-4">
-                        <span>Imported alerts</span>
+                        <span>{getImportMetricLabel(toolKey)}</span>
                         <span className="font-semibold text-brand-black">
                           {detailedStatus.imported_alert_count}
                         </span>
@@ -230,34 +337,23 @@ export function IntegrationsPage() {
                       </div>
                     </div>
                   ) : null}
-
-                  {integration.note ? (
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">
-                      {integration.note}
-                    </p>
-                  ) : null}
                 </div>
 
-                {detailedStatus ? (
+                {detailedStatus && importableTool ? (
                   <div className="mt-5 space-y-3">
                     <button
                       type="button"
-                      onClick={() => handleImportSampleData(isWazuh ? "wazuh" : "suricata")}
+                      onClick={() => handleImportSampleData(importableTool)}
                       className="btn-primary w-full"
-                      disabled={
-                        !canImport ||
-                        activeImportTool !== null
-                      }
+                      disabled={!canImport || activeImportTool !== null}
                     >
-                      {activeImportTool === (isWazuh ? "wazuh" : "suricata")
+                      {activeImportTool === importableTool
                         ? "Importing sample data..."
                         : "Import sample data"}
                     </button>
                     <p className="text-xs leading-5 text-brand-black/55">
                       {canImport
-                        ? `${detailedStatus.available_demo_payloads} ${integration.name}-style demo ${
-                            isWazuh ? "alerts" : "events"
-                          } are ready to import into alerts and logs.`
+                        ? `${detailedStatus.available_demo_payloads} ${getDemoPayloadLabel(importableTool)} are ready to import for ${integration.name} demo workflows.`
                         : "Viewer accounts can inspect status, but only admins and analysts can run demo imports."}
                     </p>
                     {detailedStatus.last_import_message ? (
@@ -274,51 +370,51 @@ export function IntegrationsPage() {
       </SectionCard>
 
       <SectionCard
-        title="Primary telemetry workflow"
-        description="Wazuh and Suricata remain the main demo-ready import paths for host and network visibility inside AegisCore."
+        title="Telemetry and assessment workflows"
+        description="AegisCore keeps operational telemetry and lab validation imports in one presentation-ready view while preserving clear safety boundaries."
         tone="dark"
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
-            <div className="flex items-center gap-3">
-              <ShieldIcon className="h-5 w-5 text-brand-orange" />
-              <p className="font-semibold text-white">Wazuh host telemetry</p>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-brand-muted">
-              Wazuh-style alert JSON can be imported on demand to create AegisCore alerts and
-              normalized log entries from endpoint and agent events.
-            </p>
-            <div className="mt-4 space-y-2 text-sm text-brand-muted">
-              {wazuhStatus?.latest_imported_alert_titles.length ? (
-                wazuhStatus.latest_imported_alert_titles.map((title) => (
-                  <div key={title} className="rounded-[1rem] bg-brand-white/5 px-3 py-2">
-                    {title}
-                  </div>
-                ))
-              ) : (
-                <p>No imported Wazuh demo alerts yet.</p>
-              )}
-            </div>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {workflowCards.map((card) => {
+            const status = detailedStatusLookup[card.tool];
+            const isLabOnly = card.tool === "nmap" || card.tool === "hydra";
 
-          <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
-            <p className="font-semibold text-white">Suricata network telemetry</p>
-            <p className="mt-3 text-sm leading-6 text-brand-muted">
-              Suricata EVE-style network events can be imported as demo data to create normalized
-              logs and network alert records for threat-hunting presentations.
-            </p>
-            <div className="mt-4 space-y-2 text-sm text-brand-muted">
-              {suricataStatus?.latest_imported_alert_titles.length ? (
-                suricataStatus.latest_imported_alert_titles.map((title) => (
-                  <div key={title} className="rounded-[1rem] bg-brand-white/5 px-3 py-2">
-                    {title}
+            return (
+              <div
+                key={card.tool}
+                className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5"
+              >
+                <div className="flex items-center gap-3">
+                  <ShieldIcon className="h-5 w-5 text-brand-orange" />
+                  <p className="font-semibold text-white">{card.title}</p>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-brand-muted">{card.description}</p>
+
+                {isLabOnly ? (
+                  <div className="mt-4 space-y-2">
+                    <div className="rounded-[1rem] bg-brand-orange/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-orange">
+                      Authorized lab-only result ingestion
+                    </div>
+                    <div className="rounded-[1rem] bg-brand-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-muted">
+                      No offensive automation
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p>No imported Suricata demo alerts yet.</p>
-              )}
-            </div>
-          </div>
+                ) : null}
+
+                <div className="mt-4 space-y-2 text-sm text-brand-muted">
+                  {status?.latest_imported_alert_titles.length ? (
+                    status.latest_imported_alert_titles.map((title) => (
+                      <div key={title} className="rounded-[1rem] bg-brand-white/5 px-3 py-2">
+                        {title}
+                      </div>
+                    ))
+                  ) : (
+                    <p>{card.emptyState}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </SectionCard>
     </div>
