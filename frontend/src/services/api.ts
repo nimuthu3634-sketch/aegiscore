@@ -13,9 +13,13 @@ import type {
   IncidentListResponse,
   IncidentApiRecord,
   IncidentUpdatePayload,
+  IntegrationApiRecord,
   LogEntryRecord,
   LogIngestPayload,
   LogListResponse,
+  WazuhImportPayload,
+  WazuhImportResponse,
+  WazuhIntegrationStatus,
 } from "@/types/domain";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -241,6 +245,34 @@ export async function fetchLogById(token: string, logId: string) {
 
 export async function ingestLog(token: string, payload: LogIngestPayload) {
   return request<LogEntryRecord>("/logs/ingest", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchIntegrationStatuses(token: string) {
+  return request<IntegrationApiRecord[]>("/integrations/status", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function fetchWazuhIntegrationStatus(token: string) {
+  return request<WazuhIntegrationStatus>("/integrations/wazuh/status", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function importWazuhAlerts(token: string, payload: WazuhImportPayload) {
+  return request<WazuhImportResponse>("/integrations/wazuh/import", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

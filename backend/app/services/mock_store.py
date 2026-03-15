@@ -526,6 +526,8 @@ DEMO_INTEGRATIONS: list[dict] = [
         "status": IntegrationHealth.CONNECTED,
         "last_sync_at": hours_ago(1),
         "notes": "Primary endpoint telemetry source.",
+        "last_import_at": hours_ago(1),
+        "last_import_message": "Seeded Wazuh lab alerts available for dashboard and demo workflows.",
     },
     {
         "id": "integration-002",

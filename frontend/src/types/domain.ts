@@ -250,6 +250,35 @@ export interface IntegrationRecord {
   note?: string;
 }
 
+export interface IntegrationApiRecord {
+  id: string;
+  tool_name: SourceToolKey;
+  status: IntegrationStatus;
+  last_sync_at: string;
+  notes: string;
+  imported_alert_count: number;
+  imported_log_count: number;
+  last_import_at: string | null;
+  last_import_message: string | null;
+}
+
+export interface WazuhIntegrationStatus extends IntegrationApiRecord {
+  available_demo_payloads: number;
+  latest_imported_alert_titles: string[];
+}
+
+export interface WazuhImportPayload {
+  alerts: Record<string, unknown>[];
+}
+
+export interface WazuhImportResponse {
+  imported_alert_count: number;
+  imported_log_count: number;
+  skipped_count: number;
+  last_import_at: string;
+  message: string;
+}
+
 export interface SettingsItem {
   label: string;
   value: string;

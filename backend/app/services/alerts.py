@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 
 from app.core.enums import AlertSeverity, AlertStatus, IntegrationTool
 from app.services.mock_store import DEMO_ALERTS
+from app.utils.time import utc_now
 
 
 def _sorted_alerts() -> list[dict]:
@@ -77,6 +78,37 @@ def get_alert_by_id(alert_id: str) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found.")
 
     return alert
+
+
+def create_alert(
+    *,
+    title: str,
+    description: str,
+    source: str,
+    source_tool: IntegrationTool | str,
+    severity: AlertSeverity,
+    status_value: AlertStatus = AlertStatus.NEW,
+    confidence_score: float = 0.75,
+    created_at=None,
+    extra_fields: dict | None = None,
+) -> dict:
+    alert_record = {
+        "id": f"alert-{len(DEMO_ALERTS) + 1:03d}",
+        "title": title,
+        "description": description,
+        "source": source,
+        "source_tool": source_tool,
+        "severity": severity,
+        "status": status_value,
+        "confidence_score": confidence_score,
+        "created_at": created_at or utc_now(),
+    }
+
+    if extra_fields:
+        alert_record.update(extra_fields)
+
+    DEMO_ALERTS.append(alert_record)
+    return alert_record
 
 
 def update_alert_status(alert_id: str, alert_status: AlertStatus) -> dict:

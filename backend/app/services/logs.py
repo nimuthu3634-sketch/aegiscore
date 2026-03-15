@@ -21,11 +21,19 @@ def get_log_by_id(log_id: str) -> dict:
     return log_entry
 
 
-def ingest_log(payload: dict) -> dict:
+def create_log_record(payload: dict, extra_fields: dict | None = None) -> dict:
     normalized_entry = normalize_log_payload(payload)
     log_record = {
         "id": f"log-{len(DEMO_LOGS) + 1:03d}",
         **normalized_entry,
     }
+
+    if extra_fields:
+        log_record.update(extra_fields)
+
     DEMO_LOGS.append(log_record)
     return log_record
+
+
+def ingest_log(payload: dict) -> dict:
+    return create_log_record(payload)
