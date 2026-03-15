@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aegiscore-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aegiscore}
+      POSTGRES_USER: ${POSTGRES_USER:-aegiscore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aegiscore}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7-alpine
+    container_name: aegiscore-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aegiscore-backend
+    environment:
+      APP_NAME: AegisCore
+      APP_ENV: development
+      API_V1_PREFIX: /api/v1
+      SECRET_KEY: ${SECRET_KEY:-change-me-for-local-dev}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      DATABASE_URL: postgresql+psycopg://aegiscore:aegiscore@postgres:5432/aegiscore
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/workspace
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: aegiscore-frontend
+    environment:
+      VITE_APP_NAME: AegisCore
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      VITE_WS_URL: ws://localhost:8000/api/v1/ws/stream
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/workspace
+      - frontend_node_modules:/workspace/frontend/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  frontend_node_modules:
