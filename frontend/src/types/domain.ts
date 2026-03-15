@@ -96,6 +96,57 @@ export interface DashboardRecentIncident {
   updated_at: string;
 }
 
+export interface IncidentAssigneeOption {
+  id: string;
+  full_name: string;
+  email: string;
+  role: "admin" | "analyst" | "viewer";
+}
+
+export interface IncidentApiRecord {
+  id: string;
+  alert_id: string | null;
+  alert_title: string | null;
+  title: string;
+  priority: SeverityLevel;
+  status: IncidentStatus;
+  notes: string;
+  opened_at: string;
+  updated_at: string;
+  closed_at: string | null;
+  assigned_to_user_id: string | null;
+  assigned_to_name: string | null;
+  affected_asset: string;
+  source_tool: SourceToolKey | null;
+  summary: string;
+}
+
+export interface IncidentListResponse {
+  items: IncidentApiRecord[];
+  available_assignees: IncidentAssigneeOption[];
+  total_items: number;
+}
+
+export interface IncidentFilters {
+  priority?: SeverityLevel;
+  status?: IncidentStatus;
+  assignee_id?: string;
+}
+
+export interface IncidentCreatePayload {
+  alert_id: string;
+  assigned_to_user_id?: string | null;
+  priority?: SeverityLevel;
+  notes?: string;
+}
+
+export interface IncidentUpdatePayload {
+  assigned_to_user_id?: string | null;
+  priority?: SeverityLevel;
+  status?: IncidentStatus;
+  notes?: string;
+}
+
 export interface DashboardStat {
   label: string;
   value: string;

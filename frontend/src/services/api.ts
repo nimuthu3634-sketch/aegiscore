@@ -8,6 +8,11 @@ import type {
   DashboardRecentAlert,
   DashboardRecentIncident,
   DashboardSummaryResponse,
+  IncidentCreatePayload,
+  IncidentFilters,
+  IncidentListResponse,
+  IncidentApiRecord,
+  IncidentUpdatePayload,
 } from "@/types/domain";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -147,6 +152,64 @@ export async function patchAlertStatus(
   payload: AlertStatusUpdatePayload,
 ) {
   return request<AlertApiRecord>(`/alerts/${alertId}/status`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchIncidents(token: string, filters: IncidentFilters = {}) {
+  const queryParams = new URLSearchParams();
+
+  if (filters.priority) {
+    queryParams.set("priority", filters.priority);
+  }
+
+  if (filters.status) {
+    queryParams.set("status", filters.status);
+  }
+
+  if (filters.assignee_id) {
+    queryParams.set("assignee_id", filters.assignee_id);
+  }
+
+  const queryString = queryParams.toString();
+
+  return request<IncidentListResponse>(`/incidents${queryString ? `?${queryString}` : ""}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function fetchIncidentById(token: string, incidentId: string) {
+  return request<IncidentApiRecord>(`/incidents/${incidentId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function createIncident(token: string, payload: IncidentCreatePayload) {
+  return request<IncidentApiRecord>("/incidents", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchIncident(
+  token: string,
+  incidentId: string,
+  payload: IncidentUpdatePayload,
+) {
+  return request<IncidentApiRecord>(`/incidents/${incidentId}`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,

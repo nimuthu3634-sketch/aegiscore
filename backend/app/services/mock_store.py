@@ -45,6 +45,24 @@ DEMO_USERS: list[dict] = [
         "created_at": days_ago(120),
     },
     {
+        "id": "user-analyst-2",
+        "full_name": "Amaya Silva",
+        "email": "amaya.silva@aegiscore.local",
+        "password_hash": get_password_hash("password"),
+        "role": UserRole.ANALYST,
+        "is_active": True,
+        "created_at": days_ago(75),
+    },
+    {
+        "id": "user-analyst-3",
+        "full_name": "Maneesha Perera",
+        "email": "maneesha.perera@aegiscore.local",
+        "password_hash": get_password_hash("password"),
+        "role": UserRole.ANALYST,
+        "is_active": True,
+        "created_at": days_ago(60),
+    },
+    {
         "id": "user-viewer",
         "full_name": "AegisCore Viewer",
         "email": "viewer@aegiscore.local",
@@ -274,7 +292,7 @@ DEMO_INCIDENTS: list[dict] = [
     {
         "id": "incident-002",
         "alert_id": "alert-004",
-        "assigned_to_user_id": "user-admin",
+        "assigned_to_user_id": "user-analyst-2",
         "priority": AlertSeverity.CRITICAL,
         "status": IncidentStatus.TRIAGED,
         "notes": "Review the exposed management service from safe Nmap import results and document containment options.",
@@ -316,7 +334,7 @@ DEMO_INCIDENTS: list[dict] = [
     {
         "id": "incident-005",
         "alert_id": "alert-012",
-        "assigned_to_user_id": "user-admin",
+        "assigned_to_user_id": "user-analyst-3",
         "priority": AlertSeverity.HIGH,
         "status": IncidentStatus.IN_PROGRESS,
         "notes": "Correlate privilege escalation commands with the active hardening lab worksheet and analyst narrative.",
@@ -330,7 +348,7 @@ DEMO_INCIDENTS: list[dict] = [
     {
         "id": "incident-006",
         "alert_id": "alert-006",
-        "assigned_to_user_id": "user-admin",
+        "assigned_to_user_id": "user-analyst-2",
         "priority": AlertSeverity.MEDIUM,
         "status": IncidentStatus.RESOLVED,
         "notes": "Documented the VirtualBox drift, restored the approved baseline, and prepared presentation notes.",

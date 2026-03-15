@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { FilterIcon, SearchIcon } from "@/components/Icons";
@@ -6,7 +7,7 @@ import { SectionCard } from "@/components/SectionCard";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchAlertById, fetchAlerts, patchAlertStatus } from "@/services/api";
+import { createIncident, fetchAlertById, fetchAlerts, patchAlertStatus } from "@/services/api";
 import type { UserRole } from "@/types/auth";
 import type {
   AlertApiRecord,
@@ -78,6 +79,10 @@ function canUpdateAlerts(userRole: UserRole | undefined) {
   return userRole === "admin" || userRole === "analyst";
 }
 
+function canManageIncidents(userRole: UserRole | undefined) {
+  return userRole === "admin" || userRole === "analyst";
+}
+
 const alertColumns: DataTableColumn<AlertApiRecord>[] = [
   {
     key: "title",
@@ -121,6 +126,7 @@ const alertColumns: DataTableColumn<AlertApiRecord>[] = [
 ];
 
 export function AlertsPage() {
+  const navigate = useNavigate();
   const { token, user } = useAuth();
   const [alertsResponse, setAlertsResponse] = useState<AlertListResponse | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
@@ -137,6 +143,8 @@ export function AlertsPage() {
   const [listError, setListError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [incidentCreateLoading, setIncidentCreateLoading] = useState(false);
+  const [incidentMessage, setIncidentMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -262,11 +270,34 @@ export function AlertsPage() {
     }
   };
 
+  const handleCreateIncident = async () => {
+    if (!token || !selectedAlertId) {
+      return;
+    }
+
+    setIncidentCreateLoading(true);
+    setIncidentMessage(null);
+
+    try {
+      const incident = await createIncident(token, { alert_id: selectedAlertId });
+      navigate(`/incidents?incidentId=${incident.id}`);
+    } catch (requestError) {
+      setIncidentMessage(
+        requestError instanceof Error
+          ? requestError.message
+          : "The incident could not be created from this alert.",
+      );
+    } finally {
+      setIncidentCreateLoading(false);
+    }
+  };
+
   const totalPages = alertsResponse?.total_pages ?? 1;
   const totalItems = alertsResponse?.total_items ?? 0;
   const listItems = alertsResponse?.items ?? [];
   const selectedSourceNote = selectedAlert ? getSourceToolNote(selectedAlert.source_tool) : null;
   const canEditStatus = canUpdateAlerts(user?.role);
+  const canCreateIncident = canManageIncidents(user?.role);
 
   return (
     <div className="space-y-6">
@@ -546,6 +577,50 @@ export function AlertsPage() {
                 {updateMessage ? (
                   <div className="mt-4 rounded-[1.25rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-3 text-sm text-brand-black/75">
                     {updateMessage}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-brand-black">Incident escalation</p>
+                    <p className="mt-1 text-xs text-brand-black/55">
+                      Create a case from this alert to move it into the incident management workflow.
+                    </p>
+                  </div>
+                  <StatusBadge variant={selectedAlert.status}>
+                    {selectedAlert.status.replace("_", " ")}
+                  </StatusBadge>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={handleCreateIncident}
+                    className="btn-primary"
+                    disabled={!canCreateIncident || incidentCreateLoading}
+                  >
+                    {incidentCreateLoading ? "Creating..." : "Create incident from alert"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/incidents")}
+                    className="btn-secondary"
+                  >
+                    Open incidents
+                  </button>
+                </div>
+
+                <p className="mt-3 text-xs text-brand-black/55">
+                  {canCreateIncident
+                    ? "New incidents open in the Incidents module for assignment, notes, and status management."
+                    : "Viewer accounts can review alerts but cannot create incidents."}
+                </p>
+
+                {incidentMessage ? (
+                  <div className="mt-4 rounded-[1.25rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-3 text-sm text-brand-black/75">
+                    {incidentMessage}
                   </div>
                 ) : null}
               </div>
