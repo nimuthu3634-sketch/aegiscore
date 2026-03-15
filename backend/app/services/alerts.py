@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from app.services.anomaly import apply_anomaly_scoring, ensure_demo_alerts_scored
 from app.core.enums import AlertSeverity, AlertStatus, IntegrationTool
 from app.services.mock_store import DEMO_ALERTS
+from app.services.websocket import broadcast_alert_created
 from app.utils.time import utc_now
 
 
@@ -112,6 +113,7 @@ def create_alert(
 
     apply_anomaly_scoring(alert_record, reference_alerts=DEMO_ALERTS)
     DEMO_ALERTS.append(alert_record)
+    broadcast_alert_created(alert_record)
     return alert_record
 
 

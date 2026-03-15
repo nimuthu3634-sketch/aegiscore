@@ -15,6 +15,7 @@ import { SeverityBadge } from "@/components/SeverityBadge";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtime } from "@/hooks/useRealtime";
 import {
   fetchDashboardAnomalySummary,
   fetchDashboardCharts,
@@ -235,6 +236,7 @@ function DashboardErrorState({
 
 export function DashboardPage() {
   const { token } = useAuth();
+  const { refreshVersion } = useRealtime();
   const [dashboard, setDashboard] = useState<DashboardState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +291,7 @@ export function DashboardPage() {
     return () => {
       isActive = false;
     };
-  }, [token, reloadKey]);
+  }, [token, reloadKey, refreshVersion]);
 
   const handleRetry = () => {
     setReloadKey((currentValue) => currentValue + 1);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import { Header } from "@/components/Header";
+import { LiveAlertToast } from "@/components/LiveAlertToast";
 import { Sidebar } from "@/components/Sidebar";
 
 export function AppShell() {
@@ -10,6 +11,7 @@ export function AppShell() {
   return (
     <div className="soc-background min-h-screen text-brand-black">
       <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <LiveAlertToast />
 
       <div className="min-h-screen lg:pl-72">
         <Header onMenuClick={() => setMobileNavOpen(true)} />

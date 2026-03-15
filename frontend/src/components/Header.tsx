@@ -6,6 +6,7 @@ import logoUrl from "@repo-assets/aegiscore-logo.svg";
 
 import { BellIcon, ChevronDownIcon, MenuIcon, SearchIcon } from "@/components/Icons";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtime } from "@/hooks/useRealtime";
 import { navigationItems } from "@/types/navigation";
 
 type HeaderProps = {
@@ -18,6 +19,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { connectionStatus, liveAlertCount } = useRealtime();
   const page = pageLookup.get(location.pathname);
   const pageTitle = page?.label ?? "AegisCore";
   const pageDescription = page?.description ?? "Security operations workspace";
@@ -45,6 +47,19 @@ export function Header({ onMenuClick }: HeaderProps) {
     logout();
     navigate("/login", { replace: true });
   };
+
+  const liveStatusLabel =
+    connectionStatus === "connected"
+      ? "Live alerts connected"
+      : connectionStatus === "connecting"
+        ? "Connecting live alerts"
+        : "Live alerts offline";
+  const liveStatusTone =
+    connectionStatus === "connected"
+      ? "bg-brand-orange/10 text-brand-orange"
+      : connectionStatus === "connecting"
+        ? "bg-amber-100 text-amber-700"
+        : "bg-brand-black/5 text-brand-black/70";
 
   return (
     <header className="sticky top-0 z-20 border-b border-brand-black/5 bg-brand-light/90 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -74,8 +89,11 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <div className="inline-flex items-center rounded-full bg-brand-light px-3 py-1 text-xs font-medium text-brand-black/70">
-              Authenticated workspace
+            <div
+              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${liveStatusTone}`}
+            >
+              <span className="h-2 w-2 rounded-full bg-current" />
+              {liveStatusLabel}
             </div>
           </div>
         </div>
@@ -93,10 +111,15 @@ export function Header({ onMenuClick }: HeaderProps) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-brand-black/10 bg-white text-brand-black"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-brand-black/10 bg-white text-brand-black"
               aria-label="Notifications"
             >
               <BellIcon className="h-5 w-5" />
+              {liveAlertCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1.5 text-[11px] font-semibold text-white">
+                  {liveAlertCount}
+                </span>
+              ) : null}
             </button>
 
             <button

@@ -17,5 +17,13 @@ class ConnectionManager:
         await websocket.send_json(message)
 
     async def broadcast(self, message: dict) -> None:
-        for connection in self.active_connections:
-            await connection.send_json(message)
+        stale_connections: list[WebSocket] = []
+
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                stale_connections.append(connection)
+
+        for connection in stale_connections:
+            self.disconnect(connection)

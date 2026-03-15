@@ -1,23 +1,17 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.services.websocket import build_alert_stream_payload
-from app.ws.connection_manager import ConnectionManager
+from app.services.websocket import alert_stream_manager, build_alert_stream_ready_payload
 
 router = APIRouter()
-manager = ConnectionManager()
 
 
 @router.websocket("/alerts")
 async def alerts_websocket(websocket: WebSocket) -> None:
-    await manager.connect(websocket)
-    await manager.send_personal_message(build_alert_stream_payload(), websocket)
+    await alert_stream_manager.connect(websocket)
+    await alert_stream_manager.send_personal_message(build_alert_stream_ready_payload(), websocket)
 
     try:
         while True:
-            message = await websocket.receive_text()
-            await manager.send_personal_message(
-                {"event": "ack", "message": f"Received: {message}"},
-                websocket,
-            )
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        alert_stream_manager.disconnect(websocket)

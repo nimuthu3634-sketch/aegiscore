@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/SectionCard";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtime } from "@/hooks/useRealtime";
 import { createIncident, fetchAlertById, fetchAlerts, patchAlertStatus } from "@/services/api";
 import type { UserRole } from "@/types/auth";
 import type {
@@ -134,6 +135,7 @@ const alertColumns: DataTableColumn<AlertApiRecord>[] = [
 export function AlertsPage() {
   const navigate = useNavigate();
   const { token, user } = useAuth();
+  const { refreshVersion } = useRealtime();
   const [alertsResponse, setAlertsResponse] = useState<AlertListResponse | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<AlertApiRecord | null>(null);
@@ -206,7 +208,7 @@ export function AlertsPage() {
     return () => {
       isActive = false;
     };
-  }, [token, searchQuery, severityFilter, statusFilter, sourceToolFilter, page, reloadKey]);
+  }, [token, searchQuery, severityFilter, statusFilter, sourceToolFilter, page, reloadKey, refreshVersion]);
 
   useEffect(() => {
     if (!token || !selectedAlertId) {
@@ -246,7 +248,7 @@ export function AlertsPage() {
     return () => {
       isActive = false;
     };
-  }, [token, selectedAlertId, reloadKey]);
+  }, [token, selectedAlertId, reloadKey, refreshVersion]);
 
   const handleRetry = () => {
     setReloadKey((currentValue) => currentValue + 1);
