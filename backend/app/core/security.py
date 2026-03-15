@@ -8,9 +8,13 @@ from passlib.context import CryptContext
 from app.core.config import get_settings
 from app.core.enums import UserRole
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 ALGORITHM = "HS256"
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{get_settings().api_prefix}/auth/login" or "/auth/login")
+TOKEN_TYPE = "bearer"
+
+settings = get_settings()
+token_url = f"{settings.api_prefix}/auth/login" if settings.api_prefix else "/auth/login"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=token_url)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -22,7 +26,6 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(subject: str, role: UserRole, expires_delta: timedelta | None = None) -> str:
-    settings = get_settings()
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
@@ -31,7 +34,6 @@ def create_access_token(subject: str, role: UserRole, expires_delta: timedelta |
 
 
 def decode_access_token(token: str) -> dict:
-    settings = get_settings()
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
     except JWTError as error:

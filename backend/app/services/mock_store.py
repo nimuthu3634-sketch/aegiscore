@@ -1,4 +1,3 @@
-from datetime import datetime
 from uuid import uuid4
 
 from app.core.enums import (
@@ -19,7 +18,7 @@ DEMO_USERS: list[dict] = [
         "id": "user-admin",
         "full_name": "AegisCore Admin",
         "email": "admin@aegiscore.local",
-        "password_hash": get_password_hash("admin123"),
+        "password_hash": get_password_hash("password"),
         "role": UserRole.ADMIN,
         "is_active": True,
         "created_at": utc_now(),
@@ -28,8 +27,17 @@ DEMO_USERS: list[dict] = [
         "id": "user-analyst",
         "full_name": "AegisCore Analyst",
         "email": "analyst@aegiscore.local",
-        "password_hash": get_password_hash("analyst123"),
+        "password_hash": get_password_hash("password"),
         "role": UserRole.ANALYST,
+        "is_active": True,
+        "created_at": utc_now(),
+    },
+    {
+        "id": "user-viewer",
+        "full_name": "AegisCore Viewer",
+        "email": "viewer@aegiscore.local",
+        "password_hash": get_password_hash("password"),
+        "role": UserRole.VIEWER,
         "is_active": True,
         "created_at": utc_now(),
     },

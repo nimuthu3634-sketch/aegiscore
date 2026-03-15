@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import TOKEN_TYPE, create_access_token, get_password_hash, verify_password
 from app.services.mock_store import DEMO_USERS, build_user_record
 
 
@@ -26,7 +26,7 @@ def authenticate_user(email: str, password: str) -> dict:
 def login_user(email: str, password: str) -> dict:
     user = authenticate_user(email=email, password=password)
     access_token = create_access_token(subject=user["email"], role=user["role"])
-    return {**user, "access_token": access_token}
+    return {**user, "access_token": access_token, "token_type": TOKEN_TYPE}
 
 
 def register_user(full_name: str, email: str, password: str, role) -> dict:
@@ -43,7 +43,8 @@ def register_user(full_name: str, email: str, password: str, role) -> dict:
         role=role,
     )
     DEMO_USERS.append(user)
-    return user
+    access_token = create_access_token(subject=user["email"], role=user["role"])
+    return {**user, "access_token": access_token, "token_type": TOKEN_TYPE}
 
 
 def get_current_user_from_payload(payload: dict) -> dict:

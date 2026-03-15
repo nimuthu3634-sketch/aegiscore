@@ -25,8 +25,10 @@ export function SettingsPage() {
           </div>
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Status</p>
-            <p className="mt-3 text-lg font-semibold text-brand-black">Frontend-only mock state</p>
-            <p className="mt-2 text-sm text-brand-black/60">No backend calls are wired yet.</p>
+            <p className="mt-3 text-lg font-semibold text-brand-black">Auth connected</p>
+            <p className="mt-2 text-sm text-brand-black/60">
+              Login, registration, and current-user lookup are wired to the backend.
+            </p>
           </div>
         </div>
       </SectionCard>

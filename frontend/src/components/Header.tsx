@@ -1,8 +1,11 @@
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
 import logoUrl from "@repo-assets/aegiscore-logo.svg";
 
 import { BellIcon, ChevronDownIcon, MenuIcon, SearchIcon } from "@/components/Icons";
+import { useAuth } from "@/hooks/useAuth";
 import { navigationItems } from "@/types/navigation";
 
 type HeaderProps = {
@@ -12,10 +15,36 @@ type HeaderProps = {
 const pageLookup = new Map(navigationItems.map((item) => [item.path, item]));
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const page = pageLookup.get(location.pathname);
   const pageTitle = page?.label ?? "AegisCore";
   const pageDescription = page?.description ?? "Security operations workspace";
+  const roleLabel = useMemo(() => {
+    if (!user) {
+      return "Guest";
+    }
+
+    return user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  }, [user]);
+  const initials = useMemo(() => {
+    if (!user) {
+      return "AC";
+    }
+
+    return user.full_name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  }, [user]);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-brand-black/5 bg-brand-light/90 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -46,7 +75,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
           <div className="hidden items-center gap-3 lg:flex">
             <div className="inline-flex items-center rounded-full bg-brand-light px-3 py-1 text-xs font-medium text-brand-black/70">
-              Presentation-ready mock UI
+              Authenticated workspace
             </div>
           </div>
         </div>
@@ -75,13 +104,24 @@ export function Header({ onMenuClick }: HeaderProps) {
               className="inline-flex items-center gap-3 rounded-2xl border border-brand-black/10 bg-white px-3 py-2.5 text-left"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-orange text-sm font-semibold text-white">
-                AC
+                {initials}
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-semibold text-brand-black">Admin Console</p>
-                <p className="text-xs text-brand-black/55">Role placeholder</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-brand-black">
+                    {user?.full_name ?? "AegisCore User"}
+                  </p>
+                  <span className="rounded-full bg-brand-orange/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-orange">
+                    {roleLabel}
+                  </span>
+                </div>
+                <p className="text-xs text-brand-black/55">{user?.email ?? "No active session"}</p>
               </div>
               <ChevronDownIcon className="h-4 w-4 text-brand-black/45" />
+            </button>
+
+            <button type="button" onClick={handleLogout} className="btn-secondary">
+              Logout
             </button>
           </div>
         </div>

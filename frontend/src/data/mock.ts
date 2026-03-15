@@ -319,8 +319,8 @@ export const accountSettings: SettingsItem[] = [
 export const systemConfig: SettingsItem[] = [
   {
     label: "API Mode",
-    value: "Frontend mock data",
-    description: "Backend integration is intentionally disabled for this UI-focused pass.",
+    value: "Auth connected, data mocked",
+    description: "Authentication is wired to the backend while dashboard content stays mock-driven.",
   },
   {
     label: "Realtime Feed",

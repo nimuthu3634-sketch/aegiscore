@@ -73,7 +73,7 @@ docker compose up --build
 Services:
 - Frontend: [http://localhost:5173](http://localhost:5173)
 - Backend API: [http://localhost:8000](http://localhost:8000)
-- API docs: [http://localhost:8000/api/v1/docs](http://localhost:8000/api/v1/docs)
+- API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
@@ -88,13 +88,13 @@ Services:
 
 - Routes are grouped into `auth`, `dashboard`, `alerts`, `incidents`, `logs`, `reports`, `integrations`, and `websocket`.
 - Starter SQLAlchemy models and Pydantic schemas are separated into clean folders.
-- Health check endpoint: `GET /api/v1/health`
-- Demo auth users exist in the service layer for scaffold-only JWT login flow.
+- Health check endpoint: `GET /health`
+- JWT auth, login, registration, and current-user lookup are scaffolded for the demo flow.
 
 Demo users:
-- `admin@aegiscore.local` / `admin123`
-- `analyst@aegiscore.local` / `analyst123`
-- `viewer@aegiscore.local` / `viewer123`
+- `admin@aegiscore.local` / `password`
+- `analyst@aegiscore.local` / `password`
+- `viewer@aegiscore.local` / `password`
 
 ## Seed and demo data
 
@@ -116,8 +116,8 @@ This project is for defensive, lab-based monitoring only.
 
 ## Recommended next implementation steps
 
-1. Wire real authentication and token verification middleware.
-2. Add CRUD endpoints backed by PostgreSQL instead of placeholder service data.
+1. Replace the in-memory auth/data store with PostgreSQL-backed persistence.
+2. Add CRUD endpoints backed by SQLAlchemy sessions instead of placeholder service data.
 3. Implement ingestion parsers for Wazuh, Suricata, and safe lab-result files.
-4. Connect dashboard pages to backend endpoints.
+4. Connect dashboard data pages to backend resources beyond auth.
 5. Add seed fixtures for presentation-ready alerts, incidents, logs, and reports.

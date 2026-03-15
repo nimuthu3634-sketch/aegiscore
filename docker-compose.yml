@@ -28,7 +28,7 @@ services:
     environment:
       APP_NAME: AegisCore
       APP_ENV: development
-      API_V1_PREFIX: /api/v1
+      API_PREFIX: ""
       SECRET_KEY: ${SECRET_KEY:-change-me-for-local-dev}
       ACCESS_TOKEN_EXPIRE_MINUTES: 60
       DATABASE_URL: postgresql+psycopg://aegiscore:aegiscore@postgres:5432/aegiscore
@@ -49,8 +49,8 @@ services:
     container_name: aegiscore-frontend
     environment:
       VITE_APP_NAME: AegisCore
-      VITE_API_BASE_URL: http://localhost:8000/api/v1
-      VITE_WS_URL: ws://localhost:8000/api/v1/ws/stream
+      VITE_API_BASE_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000/ws/alerts
     ports:
       - "5173:5173"
     volumes:

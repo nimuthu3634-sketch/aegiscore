@@ -27,7 +27,11 @@ class UserRead(ORMModel):
     created_at: datetime
 
 
+class AuthenticatedUserResponse(UserRead):
+    pass
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user: UserRead
+    user: AuthenticatedUserResponse

@@ -1,11 +1,51 @@
-import { Link } from "react-router-dom";
+import { useMemo, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import logoUrl from "@repo-assets/aegiscore-logo.svg";
 
 import { ArrowRightIcon, ShieldIcon, UserIcon } from "@/components/Icons";
+import { useAuth } from "@/hooks/useAuth";
 import { StatusBadge } from "@/components/StatusBadge";
+import type { UserRole } from "@/types/auth";
 
 export function LoginPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login, register, isLoading } = useAuth();
+
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("analyst@aegiscore.local");
+  const [password, setPassword] = useState("password");
+  const [fullName, setFullName] = useState("AegisCore Analyst");
+  const [role, setRole] = useState<UserRole>("analyst");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const redirectPath = useMemo(() => {
+    const nextPath = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+    return nextPath ?? "/dashboard";
+  }, [location.state]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      if (mode === "login") {
+        await login({ email, password });
+      } else {
+        await register({ full_name: fullName, email, password, role });
+      }
+
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="soc-background min-h-screen px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center">
@@ -81,15 +121,47 @@ export function LoginPage() {
             </div>
 
             <p className="mt-4 text-sm leading-6 text-brand-black/65">
-              This frontend remains disconnected from the backend. Use the placeholder form and
-              continue into the dashboard shell for the presentation-ready UI.
+              Sign in with seeded demo credentials or create a new local demo account through the
+              backend auth scaffold.
             </p>
 
-            <form className="mt-8 space-y-5">
+            <div className="mt-8 inline-flex rounded-full bg-brand-light p-1">
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${mode === "login" ? "bg-brand-orange text-white" : "text-brand-black/65"}`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("register")}
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${mode === "register" ? "bg-brand-orange text-white" : "text-brand-black/65"}`}
+              >
+                Register
+              </button>
+            </div>
+
+            <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+              {mode === "register" ? (
+                <label className="block text-sm font-medium text-brand-black">
+                  Full name
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    placeholder="Your full name"
+                    className="input-shell mt-2 w-full bg-brand-light outline-none placeholder:text-brand-black/35"
+                  />
+                </label>
+              ) : null}
+
               <label className="block text-sm font-medium text-brand-black">
                 Email
                 <input
                   type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   placeholder="analyst@aegiscore.local"
                   className="input-shell mt-2 w-full bg-brand-light outline-none placeholder:text-brand-black/35"
                 />
@@ -99,27 +171,54 @@ export function LoginPage() {
                 Password
                 <input
                   type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter password"
                   className="input-shell mt-2 w-full bg-brand-light outline-none placeholder:text-brand-black/35"
                 />
               </label>
 
+              {mode === "register" ? (
+                <label className="block text-sm font-medium text-brand-black">
+                  Role
+                  <select
+                    value={role}
+                    onChange={(event) => setRole(event.target.value as UserRole)}
+                    className="input-shell mt-2 w-full bg-brand-light outline-none"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="analyst">Analyst</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </label>
+              ) : null}
+
               <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
                 <p className="text-sm font-semibold text-brand-black">Demo credentials</p>
                 <ul className="mt-3 space-y-2 text-sm text-brand-black/65">
-                  <li>admin@aegiscore.local / admin123</li>
-                  <li>analyst@aegiscore.local / analyst123</li>
-                  <li>viewer@aegiscore.local / viewer123</li>
+                  <li>admin@aegiscore.local / password</li>
+                  <li>analyst@aegiscore.local / password</li>
+                  <li>viewer@aegiscore.local / password</li>
                 </ul>
               </div>
 
+              {errorMessage ? (
+                <div className="rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {errorMessage}
+                </div>
+              ) : null}
+
               <div className="grid gap-3 sm:grid-cols-2">
-                <Link to="/dashboard" className="btn-primary inline-flex items-center justify-center gap-2">
-                  Continue
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isLoading}
+                  className="btn-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSubmitting ? "Please wait" : mode === "login" ? "Sign in" : "Create account"}
                   <ArrowRightIcon className="h-4 w-4" />
-                </Link>
+                </button>
                 <button type="button" className="btn-secondary">
-                  Forgot password
+                  Demo mode active
                 </button>
               </div>
             </form>
