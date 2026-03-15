@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { ContentCard } from "@/components/ContentCard";
+import { SectionCard } from "@/components/SectionCard";
 
 type ChartDataPoint = Record<string, string | number>;
 
@@ -32,12 +32,12 @@ export function ChartCard({
   variant = "area",
 }: ChartCardProps) {
   return (
-    <ContentCard title={title} description={description}>
+    <SectionCard title={title} description={description}>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           {variant === "bar" ? (
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#D9D9D9" vertical={false} />
+              <CartesianGrid strokeDasharray="4 4" stroke="#E7E7E7" vertical={false} />
               <XAxis dataKey={xKey} stroke="#111111" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#111111" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip />
@@ -51,7 +51,7 @@ export function ChartCard({
                   <stop offset="95%" stopColor="#FF7A1A" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#D9D9D9" vertical={false} />
+              <CartesianGrid strokeDasharray="4 4" stroke="#E7E7E7" vertical={false} />
               <XAxis dataKey={xKey} stroke="#111111" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#111111" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip />
@@ -66,6 +66,6 @@ export function ChartCard({
           )}
         </ResponsiveContainer>
       </div>
-    </ContentCard>
+    </SectionCard>
   );
 }

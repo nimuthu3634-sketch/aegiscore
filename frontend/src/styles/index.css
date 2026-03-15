@@ -11,7 +11,9 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f3f3f3;
+  background:
+    radial-gradient(circle at top left, rgba(255, 122, 26, 0.12), transparent 28%),
+    linear-gradient(180deg, #f7f7f7 0%, #f3f3f3 100%);
   color: #111111;
 }
 
@@ -26,17 +28,31 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-2xl bg-brand-orange px-4 py-2.5 text-sm font-semibold text-brand-white transition hover:bg-[#e8680a];
+    @apply inline-flex items-center justify-center rounded-2xl bg-brand-orange px-4 py-2.5 text-sm font-semibold text-brand-white transition hover:bg-[#e8680a] hover:shadow-lg hover:shadow-brand-orange/20;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded-2xl border border-brand-black/10 bg-white px-4 py-2.5 text-sm font-semibold text-brand-black transition hover:bg-brand-light;
   }
 
-  .soft-grid {
+  .panel {
+    @apply rounded-[1.5rem] border border-brand-black/5 bg-white shadow-panel;
+  }
+
+  .input-shell {
+    @apply rounded-2xl border border-brand-black/10 bg-white px-4 py-3 shadow-sm;
+  }
+
+  .soc-background {
+    background:
+      radial-gradient(circle at top right, rgba(255, 122, 26, 0.1), transparent 24%),
+      linear-gradient(180deg, #fafafa 0%, #f3f3f3 100%);
+  }
+
+  .ambient-grid {
     background-image:
-      linear-gradient(to right, rgba(17, 17, 17, 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(17, 17, 17, 0.04) 1px, transparent 1px);
-    background-size: 24px 24px;
+      linear-gradient(to right, rgba(17, 17, 17, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(17, 17, 17, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
 }

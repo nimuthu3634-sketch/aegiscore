@@ -1,26 +1,34 @@
-import type { ReactNode } from "react";
+import type { Key, ReactNode } from "react";
 
-type TableColumn = {
+export type DataTableColumn<T> = {
   key: string;
-  label: string;
+  header: string;
+  render: (row: T) => ReactNode;
   className?: string;
+  headerClassName?: string;
 };
 
-type TableRow = Record<string, ReactNode>;
-
-type DataTableProps = {
-  columns: TableColumn[];
-  rows: TableRow[];
+type DataTableProps<T> = {
+  columns: DataTableColumn<T>[];
+  rows: T[];
+  rowKey: (row: T) => Key;
   emptyMessage?: string;
+  compact?: boolean;
+  onRowClick?: (row: T) => void;
+  selectedRowKey?: Key;
 };
 
-export function DataTable({
+export function DataTable<T>({
   columns,
   rows,
+  rowKey,
   emptyMessage = "No records available yet.",
-}: DataTableProps) {
+  compact = false,
+  onRowClick,
+  selectedRowKey,
+}: DataTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-[1.25rem] border border-brand-black/5">
+    <div className="overflow-hidden rounded-[1.5rem] border border-brand-black/8 bg-white">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-brand-black/5">
           <thead className="bg-brand-light/70">
@@ -28,9 +36,9 @@ export function DataTable({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-brand-black/55"
+                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-brand-black/55 ${column.headerClassName ?? ""}`}
                 >
-                  {column.label}
+                  {column.header}
                 </th>
               ))}
             </tr>
@@ -46,14 +54,18 @@ export function DataTable({
                 </td>
               </tr>
             ) : (
-              rows.map((row, rowIndex) => (
-                <tr key={String(row.id ?? rowIndex)} className="hover:bg-brand-light/40">
+              rows.map((row) => (
+                <tr
+                  key={rowKey(row)}
+                  className={`hover:bg-brand-light/40 ${onRowClick ? "cursor-pointer" : ""} ${selectedRowKey === rowKey(row) ? "bg-brand-orange/5" : ""}`}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                >
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className={`px-4 py-4 align-top text-sm text-brand-black/75 ${column.className ?? ""}`}
+                      className={`align-top text-sm text-brand-black/75 ${compact ? "px-4 py-3" : "px-4 py-4"} ${column.className ?? ""}`}
                     >
-                      {row[column.key]}
+                      {column.render(row)}
                     </td>
                   ))}
                 </tr>

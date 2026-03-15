@@ -1,158 +1,335 @@
-export const dashboardMetrics = [
-  { label: "Active alerts", value: "128", change: "+14 today" },
-  { label: "Open incidents", value: "12", change: "2 escalated" },
-  { label: "Log events", value: "48.3K", change: "Wazuh + Suricata" },
-  { label: "Anomaly score", value: "0.72", change: "Model online" }
-];
+import type {
+  AlertRecord,
+  AlertsTrendPoint,
+  DashboardStat,
+  IncidentRecord,
+  IntegrationRecord,
+  ReportCategoryPoint,
+  ReportMetric,
+  ReportRecord,
+  ReportTrendPoint,
+  SeverityChartPoint,
+  SettingsItem,
+} from "@/types/domain";
 
-export const alertTrendData = [
-  { name: "Mon", alerts: 18 },
-  { name: "Tue", alerts: 24 },
-  { name: "Wed", alerts: 31 },
-  { name: "Thu", alerts: 22 },
-  { name: "Fri", alerts: 28 },
-  { name: "Sat", alerts: 19 },
-  { name: "Sun", alerts: 26 }
-];
-
-export const sourceCoverageData = [
-  { name: "Wazuh", value: 56 },
-  { name: "Suricata", value: 29 },
-  { name: "Nmap", value: 9 },
-  { name: "Hydra", value: 6 }
-];
-
-export const recentActivity = [
+export const dashboardStats: DashboardStat[] = [
   {
-    title: "Suspicious login burst detected",
-    meta: "Hydra lab simulation imported · 4 minutes ago"
+    label: "Total Alerts",
+    value: "128",
+    change: "+14 today",
+    helper: "Across all lab integrations",
+    tone: "orange",
   },
   {
-    title: "Suricata traffic anomaly flagged",
-    meta: "HTTP inspection rule matched · 12 minutes ago"
+    label: "Critical Alerts",
+    value: "09",
+    change: "4 unassigned",
+    helper: "Immediate analyst attention",
+    tone: "critical",
   },
   {
-    title: "Wazuh endpoint policy update completed",
-    meta: "3 agents refreshed · 27 minutes ago"
-  }
+    label: "Open Incidents",
+    value: "12",
+    change: "3 escalated",
+    helper: "Case workflow in progress",
+    tone: "dark",
+  },
+  {
+    label: "Resolved Incidents",
+    value: "34",
+    change: "+8 this week",
+    helper: "Presentation-ready closure trend",
+    tone: "success",
+  },
 ];
 
-export const alertRows = [
+export const alertsOverTime: AlertsTrendPoint[] = [
+  { label: "Mon", total: 18 },
+  { label: "Tue", total: 24 },
+  { label: "Wed", total: 31 },
+  { label: "Thu", total: 28 },
+  { label: "Fri", total: 34 },
+  { label: "Sat", total: 20 },
+  { label: "Sun", total: 27 },
+];
+
+export const alertsBySeverity: SeverityChartPoint[] = [
+  { severity: "Critical", count: 9 },
+  { severity: "High", count: 28 },
+  { severity: "Medium", count: 41 },
+  { severity: "Low", count: 50 },
+];
+
+export const alerts: AlertRecord[] = [
   {
     id: "ALT-1001",
-    title: "Multiple failed SSH logins",
+    title: "Repeated SSH authentication failures",
+    source: "Wazuh",
+    asset: "lab-web-01",
     severity: "high",
     status: "new",
-    source: "Wazuh",
-    time: "2026-03-15 10:24"
+    analyst: "Unassigned",
+    createdAt: "2026-03-15 10:24",
+    description:
+      "Wazuh reported repeated failed login attempts from a lab subnet against the web server.",
   },
   {
     id: "ALT-1002",
-    title: "Suricata detected uncommon DNS query",
+    title: "Suspicious DNS burst from analyst VLAN",
+    source: "Suricata",
+    asset: "sensor-east-02",
     severity: "medium",
     status: "triaged",
-    source: "Suricata",
-    time: "2026-03-15 10:07"
+    analyst: "M. Perera",
+    createdAt: "2026-03-15 10:07",
+    description:
+      "Suricata flagged an unusual volume of DNS requests for validation in the lab environment.",
   },
   {
     id: "ALT-1003",
-    title: "Hydra lab result imported",
+    title: "Lab Hydra import exceeded threshold",
+    source: "Hydra",
+    asset: "simulation-node-01",
     severity: "low",
     status: "resolved",
-    source: "Hydra",
-    time: "2026-03-15 09:48"
+    analyst: "K. Fernando",
+    createdAt: "2026-03-15 09:48",
+    description:
+      "Safe lab-only Hydra result ingestion produced elevated failed-attempt counts for demo review.",
   },
   {
     id: "ALT-1004",
-    title: "Open port exposure from scheduled Nmap sample",
-    severity: "critical",
-    status: "in_progress",
+    title: "Unexpected service exposure in scan results",
     source: "Nmap",
-    time: "2026-03-15 09:11"
-  }
+    asset: "lab-gateway-01",
+    severity: "critical",
+    status: "investigating",
+    analyst: "A. Silva",
+    createdAt: "2026-03-15 09:11",
+    description:
+      "Imported Nmap lab output shows an exposed service that requires analyst validation and case review.",
+  },
+  {
+    id: "ALT-1005",
+    title: "VirtualBox snapshot drift detected",
+    source: "VirtualBox",
+    asset: "sandbox-host-03",
+    severity: "medium",
+    status: "triaged",
+    analyst: "R. Jayasinghe",
+    createdAt: "2026-03-15 08:56",
+    description:
+      "A VirtualBox training image snapshot drifted from the approved classroom baseline.",
+  },
+  {
+    id: "ALT-1006",
+    title: "Kernel policy mismatch on endpoint",
+    source: "Wazuh",
+    asset: "endpoint-lab-07",
+    severity: "high",
+    status: "resolved",
+    analyst: "M. Perera",
+    createdAt: "2026-03-15 08:21",
+    description:
+      "Wazuh detected a policy mismatch during endpoint hardening checks on a lab workstation.",
+  },
 ];
 
-export const incidentRows = [
+export const incidents: IncidentRecord[] = [
   {
     id: "INC-201",
     title: "Credential attack rehearsal review",
     priority: "high",
-    owner: "Analyst Team",
     status: "in_progress",
-    updated: "10 minutes ago"
+    assignmentStatus: "assigned",
+    analyst: "A. Silva",
+    affectedAsset: "lab-web-01",
+    updatedAt: "10 minutes ago",
+    summary:
+      "Assess imported Hydra result artifacts and confirm the alert sequence aligns with the lab exercise scope.",
   },
   {
     id: "INC-202",
-    title: "Network anomaly validation",
+    title: "Northbound DNS anomaly validation",
     priority: "medium",
-    owner: "Blue Lab",
     status: "triaged",
-    updated: "32 minutes ago"
+    assignmentStatus: "assigned",
+    analyst: "M. Perera",
+    affectedAsset: "sensor-east-02",
+    updatedAt: "32 minutes ago",
+    summary:
+      "Review traffic telemetry, correlate with Suricata alerts, and prepare an analyst narrative for presentation.",
   },
   {
     id: "INC-203",
     title: "Endpoint hardening follow-up",
     priority: "low",
-    owner: "Admin",
     status: "resolved",
-    updated: "1 hour ago"
-  }
+    assignmentStatus: "escalated",
+    analyst: "Admin Review",
+    affectedAsset: "endpoint-lab-07",
+    updatedAt: "1 hour ago",
+    summary:
+      "Document remediation evidence and track final approval before archiving the case as complete.",
+  },
+  {
+    id: "INC-204",
+    title: "Snapshot integrity investigation",
+    priority: "medium",
+    status: "open",
+    assignmentStatus: "unassigned",
+    analyst: "Needs assignment",
+    affectedAsset: "sandbox-host-03",
+    updatedAt: "2 hours ago",
+    summary:
+      "Validate whether the VirtualBox baseline drift was expected or caused by a configuration deviation.",
+  },
 ];
 
-export const reportRows = [
+export const reportMetrics: ReportMetric[] = [
+  { label: "Reports Generated", value: "24", detail: "Last 30 days" },
+  { label: "Avg. Build Time", value: "02m 14s", detail: "Presentation exports" },
+  { label: "Critical Cases Included", value: "11", detail: "Executive focus" },
+];
+
+export const reportTrend: ReportTrendPoint[] = [
+  { label: "Week 1", incidents: 6 },
+  { label: "Week 2", incidents: 8 },
+  { label: "Week 3", incidents: 9 },
+  { label: "Week 4", incidents: 7 },
+];
+
+export const reportCategories: ReportCategoryPoint[] = [
+  { label: "Alerts", value: 32 },
+  { label: "Incidents", value: 18 },
+  { label: "Compliance", value: 11 },
+  { label: "Anomalies", value: 15 },
+];
+
+export const reports: ReportRecord[] = [
   {
     id: "REP-01",
-    name: "Weekly SOC posture",
-    type: "Executive summary",
+    name: "Weekly SOC executive summary",
+    owner: "Admin Console",
+    range: "2026-03-08 to 2026-03-15",
     status: "ready",
-    generatedBy: "Admin",
-    schedule: "Every Friday"
+    generatedAt: "2026-03-15 09:40",
   },
   {
     id: "REP-02",
-    name: "Lab anomaly digest",
-    type: "ML insights",
+    name: "Analyst triage digest",
+    owner: "M. Perera",
+    range: "2026-03-01 to 2026-03-15",
     status: "draft",
-    generatedBy: "Analyst",
-    schedule: "On demand"
+    generatedAt: "2026-03-15 08:05",
   },
   {
     id: "REP-03",
-    name: "Integration coverage",
-    type: "Operational",
-    status: "ready",
-    generatedBy: "Viewer",
-    schedule: "Every Monday"
-  }
+    name: "Lab anomaly overview",
+    owner: "A. Silva",
+    range: "2026-02-15 to 2026-03-15",
+    status: "scheduled",
+    generatedAt: "Next run 2026-03-18",
+  },
 ];
 
-export const integrationRows = [
+export const integrations: IntegrationRecord[] = [
   {
     id: "INT-01",
-    name: "Wazuh manager",
+    name: "Wazuh",
+    vendor: "Endpoint telemetry",
     status: "connected",
-    mode: "Log ingestion",
-    lastSync: "2 minutes ago"
+    description: "Centralized endpoint monitoring and alert enrichment for lab hosts.",
+    lastSync: "2 minutes ago",
   },
   {
     id: "INT-02",
-    name: "Suricata sensor",
+    name: "Suricata",
+    vendor: "Network IDS",
     status: "connected",
-    mode: "Alert enrichment",
-    lastSync: "5 minutes ago"
+    description: "Network alert stream with packet-inspection context and severity mapping.",
+    lastSync: "5 minutes ago",
   },
   {
     id: "INT-03",
-    name: "Nmap lab import",
+    name: "Nmap",
+    vendor: "Lab result ingestion",
     status: "pending",
-    mode: "Safe result parsing",
-    lastSync: "Awaiting sample file"
+    description: "Parses imported scan-result files for safe classroom visualization only.",
+    lastSync: "Awaiting sample file",
+    labOnly: true,
+    note: "Lab-only safe integration",
   },
   {
     id: "INT-04",
-    name: "Hydra lab import",
+    name: "Hydra",
+    vendor: "Lab result ingestion",
     status: "pending",
-    mode: "Simulation ingest",
-    lastSync: "Awaiting sample file"
-  }
+    description: "Displays imported credential-testing results from controlled simulations only.",
+    lastSync: "Awaiting sample file",
+    labOnly: true,
+    note: "Lab-only safe integration",
+  },
+  {
+    id: "INT-05",
+    name: "VirtualBox",
+    vendor: "Lab infrastructure",
+    status: "degraded",
+    description: "Tracks VM baseline state, snapshot drift, and classroom environment readiness.",
+    lastSync: "15 minutes ago",
+  },
+];
+
+export const brandingSettings: SettingsItem[] = [
+  {
+    label: "Primary Accent",
+    value: "#FF7A1A",
+    description: "Buttons, chart accents, active navigation, and status highlights.",
+  },
+  {
+    label: "Sidebar Surface",
+    value: "#1A1A1A",
+    description: "Dark operational shell used for the main left navigation.",
+  },
+  {
+    label: "Workspace Background",
+    value: "#F3F3F3",
+    description: "Light content surface that keeps dense dashboard data readable.",
+  },
+];
+
+export const accountSettings: SettingsItem[] = [
+  {
+    label: "Display Name",
+    value: "Admin Console",
+    description: "Placeholder account profile for the current presentation session.",
+  },
+  {
+    label: "Role",
+    value: "Admin",
+    description: "Role-based access placeholder until backend JWT wiring is connected.",
+  },
+  {
+    label: "Workspace",
+    value: "AegisCore Lab SOC",
+    description: "Current team environment for cybersecurity lab monitoring demos.",
+  },
+];
+
+export const systemConfig: SettingsItem[] = [
+  {
+    label: "API Mode",
+    value: "Frontend mock data",
+    description: "Backend integration is intentionally disabled for this UI-focused pass.",
+  },
+  {
+    label: "Realtime Feed",
+    value: "Placeholder",
+    description: "WebSocket stream can later power notifications, status tiles, and case updates.",
+  },
+  {
+    label: "Export Mode",
+    value: "Manual trigger",
+    description: "Presentation reports are scaffolded with UI controls and mock output rows.",
+  },
 ];
