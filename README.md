@@ -1,8 +1,12 @@
 # AegisCore
 
-AegisCore is a final-year university project: an AI-integrated Security Operations Center (SOC) web application for lab-based cybersecurity monitoring, alert triage, incident management, reporting, and safe classroom data ingestion.
+AegisCore is a final-year university project: an AI-integrated Security
+Operations Center (SOC) web application for lab-based cybersecurity
+monitoring, alert triage, incident management, reporting, and safe classroom
+data ingestion.
 
 The repository is organized as a monorepo with:
+
 - a React + TypeScript + Vite frontend
 - a FastAPI backend
 - PostgreSQL and Redis for local infrastructure
@@ -27,6 +31,7 @@ The repository is organized as a monorepo with:
 ## Prerequisites
 
 ### Local development
+
 - Python 3.12
 - Node.js 20+
 - npm 10+
@@ -34,15 +39,19 @@ The repository is organized as a monorepo with:
 - Redis 7 if you want local Redis outside Docker
 
 ### Docker development
+
 - Docker Desktop with `docker compose`
 
 ## Quick overview
 
-- The UI is demo-ready out of the box with seeded in-memory alerts, incidents, logs, integrations, lab assets, and reports.
+- The UI is demo-ready out of the box with seeded in-memory alerts,
+  incidents, logs, integrations, lab assets, and reports.
 - On backend startup, AegisCore now:
+
   - creates SQLAlchemy tables when the database is reachable
   - syncs demo records into the database for supported models
   - prepares the anomaly detection model
+
 - This means a fresh setup already looks populated for presentations.
 
 ## Environment files
@@ -78,6 +87,7 @@ Copy-Item backend/.env.example backend/.env
 ### Environment variables used
 
 #### Root `.env`
+
 - `POSTGRES_DB`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
@@ -86,6 +96,7 @@ Copy-Item backend/.env.example backend/.env
 - `VITE_WS_URL`
 
 #### `backend/.env`
+
 - `APP_NAME`
 - `APP_ENV`
 - `API_PREFIX`
@@ -101,6 +112,7 @@ Copy-Item backend/.env.example backend/.env
 - `CORS_ORIGINS`
 
 #### `frontend/.env`
+
 - `VITE_APP_NAME`
 - `VITE_API_BASE_URL`
 - `VITE_WS_URL`
@@ -147,6 +159,7 @@ uvicorn app.main:app --reload
 ```
 
 Backend URLs:
+
 - API: [http://localhost:8000](http://localhost:8000)
 - Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
@@ -159,6 +172,7 @@ npm run dev
 ```
 
 Frontend URL:
+
 - App: [http://localhost:5173](http://localhost:5173)
 
 ## Docker setup
@@ -176,6 +190,7 @@ docker compose up --build
 ```
 
 Services:
+
 - Frontend: [http://localhost:5173](http://localhost:5173)
 - Backend API: [http://localhost:8000](http://localhost:8000)
 - FastAPI docs: [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -183,6 +198,7 @@ Services:
 - Redis: `localhost:6379`
 
 Docker notes:
+
 - PostgreSQL and Redis now have health checks.
 - Backend waits for PostgreSQL and Redis.
 - Frontend waits for the backend.
@@ -227,19 +243,24 @@ docker compose up --build
 
 1. Start the stack locally or with Docker.
 2. Sign in with one of the demo users.
-3. Open the Dashboard to see seeded alerts, incidents, charts, AI insights, and recent activity.
+3. Open the Dashboard to see seeded alerts, incidents, charts, AI insights,
+   and recent activity.
 4. Open Alerts and Incidents to review the seeded workflow data.
 5. Open Integrations and use `Import sample data` on:
+
    - Wazuh
    - Suricata
    - Nmap
    - Hydra
-6. Watch the live alert toast and notification badge update through WebSockets when new alerts are imported.
+
+6. Watch the live alert toast and notification badge update through
+   WebSockets when new alerts are imported.
 7. Open Reports to generate a report snapshot and export JSON if needed.
 
 ## Sample data sources available
 
 The project includes demo/sample sources for:
+
 - Wazuh alert import
 - Suricata event import
 - Nmap authorized lab-only result ingestion
@@ -248,6 +269,7 @@ The project includes demo/sample sources for:
 - VirtualBox lab environment tracking
 
 Reference files in `docs/`:
+
 - `docs/sample-wazuh-alerts.json`
 - `docs/sample-suricata-events.json`
 - `docs/sample-nmap-results.json`
@@ -259,6 +281,7 @@ Reference files in `docs/`:
 ### Recommended demo path
 
 Use the **Integrations** page in the frontend:
+
 - Wazuh card -> `Import sample data`
 - Suricata card -> `Import sample data`
 - Nmap card -> `Import sample data`
@@ -269,6 +292,7 @@ Use the **Logs** page to inspect log entries and compare raw vs normalized data.
 ### Important safety boundary
 
 Nmap and Hydra support is limited to:
+
 - importing previously generated authorized lab results
 - parsing safe structured outputs
 - converting them into alerts/findings
@@ -281,6 +305,7 @@ No offensive execution, automation, remote control, or attack launching is imple
 AegisCore includes a small, explainable anomaly detection layer built with scikit-learn.
 
 ### What features are used
+
 - alert severity
 - hour of day
 - after-hours indicator
@@ -290,21 +315,26 @@ AegisCore includes a small, explainable anomaly detection layer built with sciki
 - keyword counts from login, credential, network, and service-related text
 
 ### How the anomaly score is generated
+
 - the backend trains an `IsolationForest` model on demo SOC events
 - each alert is converted into a simple numeric feature set
 - the model generates an outlier score
-- the score is normalized into a clear demo-friendly anomaly score between `0.0` and `1.0`
+- the score is normalized into a clear demo-friendly anomaly score between
+  `0.0` and `1.0`
 - short explanations are attached, such as:
+
   - `unusual login volume`
   - `abnormal source frequency`
   - `unusual service/port activity`
 
 ### Where it appears
+
 - Dashboard AI insights widget
 - Alerts list and alert detail panels
 - Reports summary and anomaly sections
 
 ### Why it fits a student project
+
 - easy to explain during a viva or demo
 - lightweight enough for local development
 - simple to retrain on demo data
@@ -313,6 +343,7 @@ AegisCore includes a small, explainable anomaly detection layer built with sciki
 ## Backend overview
 
 Main backend modules:
+
 - `auth`
 - `dashboard`
 - `alerts`
@@ -324,6 +355,7 @@ Main backend modules:
 - `websocket`
 
 Important routes:
+
 - `GET /health`
 - `POST /auth/login`
 - `GET /dashboard/summary`
@@ -341,6 +373,7 @@ Important routes:
 ## Frontend overview
 
 Main frontend pages:
+
 - Login
 - Dashboard
 - Alerts
@@ -351,6 +384,7 @@ Main frontend pages:
 - Settings
 
 Shared UI includes:
+
 - branded sidebar and header
 - live alert toast
 - summary cards
@@ -375,6 +409,9 @@ npm run build
 ## Notes for students
 
 - Start with Docker if you want the easiest setup for PostgreSQL and Redis.
-- Start with local `uvicorn` + `npm run dev` if you want faster frontend/backend iteration.
-- The app already includes seeded demo content, so you do not need to build business logic first to get a good presentation flow.
-- If PostgreSQL is not available locally, the frontend and most backend demo flows still work because the main presentation data is seeded in memory.
+- Start with local `uvicorn` + `npm run dev` if you want faster
+  frontend/backend iteration.
+- The app already includes seeded demo content, so you do not need to build
+  business logic first to get a good presentation flow.
+- If PostgreSQL is not available locally, the frontend and most backend demo
+  flows still work because the main presentation data is seeded in memory.
