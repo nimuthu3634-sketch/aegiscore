@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from app.core.enums import IntegrationType
+from app.core.enums import IntegrationHealth, IntegrationTool
 from app.schemas.base import ORMModel
 
 
 class IntegrationRead(ORMModel):
     id: str
-    name: str
-    integration_type: IntegrationType
-    is_enabled: bool
+    tool_name: IntegrationTool
+    status: IntegrationHealth
     last_sync_at: datetime
+    notes: str

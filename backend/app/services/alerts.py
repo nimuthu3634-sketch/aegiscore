@@ -1,26 +1,15 @@
-from app.core.enums import AlertSeverity, AlertStatus
-from app.utils.time import utc_now
+from fastapi import HTTPException, status
+
+from app.services.mock_store import DEMO_ALERTS
 
 
 def list_alerts() -> list[dict]:
-    now = utc_now()
-    return [
-        {
-            "id": "ALT-1001",
-            "title": "Multiple failed SSH logins",
-            "source": "Wazuh",
-            "severity": AlertSeverity.HIGH,
-            "status": AlertStatus.NEW,
-            "summary": "Repeated failed SSH attempts from a lab workstation.",
-            "occurred_at": now,
-        },
-        {
-            "id": "ALT-1002",
-            "title": "Unusual DNS query volume",
-            "source": "Suricata",
-            "severity": AlertSeverity.MEDIUM,
-            "status": AlertStatus.TRIAGED,
-            "summary": "Suricata observed a burst of DNS requests for validation.",
-            "occurred_at": now,
-        },
-    ]
+    return DEMO_ALERTS
+
+
+def get_alert_by_id(alert_id: str) -> dict:
+    alert = next((item for item in DEMO_ALERTS if item["id"] == alert_id), None)
+    if not alert:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found.")
+
+    return alert

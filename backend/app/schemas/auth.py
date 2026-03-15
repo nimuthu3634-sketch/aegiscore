@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 from app.core.enums import UserRole
@@ -9,12 +11,20 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    full_name: str
+    email: str
+    password: str
+    role: UserRole = UserRole.VIEWER
+
+
 class UserRead(ORMModel):
     id: str
-    email: str
     full_name: str
+    email: str
     role: UserRole
     is_active: bool
+    created_at: datetime
 
 
 class TokenResponse(BaseModel):

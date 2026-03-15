@@ -7,8 +7,10 @@ from app.schemas.base import ORMModel
 class AlertRead(ORMModel):
     id: str
     title: str
+    description: str
     source: str
+    source_tool: str
     severity: AlertSeverity
     status: AlertStatus
-    summary: str
-    occurred_at: datetime
+    confidence_score: float
+    created_at: datetime

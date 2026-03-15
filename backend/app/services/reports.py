@@ -1,24 +1,14 @@
 from app.core.enums import ReportStatus
-from app.utils.time import utc_now
+from app.services.mock_store import DEMO_REPORTS
 
 
 def list_reports() -> list[dict]:
-    now = utc_now()
-    return [
-        {
-            "id": "REP-01",
-            "name": "Weekly SOC posture",
-            "report_type": "executive_summary",
-            "generated_by": "Admin",
-            "status": ReportStatus.READY,
-            "generated_at": now,
-        },
-        {
-            "id": "REP-02",
-            "name": "Anomaly digest",
-            "report_type": "ml_summary",
-            "generated_by": "Analyst",
-            "status": ReportStatus.DRAFT,
-            "generated_at": now,
-        },
-    ]
+    return DEMO_REPORTS
+
+
+def get_reports_summary() -> dict:
+    return {
+        "reports_generated": len(DEMO_REPORTS),
+        "draft_reports": sum(1 for report in DEMO_REPORTS if report["status"] == ReportStatus.DRAFT),
+        "ready_reports": sum(1 for report in DEMO_REPORTS if report["status"] == ReportStatus.READY),
+    }

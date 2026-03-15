@@ -4,9 +4,10 @@ from pydantic import BaseModel
 class DashboardMetric(BaseModel):
     label: str
     value: str
-    change: str
+    note: str
 
 
 class DashboardSummary(BaseModel):
     metrics: list[DashboardMetric]
-    highlights: list[str]
+    recent_alert_count: int
+    recent_incident_count: int

@@ -6,6 +6,8 @@ class HealthResponse(BaseModel):
     app_name: str
     environment: str
     version: str
+    database: str
+    redis: str
 
 
 class MessageResponse(BaseModel):

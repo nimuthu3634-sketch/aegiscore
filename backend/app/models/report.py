@@ -1,19 +1,21 @@
-from sqlalchemy import DateTime, Enum, String
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.enums import ReportStatus
+from app.core.enums import ReportStatus, ReportType
 from app.db.base import Base
-from app.models.mixins import IdMixin, TimestampMixin
+from app.models.mixins import IdMixin
 from app.utils.time import utc_now
 
 
-class Report(Base, IdMixin, TimestampMixin):
+class Report(Base, IdMixin):
     __tablename__ = "reports"
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    report_type: Mapped[str] = mapped_column(String(120), nullable=False)
-    generated_by: Mapped[str] = mapped_column(String(120), nullable=False)
-    status: Mapped[ReportStatus] = mapped_column(
-        Enum(ReportStatus), default=ReportStatus.DRAFT, nullable=False
-    )
-    generated_at: Mapped[object] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    report_type: Mapped[ReportType] = mapped_column(Enum(ReportType), default=ReportType.OPERATIONS, nullable=False)
+    generated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    content_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus), default=ReportStatus.DRAFT, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)

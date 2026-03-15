@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
@@ -8,6 +10,7 @@ from app.core.enums import UserRole
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{get_settings().api_prefix}/auth/login" or "/auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -25,3 +28,18 @@ def create_access_token(subject: str, role: UserRole, expires_delta: timedelta |
     )
     payload = {"sub": subject, "role": role.value, "exp": expire}
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
+
+
+def decode_access_token(token: str) -> dict:
+    settings = get_settings()
+    try:
+        return jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
+    except JWTError as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token.",
+        ) from error
+
+
+def get_token_payload(token: str = Depends(oauth2_scheme)) -> dict:
+    return decode_access_token(token)
