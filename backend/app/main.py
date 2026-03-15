@@ -1,15 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.bootstrap import bootstrap_demo_environment
 from app.core.config import get_settings
 from app.routers.router import api_router
 
 settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.demo_bootstrap = bootstrap_demo_environment()
+    yield
+
+
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     summary="AegisCore backend scaffold for SOC monitoring and incident management.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

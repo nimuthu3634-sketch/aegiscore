@@ -3,6 +3,7 @@ FROM node:20-alpine
 WORKDIR /workspace/frontend
 
 COPY frontend/package.json ./
+COPY frontend/package-lock.json ./
 COPY frontend/tsconfig.json ./
 COPY frontend/tsconfig.app.json ./
 COPY frontend/tsconfig.node.json ./
@@ -14,7 +15,7 @@ COPY frontend/public ./public
 COPY frontend/src ./src
 COPY assets ../assets
 
-RUN npm install
+RUN npm ci
 
 EXPOSE 5173
 

@@ -1,36 +1,13 @@
 # AegisCore
 
-AegisCore is a final-year university project: an AI-integrated Security Operations Center (SOC) web application for lab-based cybersecurity monitoring and incident management.
+AegisCore is a final-year university project: an AI-integrated Security Operations Center (SOC) web application for lab-based cybersecurity monitoring, alert triage, incident management, reporting, and safe classroom data ingestion.
 
-This repository is scaffolded as a production-style monorepo with a React frontend, FastAPI backend, PostgreSQL, Redis, WebSockets, and starter AI/ML modules for anomaly detection. It is intentionally focused on clean structure, theme setup, routing, and API organization rather than full business logic.
-
-## Stack
-
-### Frontend
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- React Router
-- Recharts
-
-### Backend
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- Redis
-- WebSockets
-
-### AI and data
-- scikit-learn
-- pandas
-- numpy
-
-### Auth
-- JWT scaffold with roles: `admin`, `analyst`, `viewer`
-
-### Deployment
-- Docker Compose
+The repository is organized as a monorepo with:
+- a React + TypeScript + Vite frontend
+- a FastAPI backend
+- PostgreSQL and Redis for local infrastructure
+- WebSockets for live alert updates
+- a small scikit-learn anomaly detection module for explainable demo insights
 
 ## Repository structure
 
@@ -42,29 +19,157 @@ This repository is scaffolded as a production-style monorepo with a React fronte
 |-- docs/
 |-- assets/
 |-- docker-compose.yml
+|-- .env.example
 |-- README.md
 |-- AGENTS.md
 ```
 
-## Quick start
+## Prerequisites
 
-### 1. Copy env templates
+### Local development
+- Python 3.12
+- Node.js 20+
+- npm 10+
+- PostgreSQL 16 if you want local database persistence outside Docker
+- Redis 7 if you want local Redis outside Docker
 
-Create local env files from the examples:
+### Docker development
+- Docker Desktop with `docker compose`
+
+## Quick overview
+
+- The UI is demo-ready out of the box with seeded in-memory alerts, incidents, logs, integrations, lab assets, and reports.
+- On backend startup, AegisCore now:
+  - creates SQLAlchemy tables when the database is reachable
+  - syncs demo records into the database for supported models
+  - prepares the anomaly detection model
+- This means a fresh setup already looks populated for presentations.
+
+## Environment files
+
+Copy the example files before running the project.
+
+### Root `.env` for Docker Compose
+
+```bash
+cp .env.example .env
+```
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### Frontend and backend env files
 
 ```bash
 cp frontend/.env.example frontend/.env
 cp backend/.env.example backend/.env
 ```
 
-If you are on Windows PowerShell:
+PowerShell:
 
 ```powershell
 Copy-Item frontend/.env.example frontend/.env
 Copy-Item backend/.env.example backend/.env
 ```
 
-### 2. Start the stack with Docker Compose
+### Environment variables used
+
+#### Root `.env`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `SECRET_KEY`
+- `VITE_API_BASE_URL`
+- `VITE_WS_URL`
+
+#### `backend/.env`
+- `APP_NAME`
+- `APP_ENV`
+- `API_PREFIX`
+- `SECRET_KEY`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `DATABASE_URL`
+- `REDIS_URL`
+- `CORS_ORIGINS`
+
+#### `frontend/.env`
+- `VITE_APP_NAME`
+- `VITE_API_BASE_URL`
+- `VITE_WS_URL`
+
+## Local setup
+
+### 1. Backend setup
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+PowerShell:
+
+```powershell
+cd backend
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Optional manual demo bootstrap:
+
+```bash
+python -m app.seeds.demo_seed
+```
+
+Start the backend:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Backend URLs:
+- API: [http://localhost:8000](http://localhost:8000)
+- Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 2. Frontend setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend URL:
+- App: [http://localhost:5173](http://localhost:5173)
+
+## Docker setup
+
+### 1. Copy the root env file
+
+```bash
+cp .env.example .env
+```
+
+### 2. Start the stack
 
 ```bash
 docker compose up --build
@@ -73,77 +178,203 @@ docker compose up --build
 Services:
 - Frontend: [http://localhost:5173](http://localhost:5173)
 - Backend API: [http://localhost:8000](http://localhost:8000)
-- API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- FastAPI docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-## Frontend notes
+Docker notes:
+- PostgreSQL and Redis now have health checks.
+- Backend waits for PostgreSQL and Redis.
+- Frontend waits for the backend.
+- The backend bootstraps demo data at startup when the database is reachable.
 
-- The app shell includes a dark sidebar, top navbar, responsive content area, and branded orange accents.
-- Placeholder pages are scaffolded for Login, Dashboard, Alerts, Incidents, Reports, Integrations, and Settings.
-- The shared logo asset is located at `assets/aegiscore-logo.svg`.
-- Theme colors are configured in `frontend/tailwind.config.cjs`.
+## Run commands
 
-## Backend notes
+### Local backend
 
-- Routes are grouped into `auth`, `dashboard`, `alerts`, `incidents`, `logs`, `reports`, `integrations`, and `websocket`.
-- Starter SQLAlchemy models and Pydantic schemas are separated into clean folders.
-- Health check endpoint: `GET /health`
-- JWT auth, login, registration, and current-user lookup are scaffolded for the demo flow.
-- A simple Isolation Forest module scores alerts for anomaly likelihood and generates short explanation text for the dashboard and alerts queue.
+```bash
+cd backend
+uvicorn app.main:app --reload
+```
 
-Demo users:
+### Local frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+### Optional local demo seed
+
+```bash
+cd backend
+python -m app.seeds.demo_seed
+```
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+## Demo credentials
+
 - `admin@aegiscore.local` / `password`
 - `analyst@aegiscore.local` / `password`
 - `viewer@aegiscore.local` / `password`
 
-## Seed and demo data
+## Demo workflow
 
-A starter seed script is included:
+1. Start the stack locally or with Docker.
+2. Sign in with one of the demo users.
+3. Open the Dashboard to see seeded alerts, incidents, charts, AI insights, and recent activity.
+4. Open Alerts and Incidents to review the seeded workflow data.
+5. Open Integrations and use `Import sample data` on:
+   - Wazuh
+   - Suricata
+   - Nmap
+   - Hydra
+6. Watch the live alert toast and notification badge update through WebSockets when new alerts are imported.
+7. Open Reports to generate a report snapshot and export JSON if needed.
 
-```bash
-python -m app.seeds.demo_seed
-```
+## Sample data sources available
 
-Run it from the `backend/` directory after the database is available.
+The project includes demo/sample sources for:
+- Wazuh alert import
+- Suricata event import
+- Nmap authorized lab-only result ingestion
+- Hydra authorized lab-only result ingestion
+- Generic log ingestion payloads
+- VirtualBox lab environment tracking
+
+Reference files in `docs/`:
+- `docs/sample-wazuh-alerts.json`
+- `docs/sample-suricata-events.json`
+- `docs/sample-nmap-results.json`
+- `docs/sample-hydra-results.json`
+- `docs/sample-log-ingest-payloads.json`
+
+## How to import sample data
+
+### Recommended demo path
+
+Use the **Integrations** page in the frontend:
+- Wazuh card -> `Import sample data`
+- Suricata card -> `Import sample data`
+- Nmap card -> `Import sample data`
+- Hydra card -> `Import sample data`
+
+Use the **Logs** page to inspect log entries and compare raw vs normalized data.
+
+### Important safety boundary
+
+Nmap and Hydra support is limited to:
+- importing previously generated authorized lab results
+- parsing safe structured outputs
+- converting them into alerts/findings
+- visualizing them inside the SOC workflow
+
+No offensive execution, automation, remote control, or attack launching is implemented.
 
 ## AI anomaly detection
 
-AegisCore includes a small, explainable anomaly-detection prototype built with scikit-learn.
+AegisCore includes a small, explainable anomaly detection layer built with scikit-learn.
 
-What features are used:
+### What features are used
 - alert severity
 - hour of day
 - after-hours indicator
 - source frequency
 - source-tool frequency
-- service and port activity
+- service or port activity
 - keyword counts from login, credential, network, and service-related text
 
-How the anomaly score is generated:
-- the backend trains an `IsolationForest` model on seeded demo SOC events that represent normal classroom activity
-- each incoming alert is converted into a small feature set
-- the model produces an outlier score, which is normalized into an easy-to-read anomaly score between `0.0` and `1.0`
-- simple rules then generate short explanations such as `unusual login volume`, `abnormal source frequency`, or `unusual service/port activity`
+### How the anomaly score is generated
+- the backend trains an `IsolationForest` model on demo SOC events
+- each alert is converted into a simple numeric feature set
+- the model generates an outlier score
+- the score is normalized into a clear demo-friendly anomaly score between `0.0` and `1.0`
+- short explanations are attached, such as:
+  - `unusual login volume`
+  - `abnormal source frequency`
+  - `unusual service/port activity`
 
-Why this fits a student SOC prototype:
-- the model is lightweight and easy to retrain on demo data
-- the feature set is understandable during presentations and reports
-- the explanations stay human-readable instead of relying on opaque AI output
-- the implementation is simple enough to extend later with real logs or better training data
+### Where it appears
+- Dashboard AI insights widget
+- Alerts list and alert detail panels
+- Reports summary and anomaly sections
 
-## Safety boundary
+### Why it fits a student project
+- easy to explain during a viva or demo
+- lightweight enough for local development
+- simple to retrain on demo data
+- readable output instead of opaque model responses
 
-This project is for defensive, lab-based monitoring only.
+## Backend overview
 
-- Wazuh and Suricata are intended as ingestion sources.
-- Nmap and Hydra support must remain limited to safe lab-only result ingestion, parsing, simulation, and visualization.
-- Do not add offensive security automation.
+Main backend modules:
+- `auth`
+- `dashboard`
+- `alerts`
+- `incidents`
+- `logs`
+- `reports`
+- `integrations`
+- `ml`
+- `websocket`
 
-## Recommended next implementation steps
+Important routes:
+- `GET /health`
+- `POST /auth/login`
+- `GET /dashboard/summary`
+- `GET /alerts`
+- `GET /incidents`
+- `POST /logs/ingest`
+- `GET /reports/summary`
+- `POST /reports/generate`
+- `POST /integrations/wazuh/import`
+- `POST /integrations/suricata/import`
+- `POST /integrations/nmap/import`
+- `POST /integrations/hydra/import`
+- `WS /ws/alerts`
 
-1. Replace the in-memory auth/data store with PostgreSQL-backed persistence.
-2. Add CRUD endpoints backed by SQLAlchemy sessions instead of placeholder service data.
-3. Implement ingestion parsers for Wazuh, Suricata, and safe lab-result files.
-4. Connect dashboard data pages to backend resources beyond auth.
-5. Add seed fixtures for presentation-ready alerts, incidents, logs, and reports.
+## Frontend overview
+
+Main frontend pages:
+- Login
+- Dashboard
+- Alerts
+- Incidents
+- Logs
+- Reports
+- Integrations
+- Settings
+
+Shared UI includes:
+- branded sidebar and header
+- live alert toast
+- summary cards
+- charts
+- data tables
+- filters and detail panels
+
+## Validation checklist
+
+Useful commands while developing:
+
+```bash
+cd backend
+python -m compileall app
+```
+
+```bash
+cd frontend
+npm run build
+```
+
+## Notes for students
+
+- Start with Docker if you want the easiest setup for PostgreSQL and Redis.
+- Start with local `uvicorn` + `npm run dev` if you want faster frontend/backend iteration.
+- The app already includes seeded demo content, so you do not need to build business logic first to get a good presentation flow.
+- If PostgreSQL is not available locally, the frontend and most backend demo flows still work because the main presentation data is seeded in memory.

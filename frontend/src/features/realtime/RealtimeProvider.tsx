@@ -47,6 +47,11 @@ const RECONNECT_DELAY_MS = 2500;
 export const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined);
 
 function buildAlertsWebSocketUrl() {
+  const configuredWebSocketUrl = import.meta.env.VITE_WS_URL;
+  if (configuredWebSocketUrl) {
+    return configuredWebSocketUrl;
+  }
+
   const sanitizedBaseUrl = API_BASE_URL.replace(/\/$/, "");
   const websocketBaseUrl = sanitizedBaseUrl.replace(/^http/i, "ws");
   return `${websocketBaseUrl}/ws/alerts`;
