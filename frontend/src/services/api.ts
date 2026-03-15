@@ -4,6 +4,7 @@ import type {
   AlertFilters,
   AlertListResponse,
   AlertStatusUpdatePayload,
+  DashboardAnomalySummaryResponse,
   DashboardChartsResponse,
   DashboardRecentAlert,
   DashboardRecentIncident,
@@ -119,6 +120,15 @@ export async function fetchDashboardRecentAlerts(token: string) {
 
 export async function fetchDashboardRecentIncidents(token: string) {
   return request<DashboardRecentIncident[]>("/dashboard/recent-incidents", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function fetchDashboardAnomalySummary(token: string) {
+  return request<DashboardAnomalySummaryResponse>("/dashboard/anomaly-summary", {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,

@@ -2,6 +2,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 
 from app.core.enums import AlertSeverity, IncidentStatus
+from app.services.anomaly import ensure_demo_alerts_scored, get_anomaly_summary
 from app.services.mock_store import DEMO_ALERTS, DEMO_INCIDENTS, DEMO_USERS
 
 SEVERITY_ORDER = [
@@ -19,6 +20,7 @@ def _incident_updated_at(incident: dict) -> datetime:
 
 
 def _sorted_alerts() -> list[dict]:
+    ensure_demo_alerts_scored()
     return sorted(DEMO_ALERTS, key=lambda alert: alert["created_at"], reverse=True)
 
 
@@ -92,3 +94,11 @@ def get_dashboard_recent_incidents(limit: int = 4) -> list[dict]:
         )
 
     return recent_incidents
+
+
+def get_dashboard_anomaly_summary() -> dict:
+    summary = get_anomaly_summary(limit=5)
+    return {
+        **summary,
+        "top_anomalous_alerts": summary["top_anomalous_alerts"],
+    }

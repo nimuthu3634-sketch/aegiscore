@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { AnomalyScoreBadge } from "@/components/AnomalyScoreBadge";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { FilterIcon, SearchIcon } from "@/components/Icons";
 import { SectionCard } from "@/components/SectionCard";
@@ -11,8 +12,8 @@ import { createIncident, fetchAlertById, fetchAlerts, patchAlertStatus } from "@
 import type { UserRole } from "@/types/auth";
 import type {
   AlertApiRecord,
-  AlertStatus,
   AlertListResponse,
+  AlertStatus,
   SeverityLevel,
   SourceToolKey,
 } from "@/types/domain";
@@ -110,6 +111,11 @@ const alertColumns: DataTableColumn<AlertApiRecord>[] = [
     key: "severity",
     header: "Severity",
     render: (alert) => <SeverityBadge level={alert.severity} />,
+  },
+  {
+    key: "ai_score",
+    header: "AI score",
+    render: (alert) => <AnomalyScoreBadge score={alert.anomaly_score} compact />,
   },
   {
     key: "status",
@@ -303,7 +309,7 @@ export function AlertsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Alert investigation workspace"
-        description="Search, filter, review, and update live alert records from the backend while keeping Nmap and Hydra entries clearly framed as safe imported lab assessment results."
+        description="Search, filter, review, and update live alert records from the backend while pairing each event with a simple anomaly score and explanation."
         eyebrow="Alerts"
         action={
           <button type="button" onClick={handleRetry} className="btn-primary" disabled={listLoading}>
@@ -452,7 +458,7 @@ export function AlertsPage() {
 
         <SectionCard
           title="Alert details"
-          description="Focused context and status controls for the selected alert."
+          description="Focused context, AI insight, and workflow controls for the selected alert."
         >
           {!selectedAlertId && !listLoading ? (
             <div className="rounded-[1.5rem] border border-dashed border-brand-black/10 bg-brand-light/50 p-10 text-center text-sm text-brand-black/55">
@@ -508,6 +514,35 @@ export function AlertsPage() {
               </div>
 
               <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-brand-black">AI anomaly insight</p>
+                    <p className="mt-1 text-xs text-brand-black/55">
+                      A simple Isolation Forest score built from event severity, timing, source frequency, and activity context.
+                    </p>
+                  </div>
+                  <AnomalyScoreBadge score={selectedAlert.anomaly_score} />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.25rem] bg-brand-light/60 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Explanation</p>
+                    <p className="mt-2 text-sm font-medium text-brand-black">
+                      {selectedAlert.anomaly_explanation}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.25rem] bg-brand-light/60 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Flag state</p>
+                    <div className="mt-2">
+                      <StatusBadge variant={selectedAlert.is_anomalous ? "degraded" : "connected"}>
+                        {selectedAlert.is_anomalous ? "anomalous" : "within baseline"}
+                      </StatusBadge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
                 <p className="text-sm font-semibold text-brand-black">Context</p>
                 <dl className="mt-4 space-y-3 text-sm text-brand-black/70">
                   <div className="flex justify-between gap-4">
@@ -519,8 +554,12 @@ export function AlertsPage() {
                     <dd>{selectedAlert.source}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt>Confidence</dt>
+                    <dt>Analyst confidence</dt>
                     <dd>{Math.round(selectedAlert.confidence_score * 100)}%</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>AI anomaly score</dt>
+                    <dd>{Math.round(selectedAlert.anomaly_score * 100)}%</dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt>Detected</dt>

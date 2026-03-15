@@ -15,6 +15,9 @@ class AlertRead(ORMModel):
     severity: AlertSeverity
     status: AlertStatus
     confidence_score: float
+    anomaly_score: float
+    is_anomalous: bool
+    anomaly_explanation: str
     created_at: datetime
 
 

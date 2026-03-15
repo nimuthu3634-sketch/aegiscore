@@ -1,8 +1,14 @@
 from fastapi import APIRouter, Depends
 
 from app.schemas.alerts import AlertRead
-from app.schemas.dashboard import DashboardCharts, DashboardRecentIncident, DashboardSummary
+from app.schemas.dashboard import (
+    DashboardAnomalySummary,
+    DashboardCharts,
+    DashboardRecentIncident,
+    DashboardSummary,
+)
 from app.services.dashboard import (
+    get_dashboard_anomaly_summary,
     get_dashboard_charts,
     get_dashboard_recent_alerts,
     get_dashboard_recent_incidents,
@@ -36,3 +42,18 @@ def dashboard_recent_incidents(
         DashboardRecentIncident.model_validate(incident)
         for incident in get_dashboard_recent_incidents()
     ]
+
+
+@router.get("/anomaly-summary", response_model=DashboardAnomalySummary)
+def dashboard_anomaly_summary(
+    current_user: dict = Depends(get_current_active_user),
+) -> DashboardAnomalySummary:
+    summary = get_dashboard_anomaly_summary()
+    return DashboardAnomalySummary.model_validate(
+        {
+            **summary,
+            "top_anomalous_alerts": [
+                AlertRead.model_validate(alert) for alert in summary["top_anomalous_alerts"]
+            ],
+        }
+    )

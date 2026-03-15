@@ -2,12 +2,14 @@ from math import ceil
 
 from fastapi import HTTPException, status
 
+from app.services.anomaly import apply_anomaly_scoring, ensure_demo_alerts_scored
 from app.core.enums import AlertSeverity, AlertStatus, IntegrationTool
 from app.services.mock_store import DEMO_ALERTS
 from app.utils.time import utc_now
 
 
 def _sorted_alerts() -> list[dict]:
+    ensure_demo_alerts_scored()
     return sorted(DEMO_ALERTS, key=lambda alert: alert["created_at"], reverse=True)
 
 
@@ -73,6 +75,7 @@ def list_alerts(
 
 
 def get_alert_by_id(alert_id: str) -> dict:
+    ensure_demo_alerts_scored()
     alert = next((item for item in DEMO_ALERTS if item["id"] == alert_id), None)
     if not alert:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found.")
@@ -107,6 +110,7 @@ def create_alert(
     if extra_fields:
         alert_record.update(extra_fields)
 
+    apply_anomaly_scoring(alert_record, reference_alerts=DEMO_ALERTS)
     DEMO_ALERTS.append(alert_record)
     return alert_record
 

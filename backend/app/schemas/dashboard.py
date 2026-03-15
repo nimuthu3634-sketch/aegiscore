@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.core.enums import AlertSeverity, IncidentStatus
+from app.schemas.alerts import AlertRead
 
 
 class DashboardSummary(BaseModel):
@@ -42,3 +43,14 @@ class DashboardRecentIncident(BaseModel):
     affected_asset: str
     summary: str
     updated_at: datetime
+
+
+class DashboardAnomalySummary(BaseModel):
+    model_name: str
+    trained_on_events: int
+    feature_labels: list[str]
+    trained_at: datetime
+    average_anomaly_score: float
+    anomalous_alert_count: int
+    high_anomaly_alert_count: int
+    top_anomalous_alerts: list[AlertRead]

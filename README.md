@@ -90,6 +90,7 @@ Services:
 - Starter SQLAlchemy models and Pydantic schemas are separated into clean folders.
 - Health check endpoint: `GET /health`
 - JWT auth, login, registration, and current-user lookup are scaffolded for the demo flow.
+- A simple Isolation Forest module scores alerts for anomaly likelihood and generates short explanation text for the dashboard and alerts queue.
 
 Demo users:
 - `admin@aegiscore.local` / `password`
@@ -105,6 +106,31 @@ python -m app.seeds.demo_seed
 ```
 
 Run it from the `backend/` directory after the database is available.
+
+## AI anomaly detection
+
+AegisCore includes a small, explainable anomaly-detection prototype built with scikit-learn.
+
+What features are used:
+- alert severity
+- hour of day
+- after-hours indicator
+- source frequency
+- source-tool frequency
+- service and port activity
+- keyword counts from login, credential, network, and service-related text
+
+How the anomaly score is generated:
+- the backend trains an `IsolationForest` model on seeded demo SOC events that represent normal classroom activity
+- each incoming alert is converted into a small feature set
+- the model produces an outlier score, which is normalized into an easy-to-read anomaly score between `0.0` and `1.0`
+- simple rules then generate short explanations such as `unusual login volume`, `abnormal source frequency`, or `unusual service/port activity`
+
+Why this fits a student SOC prototype:
+- the model is lightweight and easy to retrain on demo data
+- the feature set is understandable during presentations and reports
+- the explanations stay human-readable instead of relying on opaque AI output
+- the implementation is simple enough to extend later with real logs or better training data
 
 ## Safety boundary
 

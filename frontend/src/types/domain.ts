@@ -42,6 +42,17 @@ export interface DashboardChartsResponse {
   alerts_by_source_tool: DashboardSourceToolChartPoint[];
 }
 
+export interface DashboardAnomalySummaryResponse {
+  model_name: string;
+  trained_on_events: number;
+  feature_labels: string[];
+  trained_at: string;
+  average_anomaly_score: number;
+  anomalous_alert_count: number;
+  high_anomaly_alert_count: number;
+  top_anomalous_alerts: AlertApiRecord[];
+}
+
 export interface DashboardRecentAlert {
   id: string;
   title: string;
@@ -51,6 +62,9 @@ export interface DashboardRecentAlert {
   severity: SeverityLevel;
   status: AlertStatus;
   confidence_score: number;
+  anomaly_score: number;
+  is_anomalous: boolean;
+  anomaly_explanation: string;
   created_at: string;
 }
 
@@ -63,6 +77,9 @@ export interface AlertApiRecord {
   severity: SeverityLevel;
   status: AlertStatus;
   confidence_score: number;
+  anomaly_score: number;
+  is_anomalous: boolean;
+  anomaly_explanation: string;
   created_at: string;
 }
 

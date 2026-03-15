@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { AnomalyScoreBadge } from "@/components/AnomalyScoreBadge";
 import { ChartCard } from "@/components/ChartCard";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import {
@@ -15,12 +16,14 @@ import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  fetchDashboardAnomalySummary,
   fetchDashboardCharts,
   fetchDashboardRecentAlerts,
   fetchDashboardRecentIncidents,
   fetchDashboardSummary,
 } from "@/services/api";
 import type {
+  DashboardAnomalySummaryResponse,
   DashboardChartsResponse,
   DashboardRecentAlert,
   DashboardRecentIncident,
@@ -31,6 +34,7 @@ import type {
 type DashboardState = {
   summary: DashboardSummaryResponse;
   charts: DashboardChartsResponse;
+  anomalySummary: DashboardAnomalySummaryResponse;
   recentAlerts: DashboardRecentAlert[];
   recentIncidents: DashboardRecentIncident[];
 };
@@ -67,7 +71,7 @@ function formatSeverityLabel(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-const alertColumns: DataTableColumn<DashboardRecentAlert>[] = [
+const recentAlertColumns: DataTableColumn<DashboardRecentAlert>[] = [
   {
     key: "title",
     header: "Alert",
@@ -86,6 +90,11 @@ const alertColumns: DataTableColumn<DashboardRecentAlert>[] = [
     render: (alert) => <SeverityBadge level={alert.severity} />,
   },
   {
+    key: "ai_score",
+    header: "AI score",
+    render: (alert) => <AnomalyScoreBadge score={alert.anomaly_score} compact />,
+  },
+  {
     key: "status",
     header: "Status",
     render: (alert) => (
@@ -93,14 +102,36 @@ const alertColumns: DataTableColumn<DashboardRecentAlert>[] = [
     ),
   },
   {
-    key: "confidence",
-    header: "Confidence",
-    render: (alert) => <span>{Math.round(alert.confidence_score * 100)}%</span>,
-  },
-  {
     key: "created_at",
     header: "Detected",
     render: (alert) => <span>{formatDateTime(alert.created_at)}</span>,
+  },
+];
+
+const anomalousAlertColumns: DataTableColumn<DashboardRecentAlert>[] = [
+  {
+    key: "title",
+    header: "Top anomalous event",
+    render: (alert) => (
+      <div>
+        <p className="font-semibold text-brand-black">{alert.title}</p>
+        <p className="mt-1 text-xs text-brand-black/50">
+          {formatToolName(alert.source_tool)} on {alert.source}
+        </p>
+      </div>
+    ),
+  },
+  {
+    key: "score",
+    header: "AI score",
+    render: (alert) => <AnomalyScoreBadge score={alert.anomaly_score} />,
+  },
+  {
+    key: "explanation",
+    header: "Explanation",
+    render: (alert) => (
+      <span className="text-sm text-brand-black/70">{alert.anomaly_explanation}</span>
+    ),
   },
 ];
 
@@ -144,6 +175,19 @@ function DashboardLoadingState() {
             <div className="h-32 animate-pulse rounded-[1.5rem] bg-brand-light/70" />
           </SectionCard>
         </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <SectionCard title="Loading AI insights" description="Scoring the latest event baseline.">
+          <div className="h-64 animate-pulse rounded-[1.5rem] bg-brand-light/70" />
+        </SectionCard>
+
+        <SectionCard
+          title="Loading anomalous events"
+          description="Preparing the most unusual alert patterns."
+        >
+          <div className="h-64 animate-pulse rounded-[1.5rem] bg-brand-light/70" />
+        </SectionCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
@@ -208,10 +252,11 @@ export function DashboardPage() {
     void Promise.all([
       fetchDashboardSummary(token),
       fetchDashboardCharts(token),
+      fetchDashboardAnomalySummary(token),
       fetchDashboardRecentAlerts(token),
       fetchDashboardRecentIncidents(token),
     ])
-      .then(([summary, charts, recentAlerts, recentIncidents]) => {
+      .then(([summary, charts, anomalySummary, recentAlerts, recentIncidents]) => {
         if (!isActive) {
           return;
         }
@@ -219,6 +264,7 @@ export function DashboardPage() {
         setDashboard({
           summary,
           charts,
+          anomalySummary,
           recentAlerts,
           recentIncidents,
         });
@@ -253,7 +299,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <SectionCard
         title="Command overview"
-        description="Live dashboard data is now sourced from protected backend APIs so analysts can present current alert, chart, and incident activity from one SOC surface."
+        description="Live dashboard data now combines operational metrics with a simple explainable anomaly model so analysts can present suspicious patterns alongside the normal SOC view."
         eyebrow="Dashboard"
         tone="dark"
         action={
@@ -272,8 +318,8 @@ export function DashboardPage() {
           <div className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5">
             <p className="text-sm font-semibold text-white">Presentation focus</p>
             <p className="mt-2 text-sm leading-6 text-brand-muted">
-              Highlight real summary counts, alert patterns, and incident posture while keeping all
-              data limited to safe, lab-only monitoring and simulation artifacts.
+              Highlight real summary counts, alert patterns, anomaly scoring, and incident posture
+              while keeping all data limited to safe, lab-only monitoring and simulation artifacts.
             </p>
           </div>
 
@@ -286,8 +332,8 @@ export function DashboardPage() {
               {isLoading ? <StatusBadge variant="pending">refreshing</StatusBadge> : null}
             </div>
             <p className="mt-3 text-sm leading-6 text-brand-muted">
-              Dashboard widgets read from authenticated FastAPI endpoints for summary, charts, and
-              recent queue activity.
+              Dashboard widgets read from authenticated FastAPI endpoints for summary, charts,
+              recent queue activity, and anomaly insights.
             </p>
           </div>
         </div>
@@ -371,7 +417,7 @@ export function DashboardPage() {
 
               <ChartCard
                 title="Alerts by source tool"
-                description="Signal volume split across Wazuh, Suricata, and lab-only imports."
+                description="Signal volume split across telemetry sources and lab imports."
                 data={dashboard.charts.alerts_by_source_tool.map((point) => ({
                   label: formatToolName(point.source_tool),
                   count: point.count,
@@ -381,6 +427,77 @@ export function DashboardPage() {
                 variant="bar"
               />
             </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+            <SectionCard
+              title="AI insights"
+              description="Isolation Forest scores each alert using simple engineered features from severity, timing, source frequency, and service activity."
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Model</p>
+                  <p className="mt-3 text-xl font-semibold text-brand-black">
+                    {dashboard.anomalySummary.model_name}
+                  </p>
+                  <p className="mt-2 text-sm text-brand-black/65">
+                    Trained on {dashboard.anomalySummary.trained_on_events} demo events
+                  </p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">
+                    Avg. anomaly score
+                  </p>
+                  <p className="mt-3 text-xl font-semibold text-brand-black">
+                    {Math.round(dashboard.anomalySummary.average_anomaly_score * 100)}%
+                  </p>
+                  <p className="mt-2 text-sm text-brand-black/65">
+                    Latest scoring pass {formatDateTime(dashboard.anomalySummary.trained_at)}
+                  </p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">
+                    Alerts flagged
+                  </p>
+                  <p className="mt-3 text-xl font-semibold text-brand-black">
+                    {dashboard.anomalySummary.anomalous_alert_count}
+                  </p>
+                  <p className="mt-2 text-sm text-brand-black/65">
+                    Marked above the demo anomaly threshold
+                  </p>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">
+                    High anomaly alerts
+                  </p>
+                  <p className="mt-3 text-xl font-semibold text-brand-black">
+                    {dashboard.anomalySummary.high_anomaly_alert_count}
+                  </p>
+                  <p className="mt-2 text-sm text-brand-black/65">
+                    Score of 70% or above
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-[1.5rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-4 text-sm leading-6 text-brand-black/72">
+                Feature set: {dashboard.anomalySummary.feature_labels.join(", ")}.
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Top anomalous events"
+              description="Most unusual alerts currently in the queue, with simple explanation text for project demonstrations."
+            >
+              <DataTable
+                columns={anomalousAlertColumns}
+                rows={dashboard.anomalySummary.top_anomalous_alerts}
+                rowKey={(alert) => alert.id}
+                emptyMessage="No anomalous events are currently available."
+              />
+            </SectionCard>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
@@ -394,7 +511,7 @@ export function DashboardPage() {
               }
             >
               <DataTable
-                columns={alertColumns}
+                columns={recentAlertColumns}
                 rows={dashboard.recentAlerts}
                 rowKey={(alert) => alert.id}
               />

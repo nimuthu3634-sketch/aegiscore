@@ -1,4 +1,4 @@
-from sqlalchemy import Enum, Float, String, Text
+from sqlalchemy import Boolean, Enum, Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import AlertSeverity, AlertStatus
@@ -16,3 +16,6 @@ class Alert(Base, IdMixin, CreatedAtMixin):
     severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity), nullable=False)
     status: Mapped[AlertStatus] = mapped_column(Enum(AlertStatus), default=AlertStatus.NEW, nullable=False)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    anomaly_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_anomalous: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    anomaly_explanation: Mapped[str] = mapped_column(String(255), default="", nullable=False)
