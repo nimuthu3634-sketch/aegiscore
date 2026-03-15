@@ -22,11 +22,11 @@ export function LiveAlertToast() {
 
   return (
     <div className="pointer-events-none fixed right-4 top-24 z-50 w-full max-w-sm sm:right-6 lg:right-8">
-      <div className="pointer-events-auto overflow-hidden rounded-[1.5rem] border border-brand-orange/25 bg-brand-surface text-white shadow-2xl">
-        <div className="h-1.5 bg-brand-orange" />
+      <div className="pointer-events-auto overflow-hidden rounded-[1.65rem] border border-brand-orange/20 bg-brand-surface/95 text-white shadow-premium backdrop-blur-md">
+        <div className="h-1.5 bg-gradient-to-r from-brand-orange to-[#ffb071]" />
         <div className="p-4">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-orange text-white">
+            <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-orange text-white shadow-float">
               <AlertTriangleIcon className="h-5 w-5" />
             </div>
 

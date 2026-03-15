@@ -22,7 +22,7 @@ function getScoreClasses(score: number) {
 export function AnomalyScoreBadge({ score, compact = false }: AnomalyScoreBadgeProps) {
   return (
     <span
-      className={`inline-flex rounded-full ring-1 ${compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1 text-xs"} font-semibold ${getScoreClasses(score)}`}
+      className={`inline-flex rounded-full ring-1 ring-inset shadow-sm ${compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-[11px]"} font-semibold tracking-[0.12em] ${getScoreClasses(score)}`}
     >
       AI {Math.round(score * 100)}%
     </span>

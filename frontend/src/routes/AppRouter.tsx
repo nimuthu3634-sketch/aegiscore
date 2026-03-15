@@ -25,8 +25,14 @@ const NotFoundPage = lazy(async () => ({
 
 function RouteLoader() {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center rounded-[1.75rem] bg-white p-8 text-sm text-brand-black/60 shadow-panel">
-      Loading workspace...
+    <div className="panel flex min-h-[40vh] flex-col items-center justify-center rounded-[1.9rem] p-8 text-center shadow-premium">
+      <div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-brand-orange/10 text-brand-orange shadow-soft">
+        <div className="h-5 w-5 animate-pulse rounded-full bg-brand-orange/80" />
+      </div>
+      <p className="mt-4 text-sm font-semibold text-brand-black">Loading workspace</p>
+      <p className="mt-2 text-sm leading-6 text-brand-black/55">
+        Preparing the AegisCore dashboard, alert feeds, and analyst views.
+      </p>
     </div>
   );
 }

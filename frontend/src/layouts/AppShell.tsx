@@ -16,8 +16,8 @@ export function AppShell() {
       <div className="min-h-screen lg:pl-72">
         <Header onMenuClick={() => setMobileNavOpen(true)} />
 
-        <main className="px-4 pb-8 pt-4 sm:px-6 lg:px-8">
-          <div className="ambient-grid rounded-[2rem] p-3 sm:p-4">
+        <main className="px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+          <div className="ambient-grid rounded-[2.2rem] border border-white/60 bg-white/28 p-3 shadow-soft backdrop-blur-[2px] sm:p-4">
             <Outlet />
           </div>
         </main>

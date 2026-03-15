@@ -48,7 +48,9 @@ const variantClasses: Record<StatusBadgeProps["variant"], string> = {
 
 export function StatusBadge({ variant, children }: StatusBadgeProps) {
   return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ring-1 ${variantClasses[variant]}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize tracking-[0.12em] ring-1 ring-inset shadow-sm ${variantClasses[variant]}`}
+    >
       {children}
     </span>
   );

@@ -43,32 +43,40 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       <aside
         className={classNames(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-brand-white/10 bg-brand-surface text-brand-white shadow-panel transition-transform duration-300 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-brand-white/10 bg-brand-surface text-brand-white shadow-premium transition-transform duration-300 lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex items-center gap-3 border-b border-brand-white/10 px-6 py-6">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-orange to-[#ff9a53] shadow-lg shadow-brand-orange/20">
-            <img src={logoUrl} alt="AegisCore logo" className="h-10 w-10 object-contain" />
+        <div className="pointer-events-none absolute -right-10 top-0 h-40 w-40 rounded-full bg-brand-orange/12 blur-3xl" />
+        <div className="pointer-events-none absolute left-0 top-28 h-32 w-32 rounded-full bg-white/5 blur-3xl" />
+
+        <div className="relative flex items-center gap-4 border-b border-brand-white/10 px-6 py-6">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-brand-orange to-[#ffb071] p-[1px] shadow-float">
+            <div className="flex h-full w-full items-center justify-center rounded-[1.3rem] bg-white">
+              <img src={logoUrl} alt="AegisCore logo" className="h-9 w-9 object-contain" />
+            </div>
           </div>
           <div>
-            <p className="text-lg font-semibold">AegisCore</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand-muted">
+              Final-year project
+            </p>
+            <p className="mt-1 text-xl font-semibold tracking-tight text-white">AegisCore</p>
             <p className="text-sm text-brand-muted">Security Operations Center</p>
           </div>
         </div>
 
-        <div className="px-6 py-5">
-          <div className="rounded-[1.5rem] border border-brand-white/10 bg-gradient-to-br from-brand-white/8 to-transparent p-4">
+        <div className="relative px-6 py-5">
+          <div className="rounded-[1.6rem] border border-brand-white/10 bg-gradient-to-br from-brand-white/10 to-transparent p-5 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-orange/15 text-brand-orange">
                 <ShieldIcon className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-brand-muted">Live posture</p>
+                <p className="text-xs uppercase tracking-[0.22em] text-brand-muted">Live posture</p>
                 <p className="mt-1 text-sm font-semibold text-brand-white">Defensive lab mode</p>
               </div>
             </div>
-            <p className="mt-3 text-sm leading-6 text-brand-muted">
+            <p className="mt-3 text-sm leading-7 text-brand-muted">
               Monitor alerts, triage incidents, and present lab-only security insights with a
               clean SOC workflow.
             </p>
@@ -87,10 +95,10 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                     onClick={onClose}
                     className={({ isActive }) =>
                       classNames(
-                        "group flex items-center justify-between rounded-[1.25rem] px-4 py-3 text-sm transition-all",
+                        "group flex items-center justify-between rounded-[1.35rem] px-4 py-3 text-sm transition-all duration-200",
                         isActive
-                          ? "bg-brand-orange text-brand-white shadow-lg shadow-brand-orange/20"
-                          : "text-brand-muted hover:bg-brand-white/8 hover:text-brand-white",
+                          ? "bg-gradient-to-r from-brand-orange to-[#ff9d58] text-brand-white shadow-float"
+                          : "text-brand-muted hover:bg-brand-white/7 hover:text-brand-white",
                       )
                     }
                   >
@@ -100,12 +108,10 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                       </div>
                       <div>
                         <p className="font-medium">{item.label}</p>
-                        <p className="text-xs opacity-80">{item.description}</p>
+                        <p className="text-xs leading-5 opacity-80">{item.description}</p>
                       </div>
                     </div>
-                    <span className="rounded-full border border-current/20 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em]">
-                      View
-                    </span>
+                    <span className="h-2.5 w-2.5 rounded-full bg-current/70 transition group-hover:bg-brand-orange" />
                   </NavLink>
                 </li>
               );
@@ -113,20 +119,20 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           </ul>
         </nav>
 
-        <div className="border-t border-brand-white/10 p-6">
-          <div className="rounded-[1.5rem] bg-white px-4 py-4 text-brand-black">
+        <div className="relative border-t border-brand-white/10 p-6">
+          <div className="rounded-[1.6rem] bg-white px-4 py-4 text-brand-black shadow-soft">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-brand-orange">Demo roles</p>
+                <p className="text-xs uppercase tracking-[0.22em] text-brand-orange">Demo roles</p>
                 <p className="mt-2 text-sm font-semibold">Admin, Analyst, Viewer</p>
               </div>
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
                 Ready
               </span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-brand-black/70">
-              Auth, dashboard, alerts, incidents, and logs are live for demo access. Reports,
-              integrations, and settings remain scaffolded for presentation flow.
+            <p className="mt-3 text-xs leading-6 text-brand-black/70">
+              Auth, dashboard, alerts, incidents, logs, reports, integrations, and realtime
+              updates are ready for final presentation flow.
             </p>
           </div>
         </div>

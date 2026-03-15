@@ -28,15 +28,15 @@ export function DataTable<T>({
   selectedRowKey,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-brand-black/8 bg-white">
+    <div className="overflow-hidden rounded-[1.65rem] border border-brand-black/8 bg-white/96 shadow-soft">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-brand-black/5">
-          <thead className="bg-brand-light/70">
+          <thead className="bg-gradient-to-r from-brand-light via-white to-brand-light/70">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-brand-black/55 ${column.headerClassName ?? ""}`}
+                  className={`px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-black/48 ${column.headerClassName ?? ""}`}
                 >
                   {column.header}
                 </th>
@@ -50,20 +50,28 @@ export function DataTable<T>({
                   colSpan={columns.length}
                   className="px-4 py-12 text-center text-sm text-brand-black/60"
                 >
-                  {emptyMessage}
+                  <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-light text-brand-orange shadow-soft">
+                      <span className="h-2.5 w-2.5 rounded-full bg-current" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-brand-black">No matching records</p>
+                      <p className="mt-1 leading-6 text-brand-black/55">{emptyMessage}</p>
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              rows.map((row, rowIndex) => (
                 <tr
                   key={rowKey(row)}
-                  className={`hover:bg-brand-light/40 ${onRowClick ? "cursor-pointer" : ""} ${selectedRowKey === rowKey(row) ? "bg-brand-orange/5" : ""}`}
+                  className={`${rowIndex % 2 === 0 ? "bg-white" : "bg-brand-light/28"} transition-colors duration-150 hover:bg-brand-light/55 ${onRowClick ? "cursor-pointer" : ""} ${selectedRowKey === rowKey(row) ? "bg-brand-orange/7" : ""}`}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className={`align-top text-sm text-brand-black/75 ${compact ? "px-4 py-3" : "px-4 py-4"} ${column.className ?? ""}`}
+                      className={`align-top text-sm leading-6 text-brand-black/74 ${compact ? "px-4 py-3.5" : "px-4 py-[1.125rem]"} ${column.className ?? ""}`}
                     >
                       {column.render(row)}
                     </td>

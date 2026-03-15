@@ -14,7 +14,7 @@ const severityStyles: Record<SeverityLevel, string> = {
 export function SeverityBadge({ level }: SeverityBadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold capitalize ring-1 ${severityStyles[level]}`}
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold capitalize tracking-[0.12em] ring-1 ring-inset shadow-sm ${severityStyles[level]}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {level}
