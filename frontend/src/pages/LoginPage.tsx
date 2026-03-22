@@ -5,18 +5,14 @@ import { BrandMark } from "@/components/BrandMark";
 import { ArrowRightIcon, ShieldIcon, UserIcon } from "@/components/Icons";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
-import type { UserRole } from "@/types/auth";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
 
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("analyst@aegiscore.local");
   const [password, setPassword] = useState("password");
-  const [fullName, setFullName] = useState("AegisCore Analyst");
-  const [role, setRole] = useState<UserRole>("analyst");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,12 +27,7 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      if (mode === "login") {
-        await login({ email, password });
-      } else {
-        await register({ full_name: fullName, email, password, role });
-      }
-
+      await login({ email, password });
       navigate(redirectPath, { replace: true });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");
@@ -132,41 +123,11 @@ export function LoginPage() {
             </div>
 
             <p className="mt-5 text-sm leading-7 text-brand-black/65">
-              Sign in with an existing account or create a new local account through the
-              authentication service.
+              Sign in with one of the provisioned SOC accounts. Public self-registration is
+              disabled for this deployment.
             </p>
 
-            <div className="mt-8 inline-flex rounded-full border border-brand-black/8 bg-brand-light/80 p-1 shadow-soft">
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "login" ? "bg-brand-orange text-white shadow-float" : "text-brand-black/65"}`}
-              >
-                Login
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("register")}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${mode === "register" ? "bg-brand-orange text-white shadow-float" : "text-brand-black/65"}`}
-              >
-                Register
-              </button>
-            </div>
-
             <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-              {mode === "register" ? (
-                <label className="block text-sm font-medium text-brand-black">
-                  Full name
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Your full name"
-                    className="input-shell mt-2 w-full bg-brand-light/75 placeholder:text-brand-black/35"
-                  />
-                </label>
-              ) : null}
-
               <label className="block text-sm font-medium text-brand-black">
                 Email
                 <input
@@ -189,21 +150,6 @@ export function LoginPage() {
                 />
               </label>
 
-              {mode === "register" ? (
-                <label className="block text-sm font-medium text-brand-black">
-                  Role
-                  <select
-                    value={role}
-                    onChange={(event) => setRole(event.target.value as UserRole)}
-                    className="input-shell mt-2 w-full bg-brand-light/75"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="analyst">Analyst</option>
-                    <option value="viewer">Viewer</option>
-                  </select>
-                </label>
-              ) : null}
-
               <div className="rounded-[1.6rem] border border-brand-black/8 bg-brand-light/60 p-4 shadow-soft">
                 <p className="text-sm font-semibold text-brand-black">Default access accounts</p>
                 <ul className="mt-3 space-y-2 text-sm text-brand-black/65">
@@ -225,7 +171,7 @@ export function LoginPage() {
                   disabled={isSubmitting || isLoading}
                   className="btn-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {isSubmitting ? "Please wait" : mode === "login" ? "Sign in" : "Create account"}
+                  {isSubmitting ? "Please wait" : "Sign in"}
                   <ArrowRightIcon className="h-4 w-4" />
                 </button>
                 <button type="button" className="btn-secondary">

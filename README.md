@@ -239,6 +239,10 @@ docker compose up --build
 - `analyst@aegiscore.local` / `password`
 - `viewer@aegiscore.local` / `password`
 
+Public self-registration is disabled by default for the demo deployment. Use the seeded
+accounts above unless you intentionally enable `ALLOW_SELF_REGISTRATION=true` in
+`backend/.env`.
+
 ## Demo workflow
 
 1. Start the stack locally or with Docker.

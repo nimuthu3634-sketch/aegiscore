@@ -91,6 +91,16 @@ def identify_event_type(source_tool: str, raw_log: dict[str, Any], explicit_even
         return "virtualization"
 
     message = " ".join(str(value) for value in raw_log.values()).lower()
+    if any(
+        keyword in message
+        for keyword in ("integrity", "checksum", "syscheck", "file changed", "file modified", "sudoers")
+    ):
+        return "file_integrity"
+    if any(
+        keyword in message
+        for keyword in ("useradd", "account created", "new user", "groupadd", "unauthorized user")
+    ):
+        return "user_account"
     if any(keyword in message for keyword in ("login", "ssh", "rdp", "password", "sudo", "auth")):
         return "authentication"
     if any(keyword in message for keyword in ("dns", "tls", "network", "traffic", "port", "smb")):
@@ -150,6 +160,10 @@ def normalize_log_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "source_ip": raw_log.get("source_ip") or raw_log.get("src_ip"),
         "destination_ip": raw_log.get("destination_ip") or raw_log.get("dest_ip") or raw_log.get("dst_ip"),
         "port": raw_log.get("port") or raw_log.get("dest_port") or raw_log.get("dport"),
+        "path": raw_log.get("path"),
+        "file": raw_log.get("file"),
+        "action": raw_log.get("action"),
+        "protocol": raw_log.get("proto") or raw_log.get("protocol"),
     }
 
     normalized_log = {

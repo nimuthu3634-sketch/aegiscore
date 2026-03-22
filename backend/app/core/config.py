@@ -18,6 +18,7 @@ class Settings:
     postgres_password: str
     postgres_host: str
     postgres_port: int
+    allow_self_registration: bool
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -31,6 +32,13 @@ def get_settings() -> Settings:
     postgres_password = os.getenv("POSTGRES_PASSWORD", "aegiscore")
     postgres_host = os.getenv("POSTGRES_HOST", "localhost")
     postgres_port = int(os.getenv("POSTGRES_PORT", "5432"))
+
+    allow_self_registration = os.getenv("ALLOW_SELF_REGISTRATION", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
     return Settings(
         app_name=os.getenv("APP_NAME", "AegisCore"),
@@ -49,4 +57,5 @@ def get_settings() -> Settings:
         postgres_password=postgres_password,
         postgres_host=postgres_host,
         postgres_port=postgres_port,
+        allow_self_registration=allow_self_registration,
     )

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.config import get_settings
 from app.schemas.auth import (
     AuthenticatedUserResponse,
     LoginRequest,
@@ -10,6 +11,7 @@ from app.services.auth import login_user, register_user
 from app.utils.auth import get_current_active_user
 
 router = APIRouter()
+settings = get_settings()
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -21,6 +23,12 @@ def login(payload: LoginRequest) -> TokenResponse:
 
 @router.post("/register", response_model=TokenResponse)
 def register(payload: RegisterRequest) -> TokenResponse:
+    if not settings.allow_self_registration:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Self-registration is disabled for this deployment.",
+        )
+
     result = register_user(
         full_name=payload.full_name,
         email=payload.email,

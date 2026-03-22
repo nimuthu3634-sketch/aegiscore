@@ -33,6 +33,18 @@ def _extract_event_type(alert_payload: dict) -> str:
     rule = alert_payload.get("rule", {})
     groups = [str(item).lower() for item in rule.get("groups", [])]
     description = str(rule.get("description", "")).lower()
+    full_log = str(alert_payload.get("full_log", "")).lower()
+    combined_text = " ".join([description, full_log, " ".join(groups)])
+
+    if alert_payload.get("syscheck") or any(
+        keyword in groups for keyword in ("syscheck", "fim", "integrity", "configuration")
+    ):
+        return "file_integrity"
+    if any(
+        keyword in combined_text
+        for keyword in ("useradd", "account created", "new user", "unauthorized user", "groupadd")
+    ):
+        return "user_account"
 
     if any(keyword in groups for keyword in ("authentication_failed", "auth", "sshd", "windows")):
         return "authentication"
