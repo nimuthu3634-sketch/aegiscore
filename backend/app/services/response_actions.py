@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from sqlalchemy import select
+
 from fastapi import HTTPException, status
 
 from app.core.enums import (
@@ -9,6 +11,7 @@ from app.core.enums import (
     ResponseActionStatus,
     ResponseActionType,
 )
+from app.models.response_action import ResponseAction
 from app.services.alerts import get_alert_by_id, update_alert_status
 from app.services.incidents import create_incident, load_incident_records
 from app.services.logs import load_log_records
@@ -19,7 +22,9 @@ from app.services.mock_store import (
     DEMO_RESPONSE_ACTIONS,
     DEMO_USERS,
 )
-from app.utils.time import utc_now
+from app.services.persistence import run_with_optional_db
+from app.services.record_ids import next_prefixed_id
+from app.utils.time import ensure_utc, utc_now
 
 AUTOMATION_ACTOR_NAME = "AegisCore Automation"
 
@@ -33,6 +38,70 @@ def _first_present(*values):
         return str(value)
 
     return None
+
+
+def _response_action_from_model(action: ResponseAction) -> dict:
+    return {
+        "id": action.id,
+        "alert_id": action.alert_id,
+        "action_type": action.action_type,
+        "status": action.status,
+        "execution_mode": action.execution_mode,
+        "target_label": action.target_label,
+        "notes": action.notes,
+        "result_summary": action.result_summary,
+        "performed_by_user_id": action.performed_by_user_id,
+        "incident_id": action.incident_id,
+        "created_at": ensure_utc(action.created_at),
+    }
+
+
+def _load_persisted_response_actions() -> list[dict]:
+    def operation(db) -> list[dict]:
+        actions = db.scalars(select(ResponseAction)).all()
+        return [_response_action_from_model(action) for action in actions]
+
+    return run_with_optional_db(operation, lambda: [])
+
+
+def load_response_action_records() -> list[dict]:
+    merged_actions = {
+        action["id"]: dict(action)
+        for action in DEMO_RESPONSE_ACTIONS
+    }
+
+    for persisted_action in _load_persisted_response_actions():
+        if persisted_action["id"] in merged_actions:
+            merged_actions[persisted_action["id"]] = {
+                **merged_actions[persisted_action["id"]],
+                **persisted_action,
+            }
+        else:
+            merged_actions[persisted_action["id"]] = persisted_action
+
+    return list(merged_actions.values())
+
+
+def _persist_response_action(action_record: dict) -> None:
+    def operation(db) -> None:
+        db.merge(
+            ResponseAction(
+                id=action_record["id"],
+                alert_id=action_record["alert_id"],
+                action_type=action_record["action_type"],
+                status=action_record["status"],
+                execution_mode=action_record["execution_mode"],
+                target_label=action_record.get("target_label"),
+                notes=action_record.get("notes", ""),
+                result_summary=action_record.get("result_summary", ""),
+                performed_by_user_id=action_record.get("performed_by_user_id"),
+                incident_id=action_record.get("incident_id"),
+                created_at=action_record["created_at"],
+            )
+        )
+        db.commit()
+
+    run_with_optional_db(operation, lambda: None)
 
 
 def _related_log_for_alert(alert: dict) -> dict | None:
@@ -143,7 +212,10 @@ def _record_action(
 ) -> dict:
     performed_by_user_id, performed_by_name = _resolve_actor(actor, execution_mode)
     action_record = {
-        "id": f"response-{len(DEMO_RESPONSE_ACTIONS) + 1:03d}",
+        "id": next_prefixed_id(
+            "response",
+            (action["id"] for action in load_response_action_records()),
+        ),
         "alert_id": alert_id,
         "action_type": action_type,
         "status": action_status,
@@ -157,28 +229,45 @@ def _record_action(
         "created_at": utc_now(),
     }
     DEMO_RESPONSE_ACTIONS.insert(0, action_record)
+    _persist_response_action(action_record)
     return _serialize_action(action_record)
+
+
+def _completed_action_targets(action_type: ResponseActionType) -> set[str]:
+    return {
+        str(action["target_label"])
+        for action in load_response_action_records()
+        if action["action_type"] == action_type
+        and action["status"] == ResponseActionStatus.COMPLETED
+        and action.get("target_label")
+    }
 
 
 def _is_ip_blocked(source_ip: str | None) -> bool:
     if source_ip is None:
         return False
 
-    return any(record["source_ip"] == source_ip for record in DEMO_BLOCKED_IPS)
+    return source_ip in _completed_action_targets(ResponseActionType.BLOCK_SOURCE_IP) or any(
+        record["source_ip"] == source_ip for record in DEMO_BLOCKED_IPS
+    )
 
 
 def _is_asset_isolated(asset: str | None) -> bool:
     if asset is None:
         return False
 
-    return any(record["asset"] == asset for record in DEMO_ISOLATED_ASSETS)
+    return asset in _completed_action_targets(ResponseActionType.ISOLATE_ASSET) or any(
+        record["asset"] == asset for record in DEMO_ISOLATED_ASSETS
+    )
 
 
 def _is_account_disabled(account: str | None) -> bool:
     if account is None:
         return False
 
-    return any(record["account"] == account for record in DEMO_DISABLED_ACCOUNTS)
+    return account in _completed_action_targets(ResponseActionType.DISABLE_ACCOUNT) or any(
+        record["account"] == account for record in DEMO_DISABLED_ACCOUNTS
+    )
 
 
 def _build_suggestions(alert: dict) -> list[dict]:
@@ -275,7 +364,7 @@ def _is_high_risk_alert(alert: dict) -> bool:
 def list_response_actions(alert_id: str) -> dict:
     alert = get_alert_by_id(alert_id)
     history = sorted(
-        (action for action in DEMO_RESPONSE_ACTIONS if action["alert_id"] == alert_id),
+        (action for action in load_response_action_records() if action["alert_id"] == alert_id),
         key=lambda action: action["created_at"],
         reverse=True,
     )

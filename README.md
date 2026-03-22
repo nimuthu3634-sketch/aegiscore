@@ -54,6 +54,8 @@ The repository is organized as a monorepo with:
 - When the database is available, alerts, logs, incidents, and reports are now
   read back from persisted records as well, so core analyst workflow changes
   survive backend restarts instead of existing only in memory.
+- Response-action audit history and integration import timestamps/messages also
+  persist through the database-backed runtime path when the database is available.
 
 - This means a fresh setup already looks populated for presentations.
 

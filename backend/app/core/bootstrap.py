@@ -10,9 +10,11 @@ from app.db.init_db import init_db
 from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.incident import Incident
+from app.models.integration_import_state import IntegrationImportState
 from app.models.integration_status import IntegrationStatus
 from app.models.log_entry import LogEntry
 from app.models.report import Report
+from app.models.response_action import ResponseAction
 from app.models.user import User
 from app.models.virtual_machine import VirtualMachine
 from app.services.anomaly import train_demo_anomaly_model
@@ -22,6 +24,7 @@ from app.services.mock_store import (
     DEMO_INTEGRATIONS,
     DEMO_LOGS,
     DEMO_REPORTS,
+    DEMO_RESPONSE_ACTIONS,
     DEMO_USERS,
     DEMO_VIRTUAL_MACHINES,
 )
@@ -121,6 +124,30 @@ def _seed_database_demo_records() -> dict[str, int]:
                 status=record["status"],
                 last_sync_at=record["last_sync_at"],
                 notes=record.get("notes", ""),
+            ),
+        ),
+        "integration_import_states": _sync_records(
+            DEMO_INTEGRATIONS,
+            lambda record: IntegrationImportState(
+                tool_name=record["tool_name"],
+                last_import_at=record.get("last_import_at"),
+                last_import_message=record.get("last_import_message"),
+            ),
+        ),
+        "response_actions": _sync_records(
+            DEMO_RESPONSE_ACTIONS,
+            lambda record: ResponseAction(
+                id=record["id"],
+                alert_id=record["alert_id"],
+                action_type=record["action_type"],
+                status=record["status"],
+                execution_mode=record["execution_mode"],
+                target_label=record.get("target_label"),
+                notes=record.get("notes", ""),
+                result_summary=record.get("result_summary", ""),
+                performed_by_user_id=record.get("performed_by_user_id"),
+                incident_id=record.get("incident_id"),
+                created_at=record["created_at"],
             ),
         ),
         "virtual_machines": _sync_records(

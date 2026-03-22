@@ -2,8 +2,8 @@ from app.core.enums import AlertSeverity, AlertStatus, IntegrationHealth, Integr
 from app.services.alerts import create_alert
 from app.services.integrations import (
     get_augmented_integration_by_tool,
-    get_integration_by_tool,
     get_latest_alert_titles_for_tool,
+    update_integration_runtime,
 )
 from app.services.logs import create_log_record, load_log_records
 from app.utils.log_normalization import normalize_timestamp
@@ -77,7 +77,6 @@ def get_hydra_status() -> dict:
 
 
 def import_hydra_results(results: list[dict]) -> dict:
-    integration = get_integration_by_tool(IntegrationTool.HYDRA)
     imported_alert_count = 0
     imported_log_count = 0
     skipped_count = 0
@@ -161,14 +160,16 @@ def import_hydra_results(results: list[dict]) -> dict:
         existing_references.add(integration_ref)
 
     last_import_at = utc_now()
-    integration["status"] = IntegrationHealth.CONNECTED
-    integration["last_sync_at"] = last_import_at
-    integration["last_import_at"] = last_import_at
-    integration["last_import_message"] = (
+    last_import_message = (
         f"Imported {imported_alert_count} Hydra findings and {imported_log_count} logs."
     )
-    integration["notes"] = (
-        "Authorized credential-assessment result ingestion. No offensive automation."
+    update_integration_runtime(
+        IntegrationTool.HYDRA,
+        status=IntegrationHealth.CONNECTED,
+        last_sync_at=last_import_at,
+        last_import_at=last_import_at,
+        last_import_message=last_import_message,
+        notes="Authorized credential-assessment result ingestion. No offensive automation.",
     )
 
     return {
@@ -176,5 +177,5 @@ def import_hydra_results(results: list[dict]) -> dict:
         "imported_log_count": imported_log_count,
         "skipped_count": skipped_count,
         "last_import_at": last_import_at,
-        "message": integration["last_import_message"],
+        "message": last_import_message,
     }

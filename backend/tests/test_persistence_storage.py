@@ -5,26 +5,42 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from app.core.enums import AlertSeverity, IntegrationTool
+from app.core.enums import AlertSeverity, IntegrationTool, ResponseActionType
 from app.db.base import Base
 from app.services import alerts as alerts_service
+from app.services import integrations as integrations_service
 from app.services import incidents as incidents_service
 from app.services import logs as logs_service
+from app.services import response_actions as response_actions_service
 from app.services.dashboard import get_dashboard_summary
-from app.services.mock_store import DEMO_ALERTS, DEMO_INCIDENTS, DEMO_LOGS
+from app.services.hydra_integration import import_hydra_results
+from app.services.mock_store import (
+    DEMO_ALERTS,
+    DEMO_BLOCKED_IPS,
+    DEMO_INCIDENTS,
+    DEMO_INTEGRATIONS,
+    DEMO_LOGS,
+    DEMO_RESPONSE_ACTIONS,
+)
 
 
 @pytest.fixture(autouse=True)
 def restore_demo_state() -> None:
     alerts_snapshot = deepcopy(DEMO_ALERTS)
+    blocked_ips_snapshot = deepcopy(DEMO_BLOCKED_IPS)
     incidents_snapshot = deepcopy(DEMO_INCIDENTS)
+    integrations_snapshot = deepcopy(DEMO_INTEGRATIONS)
     logs_snapshot = deepcopy(DEMO_LOGS)
+    response_actions_snapshot = deepcopy(DEMO_RESPONSE_ACTIONS)
 
     yield
 
     DEMO_ALERTS[:] = alerts_snapshot
+    DEMO_BLOCKED_IPS[:] = blocked_ips_snapshot
     DEMO_INCIDENTS[:] = incidents_snapshot
+    DEMO_INTEGRATIONS[:] = integrations_snapshot
     DEMO_LOGS[:] = logs_snapshot
+    DEMO_RESPONSE_ACTIONS[:] = response_actions_snapshot
 
 
 @pytest.fixture
@@ -44,8 +60,10 @@ def sqlite_storage(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
             db.close()
 
     monkeypatch.setattr(alerts_service, "run_with_optional_db", run_with_sqlite)
+    monkeypatch.setattr(integrations_service, "run_with_optional_db", run_with_sqlite)
     monkeypatch.setattr(logs_service, "run_with_optional_db", run_with_sqlite)
     monkeypatch.setattr(incidents_service, "run_with_optional_db", run_with_sqlite)
+    monkeypatch.setattr(response_actions_service, "run_with_optional_db", run_with_sqlite)
 
 
 def test_alert_log_and_incident_survive_memory_reset_via_database(sqlite_storage) -> None:
@@ -106,3 +124,57 @@ def test_alert_log_and_incident_survive_memory_reset_via_database(sqlite_storage
 
     assert next_alert["id"] != created_alert["id"]
     assert next_alert["id"] > created_alert["id"]
+
+
+def test_response_actions_and_integration_runtime_survive_memory_reset(sqlite_storage) -> None:
+    action = response_actions_service.execute_response_action(
+        alert_id="alert-001",
+        action_type=ResponseActionType.BLOCK_SOURCE_IP,
+        actor={"id": "user-admin", "full_name": "AegisCore Admin"},
+    )
+    assert action["status"] == "completed"
+
+    import_result = import_hydra_results(
+        [
+            {
+                "target_system": "lab-hydra-01",
+                "protocol": "ssh",
+                "result_summary": "Repeated match threshold crossed during authorized lab assessment",
+                "timestamp": "2026-03-22T12:05:00Z",
+                "notes": "Persistence verification import",
+            }
+        ]
+    )
+    assert import_result["imported_alert_count"] == 1
+
+    original_hydra_integration = deepcopy(
+        next(
+            integration
+            for integration in DEMO_INTEGRATIONS
+            if integration["tool_name"] == IntegrationTool.HYDRA
+        )
+    )
+
+    DEMO_RESPONSE_ACTIONS.clear()
+    DEMO_BLOCKED_IPS.clear()
+    for integration in DEMO_INTEGRATIONS:
+        if integration["tool_name"] == IntegrationTool.HYDRA:
+            integration.update(
+                {
+                    "last_import_at": original_hydra_integration.get("last_import_at"),
+                    "last_import_message": original_hydra_integration.get("last_import_message"),
+                }
+            )
+
+    response_history = response_actions_service.list_response_actions("alert-001")
+    history_types = [item["action_type"] for item in response_history["items"]]
+    assert ResponseActionType.BLOCK_SOURCE_IP in history_types
+
+    suggestions = {
+        item["action_type"]: item for item in response_history["recommended_actions"]
+    }
+    assert suggestions[ResponseActionType.BLOCK_SOURCE_IP]["available"] is False
+
+    hydra_status = integrations_service.get_augmented_integration_by_tool(IntegrationTool.HYDRA)
+    assert hydra_status["last_import_message"] == import_result["message"]
+    assert hydra_status["last_import_at"] is not None
