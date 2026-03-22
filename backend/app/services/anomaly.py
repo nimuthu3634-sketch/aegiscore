@@ -31,6 +31,12 @@ def _build_event_context(
     }
 
 
+def _load_reference_alert_records() -> list[dict]:
+    from app.services.alerts import load_alert_records
+
+    return load_alert_records()
+
+
 def train_demo_anomaly_model(force_retrain: bool = True) -> dict[str, Any]:
     metadata = (
         anomaly_detector.train_demo_model()
@@ -54,7 +60,7 @@ def score_event_payload(
     *,
     reference_alerts: list[dict] | None = None,
 ) -> dict[str, Any]:
-    context = _build_event_context(payload, reference_alerts or DEMO_ALERTS)
+    context = _build_event_context(payload, reference_alerts or _load_reference_alert_records())
     prediction = anomaly_detector.predict_event(context)
 
     return {
@@ -86,14 +92,14 @@ def ensure_demo_alerts_scored(force_recompute: bool = False) -> None:
 
 
 def get_anomaly_summary(limit: int = 5) -> dict[str, Any]:
-    ensure_demo_alerts_scored()
+    alert_records = _load_reference_alert_records()
     metadata = anomaly_detector.get_training_metadata()
     sorted_alerts = sorted(
-        DEMO_ALERTS,
+        alert_records,
         key=lambda alert: (alert.get("anomaly_score", 0.0), alert.get("created_at")),
         reverse=True,
     )
-    anomaly_scores = [float(alert.get("anomaly_score", 0.0)) for alert in DEMO_ALERTS]
+    anomaly_scores = [float(alert.get("anomaly_score", 0.0)) for alert in alert_records]
 
     return {
         "model_name": metadata.model_name,
@@ -105,9 +111,9 @@ def get_anomaly_summary(limit: int = 5) -> dict[str, Any]:
         )
         if anomaly_scores
         else 0.0,
-        "anomalous_alert_count": sum(1 for alert in DEMO_ALERTS if alert.get("is_anomalous")),
+        "anomalous_alert_count": sum(1 for alert in alert_records if alert.get("is_anomalous")),
         "high_anomaly_alert_count": sum(
-            1 for alert in DEMO_ALERTS if float(alert.get("anomaly_score", 0.0)) >= 0.7
+            1 for alert in alert_records if float(alert.get("anomaly_score", 0.0)) >= 0.7
         ),
         "top_anomalous_alerts": sorted_alerts[:limit],
     }

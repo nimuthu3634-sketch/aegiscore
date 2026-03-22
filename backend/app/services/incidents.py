@@ -4,9 +4,10 @@ from sqlalchemy import select
 from app.core.enums import AlertSeverity, IncidentStatus, UserRole
 from app.models.incident import Incident
 from app.services.alerts import get_alert_by_id
-from app.services.mock_store import DEMO_INCIDENTS, DEMO_USERS
+from app.services.mock_store import DEMO_INCIDENTS
 from app.services.persistence import run_with_optional_db
 from app.services.record_ids import next_prefixed_id
+from app.services.users import get_user_by_id, get_user_name_lookup, list_active_analysts
 from app.utils.time import ensure_utc, utc_now
 
 
@@ -75,23 +76,14 @@ def _sorted_incidents() -> list[dict]:
 
 
 def _get_available_assignees() -> list[dict]:
-    return [
-        {
-            "id": user["id"],
-            "full_name": user["full_name"],
-            "email": user["email"],
-            "role": user["role"],
-        }
-        for user in DEMO_USERS
-        if user["role"] == UserRole.ANALYST and user.get("is_active", False)
-    ]
+    return list_active_analysts()
 
 
 def _validate_assignee(assigned_to_user_id: str | None) -> str | None:
     if assigned_to_user_id is None:
         return None
 
-    assignee = next((user for user in DEMO_USERS if user["id"] == assigned_to_user_id), None)
+    assignee = get_user_by_id(assigned_to_user_id)
     if (
         not assignee
         or assignee["role"] != UserRole.ANALYST
@@ -106,7 +98,7 @@ def _validate_assignee(assigned_to_user_id: str | None) -> str | None:
 
 
 def _serialize_incident(incident: dict) -> dict:
-    user_lookup = {user["id"]: user["full_name"] for user in DEMO_USERS}
+    user_lookup = get_user_name_lookup()
     alert = get_alert_by_id(incident["alert_id"]) if incident.get("alert_id") else None
     title = incident.get("title") or (alert["title"] if alert else "Incident review")
     affected_asset = incident.get("affected_asset") or (alert["source"] if alert else "Unknown asset")

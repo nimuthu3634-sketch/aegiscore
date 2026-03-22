@@ -5,7 +5,7 @@ from app.core.enums import AlertSeverity, IncidentStatus
 from app.services.anomaly import ensure_demo_alerts_scored
 from app.services.alerts import load_alert_records
 from app.services.incidents import load_incident_records
-from app.services.mock_store import DEMO_USERS
+from app.services.users import get_user_name_lookup
 
 SEVERITY_ORDER = [
     AlertSeverity.CRITICAL,
@@ -81,7 +81,7 @@ def get_dashboard_recent_alerts(limit: int = 5) -> list[dict]:
 
 
 def get_dashboard_recent_incidents(limit: int = 4) -> list[dict]:
-    user_lookup = {user["id"]: user["full_name"] for user in DEMO_USERS}
+    user_lookup = get_user_name_lookup()
     recent_incidents: list[dict] = []
 
     for incident in _sorted_incidents()[:limit]:

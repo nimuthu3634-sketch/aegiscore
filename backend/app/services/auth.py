@@ -2,14 +2,11 @@ from fastapi import HTTPException, status
 
 from app.core.security import TOKEN_TYPE, create_access_token, get_password_hash, verify_password
 from app.services.mock_store import DEMO_USERS, build_user_record
+from app.services.users import get_user_by_email, load_user_records, persist_user_record
 
 
 def list_demo_users() -> list[dict]:
-    return DEMO_USERS
-
-
-def get_user_by_email(email: str) -> dict | None:
-    return next((user for user in DEMO_USERS if user["email"] == email), None)
+    return load_user_records()
 
 
 def authenticate_user(email: str, password: str) -> dict:
@@ -43,6 +40,7 @@ def register_user(full_name: str, email: str, password: str, role) -> dict:
         role=role,
     )
     DEMO_USERS.append(user)
+    persist_user_record(user)
     access_token = create_access_token(subject=user["email"], role=user["role"])
     return {**user, "access_token": access_token, "token_type": TOKEN_TYPE}
 

@@ -56,6 +56,12 @@ The repository is organized as a monorepo with:
   survive backend restarts instead of existing only in memory.
 - Response-action audit history and integration import timestamps/messages also
   persist through the database-backed runtime path when the database is available.
+- Seeded user accounts and VirtualBox lab inventory now follow that same
+  database-backed runtime path, so login, analyst name lookups, and VM tracking
+  continue to work after a restart when PostgreSQL is available.
+- Live alert stream readiness and anomaly summaries now read from the merged
+  persisted alert view too, so newly imported alerts still appear in those demo
+  flows after a restart.
 
 - This means a fresh setup already looks populated for presentations.
 

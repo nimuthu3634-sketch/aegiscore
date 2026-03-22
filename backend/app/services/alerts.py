@@ -177,7 +177,7 @@ def create_alert(
     if extra_fields:
         alert_record.update(extra_fields)
 
-    apply_anomaly_scoring(alert_record, reference_alerts=DEMO_ALERTS)
+    apply_anomaly_scoring(alert_record, reference_alerts=load_alert_records())
     DEMO_ALERTS.append(alert_record)
     _persist_alert_record(alert_record)
     from app.services.response_actions import run_automatic_response_workflow

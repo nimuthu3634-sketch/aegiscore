@@ -5,17 +5,19 @@ import asyncio
 import anyio
 from fastapi.encoders import jsonable_encoder
 
-from app.services.mock_store import DEMO_ALERTS
 from app.ws.connection_manager import ConnectionManager
 
 alert_stream_manager = ConnectionManager()
 
 
 def _latest_alert() -> dict | None:
-    if not DEMO_ALERTS:
+    from app.services.alerts import load_alert_records
+
+    alert_records = load_alert_records()
+    if not alert_records:
         return None
 
-    return max(DEMO_ALERTS, key=lambda alert: alert["created_at"])
+    return max(alert_records, key=lambda alert: alert["created_at"])
 
 
 def build_alert_stream_ready_payload() -> dict:

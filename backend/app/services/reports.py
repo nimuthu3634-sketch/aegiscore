@@ -21,8 +21,9 @@ from app.models.user import User
 from app.services.anomaly import ensure_demo_alerts_scored
 from app.services.alerts import load_alert_records
 from app.services.incidents import load_incident_records
-from app.services.mock_store import DEMO_REPORTS, DEMO_USERS
+from app.services.mock_store import DEMO_REPORTS
 from app.services.record_ids import next_prefixed_id
+from app.services.users import get_user_by_id
 from app.utils.time import ensure_utc, utc_now
 
 SEVERITY_ORDER = [
@@ -79,7 +80,7 @@ def _get_user_name(user_id: str | None) -> str | None:
     if not user_id:
         return None
 
-    user_record = next((user for user in DEMO_USERS if user["id"] == user_id), None)
+    user_record = get_user_by_id(user_id)
     return user_record["full_name"] if user_record else None
 
 

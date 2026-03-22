@@ -20,10 +20,10 @@ from app.services.mock_store import (
     DEMO_DISABLED_ACCOUNTS,
     DEMO_ISOLATED_ASSETS,
     DEMO_RESPONSE_ACTIONS,
-    DEMO_USERS,
 )
 from app.services.persistence import run_with_optional_db
 from app.services.record_ids import next_prefixed_id
+from app.services.users import get_user_by_id
 from app.utils.time import ensure_utc, utc_now
 
 AUTOMATION_ACTOR_NAME = "AegisCore Automation"
@@ -176,7 +176,7 @@ def _find_user_name(user_id: str | None) -> str | None:
     if user_id is None:
         return None
 
-    user = next((candidate for candidate in DEMO_USERS if candidate["id"] == user_id), None)
+    user = get_user_by_id(user_id)
     return user["full_name"] if user else None
 
 
