@@ -19,8 +19,11 @@ from app.db.init_db import init_db
 from app.models.report import Report
 from app.models.user import User
 from app.services.anomaly import ensure_demo_alerts_scored
-from app.services.mock_store import DEMO_ALERTS, DEMO_INCIDENTS, DEMO_REPORTS, DEMO_USERS
-from app.utils.time import utc_now
+from app.services.alerts import load_alert_records
+from app.services.incidents import load_incident_records
+from app.services.mock_store import DEMO_REPORTS, DEMO_USERS
+from app.services.record_ids import next_prefixed_id
+from app.utils.time import ensure_utc, utc_now
 
 SEVERITY_ORDER = [
     AlertSeverity.CRITICAL,
@@ -96,7 +99,7 @@ def _report_from_model(report: Report) -> dict:
         "generated_by_name": _get_user_name(report.generated_by_user_id),
         "content_json": report.content_json,
         "status": report.status,
-        "created_at": report.created_at,
+        "created_at": ensure_utc(report.created_at),
     }
 
 
@@ -129,7 +132,7 @@ def _filter_alerts(*, date_from: date | None, date_to: date | None) -> list[dict
     ensure_demo_alerts_scored()
     return [
         alert
-        for alert in DEMO_ALERTS
+        for alert in load_alert_records()
         if _within_date_range(alert.get("created_at"), date_from=date_from, date_to=date_to)
     ]
 
@@ -137,7 +140,7 @@ def _filter_alerts(*, date_from: date | None, date_to: date | None) -> list[dict
 def _filter_incidents(*, date_from: date | None, date_to: date | None) -> list[dict]:
     return [
         incident
-        for incident in DEMO_INCIDENTS
+        for incident in load_incident_records()
         if _within_date_range(incident.get("opened_at"), date_from=date_from, date_to=date_to)
     ]
 
@@ -330,7 +333,7 @@ def generate_report(
 ) -> dict:
     _validate_date_range(date_from, date_to)
     report_record = {
-        "id": f"report-{len(DEMO_REPORTS) + 1:03d}",
+        "id": next_prefixed_id("report", (report["id"] for report in _merged_report_records(db))),
         "title": title or _default_report_title(report_type, date_from=date_from, date_to=date_to),
         "report_type": report_type,
         "generated_by_user_id": current_user.get("id"),

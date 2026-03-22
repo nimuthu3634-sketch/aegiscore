@@ -9,14 +9,13 @@ from app.core.enums import (
     ResponseActionStatus,
     ResponseActionType,
 )
-from app.services.alerts import get_alert_by_id
-from app.services.incidents import create_incident
+from app.services.alerts import get_alert_by_id, update_alert_status
+from app.services.incidents import create_incident, load_incident_records
+from app.services.logs import load_log_records
 from app.services.mock_store import (
     DEMO_BLOCKED_IPS,
     DEMO_DISABLED_ACCOUNTS,
-    DEMO_INCIDENTS,
     DEMO_ISOLATED_ASSETS,
-    DEMO_LOGS,
     DEMO_RESPONSE_ACTIONS,
     DEMO_USERS,
 )
@@ -40,13 +39,13 @@ def _related_log_for_alert(alert: dict) -> dict | None:
     integration_ref = alert.get("integration_ref")
     if integration_ref:
         return next(
-            (log_entry for log_entry in DEMO_LOGS if log_entry.get("integration_ref") == integration_ref),
+            (log_entry for log_entry in load_log_records() if log_entry.get("integration_ref") == integration_ref),
             None,
         )
 
     candidates = [
         log_entry
-        for log_entry in DEMO_LOGS
+        for log_entry in load_log_records()
         if log_entry.get("source") == alert.get("source")
         and log_entry.get("source_tool") == alert.get("source_tool")
     ]
@@ -101,7 +100,7 @@ def _extract_response_targets(alert: dict) -> dict:
 
 
 def _find_existing_incident(alert_id: str) -> dict | None:
-    return next((incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == alert_id), None)
+    return next((incident for incident in load_incident_records() if incident.get("alert_id") == alert_id), None)
 
 
 def _find_user_name(user_id: str | None) -> str | None:
@@ -355,7 +354,7 @@ def execute_response_action(
                 actor=actor,
             )
 
-        alert["status"] = AlertStatus.INVESTIGATING
+        alert = update_alert_status(alert_id, AlertStatus.INVESTIGATING)
         return _record_action(
             alert_id=alert_id,
             action_type=action_type,
@@ -397,7 +396,7 @@ def execute_response_action(
             }
         )
         if alert["status"] != AlertStatus.RESOLVED:
-            alert["status"] = AlertStatus.INVESTIGATING
+            update_alert_status(alert_id, AlertStatus.INVESTIGATING)
 
         return _record_action(
             alert_id=alert_id,
@@ -440,7 +439,7 @@ def execute_response_action(
             }
         )
         if alert["status"] != AlertStatus.RESOLVED:
-            alert["status"] = AlertStatus.INVESTIGATING
+            update_alert_status(alert_id, AlertStatus.INVESTIGATING)
 
         return _record_action(
             alert_id=alert_id,
@@ -483,7 +482,7 @@ def execute_response_action(
             }
         )
         if alert["status"] != AlertStatus.RESOLVED:
-            alert["status"] = AlertStatus.INVESTIGATING
+            update_alert_status(alert_id, AlertStatus.INVESTIGATING)
 
         return _record_action(
             alert_id=alert_id,

@@ -5,8 +5,7 @@ from app.services.integrations import (
     get_integration_by_tool,
     get_latest_alert_titles_for_tool,
 )
-from app.services.logs import create_log_record
-from app.services.mock_store import DEMO_ALERTS, DEMO_LOGS
+from app.services.logs import create_log_record, load_log_records
 from app.utils.log_normalization import normalize_timestamp
 from app.utils.time import utc_now
 
@@ -83,12 +82,23 @@ def import_hydra_results(results: list[dict]) -> dict:
     imported_log_count = 0
     skipped_count = 0
 
-    existing_references = {
-        alert.get("integration_ref") for alert in DEMO_ALERTS if alert.get("integration_ref")
-    }
-    existing_references.update(
-        log_entry.get("integration_ref") for log_entry in DEMO_LOGS if log_entry.get("integration_ref")
-    )
+    existing_references = set()
+    for log_entry in load_log_records():
+        if log_entry.get("source_tool") != IntegrationTool.HYDRA:
+            continue
+
+        if log_entry.get("integration_ref"):
+            existing_references.add(log_entry["integration_ref"])
+
+        raw_log = log_entry.get("raw_log")
+        if isinstance(raw_log, dict):
+            reference_payload = {
+                "target_system": raw_log.get("target_system"),
+                "protocol": raw_log.get("protocol"),
+                "timestamp": raw_log.get("timestamp"),
+                "result_summary": raw_log.get("result_summary"),
+            }
+            existing_references.add(_build_hydra_reference(reference_payload))
 
     for result_payload in results:
         integration_ref = _build_hydra_reference(result_payload)

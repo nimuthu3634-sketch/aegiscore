@@ -1,17 +1,84 @@
 from math import ceil
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 
 from app.services.anomaly import apply_anomaly_scoring, ensure_demo_alerts_scored
 from app.core.enums import AlertSeverity, AlertStatus, IntegrationTool
+from app.models.alert import Alert
 from app.services.mock_store import DEMO_ALERTS
+from app.services.persistence import run_with_optional_db
+from app.services.record_ids import next_prefixed_id
 from app.services.websocket import broadcast_alert_created
-from app.utils.time import utc_now
+from app.utils.time import ensure_utc, utc_now
+
+
+def _alert_from_model(alert: Alert) -> dict:
+    return {
+        "id": alert.id,
+        "title": alert.title,
+        "description": alert.description,
+        "source": alert.source,
+        "source_tool": alert.source_tool,
+        "severity": alert.severity,
+        "status": alert.status,
+        "confidence_score": alert.confidence_score,
+        "anomaly_score": alert.anomaly_score,
+        "is_anomalous": alert.is_anomalous,
+        "anomaly_explanation": alert.anomaly_explanation,
+        "created_at": ensure_utc(alert.created_at),
+    }
+
+
+def _load_persisted_alerts() -> list[dict]:
+    def operation(db) -> list[dict]:
+        alerts = db.scalars(select(Alert).order_by(Alert.created_at.desc())).all()
+        return [_alert_from_model(alert) for alert in alerts]
+
+    return run_with_optional_db(operation, lambda: [])
+
+
+def load_alert_records() -> list[dict]:
+    ensure_demo_alerts_scored()
+    merged_alerts = {alert["id"]: dict(alert) for alert in DEMO_ALERTS}
+
+    for persisted_alert in _load_persisted_alerts():
+        if persisted_alert["id"] in merged_alerts:
+            merged_alerts[persisted_alert["id"]] = {
+                **merged_alerts[persisted_alert["id"]],
+                **persisted_alert,
+            }
+        else:
+            merged_alerts[persisted_alert["id"]] = persisted_alert
+
+    return list(merged_alerts.values())
 
 
 def _sorted_alerts() -> list[dict]:
-    ensure_demo_alerts_scored()
-    return sorted(DEMO_ALERTS, key=lambda alert: alert["created_at"], reverse=True)
+    return sorted(load_alert_records(), key=lambda alert: alert["created_at"], reverse=True)
+
+
+def _persist_alert_record(alert_record: dict) -> None:
+    def operation(db) -> None:
+        db.merge(
+            Alert(
+                id=alert_record["id"],
+                title=alert_record["title"],
+                description=alert_record["description"],
+                source=alert_record["source"],
+                source_tool=alert_record["source_tool"],
+                severity=alert_record["severity"],
+                status=alert_record["status"],
+                confidence_score=alert_record["confidence_score"],
+                anomaly_score=alert_record["anomaly_score"],
+                is_anomalous=alert_record["is_anomalous"],
+                anomaly_explanation=alert_record["anomaly_explanation"],
+                created_at=alert_record["created_at"],
+            )
+        )
+        db.commit()
+
+    run_with_optional_db(operation, lambda: None)
 
 
 def _matches_filters(
@@ -76,8 +143,7 @@ def list_alerts(
 
 
 def get_alert_by_id(alert_id: str) -> dict:
-    ensure_demo_alerts_scored()
-    alert = next((item for item in DEMO_ALERTS if item["id"] == alert_id), None)
+    alert = next((item for item in _sorted_alerts() if item["id"] == alert_id), None)
     if not alert:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found.")
 
@@ -97,7 +163,7 @@ def create_alert(
     extra_fields: dict | None = None,
 ) -> dict:
     alert_record = {
-        "id": f"alert-{len(DEMO_ALERTS) + 1:03d}",
+        "id": next_prefixed_id("alert", (alert["id"] for alert in load_alert_records())),
         "title": title,
         "description": description,
         "source": source,
@@ -113,6 +179,7 @@ def create_alert(
 
     apply_anomaly_scoring(alert_record, reference_alerts=DEMO_ALERTS)
     DEMO_ALERTS.append(alert_record)
+    _persist_alert_record(alert_record)
     from app.services.response_actions import run_automatic_response_workflow
 
     run_automatic_response_workflow(alert_record["id"])
@@ -122,5 +189,11 @@ def create_alert(
 
 def update_alert_status(alert_id: str, alert_status: AlertStatus) -> dict:
     alert = get_alert_by_id(alert_id)
+
+    memory_alert = next((item for item in DEMO_ALERTS if item["id"] == alert_id), None)
+    if memory_alert:
+        memory_alert["status"] = alert_status
+
     alert["status"] = alert_status
-    return alert
+    _persist_alert_record(alert)
+    return get_alert_by_id(alert_id)

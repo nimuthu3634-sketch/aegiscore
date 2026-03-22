@@ -2,8 +2,10 @@ from collections import Counter
 from datetime import datetime, timedelta
 
 from app.core.enums import AlertSeverity, IncidentStatus
-from app.services.anomaly import ensure_demo_alerts_scored, get_anomaly_summary
-from app.services.mock_store import DEMO_ALERTS, DEMO_INCIDENTS, DEMO_USERS
+from app.services.anomaly import ensure_demo_alerts_scored
+from app.services.alerts import load_alert_records
+from app.services.incidents import load_incident_records
+from app.services.mock_store import DEMO_USERS
 
 SEVERITY_ORDER = [
     AlertSeverity.CRITICAL,
@@ -21,33 +23,36 @@ def _incident_updated_at(incident: dict) -> datetime:
 
 def _sorted_alerts() -> list[dict]:
     ensure_demo_alerts_scored()
-    return sorted(DEMO_ALERTS, key=lambda alert: alert["created_at"], reverse=True)
+    return sorted(load_alert_records(), key=lambda alert: alert["created_at"], reverse=True)
 
 
 def _sorted_incidents() -> list[dict]:
-    return sorted(DEMO_INCIDENTS, key=_incident_updated_at, reverse=True)
+    return sorted(load_incident_records(), key=_incident_updated_at, reverse=True)
 
 
 def get_dashboard_summary() -> dict:
-    total_alerts = len(DEMO_ALERTS)
-    critical_alerts = sum(1 for alert in DEMO_ALERTS if alert["severity"] == AlertSeverity.CRITICAL)
+    alert_records = load_alert_records()
+    incident_records = load_incident_records()
+    total_alerts = len(alert_records)
+    critical_alerts = sum(1 for alert in alert_records if alert["severity"] == AlertSeverity.CRITICAL)
     resolved_incidents = sum(
-        1 for incident in DEMO_INCIDENTS if incident["status"] == IncidentStatus.RESOLVED
+        1 for incident in incident_records if incident["status"] == IncidentStatus.RESOLVED
     )
 
     return {
         "total_alerts": total_alerts,
         "critical_alerts": critical_alerts,
-        "open_incidents": len(DEMO_INCIDENTS) - resolved_incidents,
+        "open_incidents": len(incident_records) - resolved_incidents,
         "resolved_incidents": resolved_incidents,
     }
 
 
 def get_dashboard_charts() -> dict:
-    latest_alert_day = max(alert["created_at"].date() for alert in DEMO_ALERTS)
-    daily_counts = Counter(alert["created_at"].date() for alert in DEMO_ALERTS)
-    severity_counts = Counter(alert["severity"] for alert in DEMO_ALERTS)
-    source_tool_counts = Counter(alert["source_tool"] for alert in DEMO_ALERTS)
+    alert_records = load_alert_records()
+    latest_alert_day = max(alert["created_at"].date() for alert in alert_records)
+    daily_counts = Counter(alert["created_at"].date() for alert in alert_records)
+    severity_counts = Counter(alert["severity"] for alert in alert_records)
+    source_tool_counts = Counter(alert["source_tool"] for alert in alert_records)
 
     alerts_over_time = []
     for offset in range(6, -1, -1):
@@ -97,7 +102,32 @@ def get_dashboard_recent_incidents(limit: int = 4) -> list[dict]:
 
 
 def get_dashboard_anomaly_summary() -> dict:
-    summary = get_anomaly_summary(limit=5)
+    ensure_demo_alerts_scored()
+    from app.ml.anomaly import anomaly_detector
+
+    alert_records = _sorted_alerts()
+    metadata = anomaly_detector.get_training_metadata()
+    anomaly_scores = [float(alert.get("anomaly_score", 0.0)) for alert in alert_records]
+    top_anomalous_alerts = sorted(
+        alert_records,
+        key=lambda alert: (float(alert.get("anomaly_score", 0.0)), alert.get("created_at")),
+        reverse=True,
+    )[:5]
+
+    summary = {
+        "model_name": metadata.model_name,
+        "trained_on_events": metadata.trained_on_events,
+        "feature_labels": metadata.feature_labels,
+        "trained_at": metadata.trained_at,
+        "average_anomaly_score": round(sum(anomaly_scores) / len(anomaly_scores), 2)
+        if anomaly_scores
+        else 0.0,
+        "anomalous_alert_count": sum(1 for alert in alert_records if alert.get("is_anomalous")),
+        "high_anomaly_alert_count": sum(
+            1 for alert in alert_records if float(alert.get("anomaly_score", 0.0)) >= 0.7
+        ),
+        "top_anomalous_alerts": top_anomalous_alerts,
+    }
     return {
         **summary,
         "top_anomalous_alerts": summary["top_anomalous_alerts"],
