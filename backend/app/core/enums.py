@@ -21,6 +21,24 @@ class AlertStatus(str, Enum):
     RESOLVED = "resolved"
 
 
+class ResponseActionType(str, Enum):
+    CREATE_INCIDENT = "create_incident"
+    BLOCK_SOURCE_IP = "block_source_ip"
+    ISOLATE_ASSET = "isolate_asset"
+    DISABLE_ACCOUNT = "disable_account"
+    MARK_INVESTIGATING = "mark_investigating"
+
+
+class ResponseActionStatus(str, Enum):
+    COMPLETED = "completed"
+    SKIPPED = "skipped"
+
+
+class ResponseActionMode(str, Enum):
+    AUTOMATED = "automated"
+    MANUAL = "manual"
+
+
 class IncidentStatus(str, Enum):
     OPEN = "open"
     TRIAGED = "triaged"

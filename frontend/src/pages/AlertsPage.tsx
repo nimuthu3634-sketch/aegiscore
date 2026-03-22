@@ -9,12 +9,21 @@ import { SeverityBadge } from "@/components/SeverityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { useRealtime } from "@/hooks/useRealtime";
-import { createIncident, fetchAlertById, fetchAlerts, patchAlertStatus } from "@/services/api";
+import {
+  executeAlertResponseAction,
+  fetchAlertById,
+  fetchAlertResponseActions,
+  fetchAlerts,
+  patchAlertStatus,
+} from "@/services/api";
 import type { UserRole } from "@/types/auth";
 import type {
   AlertApiRecord,
   AlertListResponse,
+  AlertResponseActionsResponse,
   AlertStatus,
+  ResponseActionRecord,
+  ResponseActionType,
   SeverityLevel,
   SourceToolKey,
 } from "@/types/domain";
@@ -85,6 +94,39 @@ function canManageIncidents(userRole: UserRole | undefined) {
   return userRole === "admin" || userRole === "analyst";
 }
 
+function getResponseActionLabel(actionType: ResponseActionType) {
+  switch (actionType) {
+    case "create_incident":
+      return "Create incident";
+    case "block_source_ip":
+      return "Block source IP";
+    case "isolate_asset":
+      return "Isolate asset";
+    case "disable_account":
+      return "Disable account";
+    case "mark_investigating":
+      return "Move to investigating";
+    default:
+      return String(actionType).replace(/_/g, " ");
+  }
+}
+
+function getResponseActionTone(action: ResponseActionRecord) {
+  if (action.status === "completed") {
+    return "bg-emerald-100 text-emerald-700 ring-emerald-200";
+  }
+
+  return "bg-amber-100 text-amber-700 ring-amber-200";
+}
+
+function getResponseModeTone(mode: ResponseActionRecord["execution_mode"]) {
+  if (mode === "automated") {
+    return "bg-sky-100 text-sky-700 ring-sky-200";
+  }
+
+  return "bg-brand-black/5 text-brand-black/70 ring-brand-black/10";
+}
+
 const alertColumns: DataTableColumn<AlertApiRecord>[] = [
   {
     key: "title",
@@ -151,8 +193,11 @@ export function AlertsPage() {
   const [listError, setListError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
-  const [incidentCreateLoading, setIncidentCreateLoading] = useState(false);
-  const [incidentMessage, setIncidentMessage] = useState<string | null>(null);
+  const [responseActions, setResponseActions] = useState<AlertResponseActionsResponse | null>(null);
+  const [responseActionsLoading, setResponseActionsLoading] = useState(false);
+  const [responseActionsError, setResponseActionsError] = useState<string | null>(null);
+  const [responseActionLoading, setResponseActionLoading] = useState<ResponseActionType | null>(null);
+  const [responseActionMessage, setResponseActionMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -250,6 +295,47 @@ export function AlertsPage() {
     };
   }, [token, selectedAlertId, reloadKey, refreshVersion]);
 
+  useEffect(() => {
+    if (!token || !selectedAlertId) {
+      setResponseActions(null);
+      setResponseActionsError(null);
+      return;
+    }
+
+    let isActive = true;
+    setResponseActionsLoading(true);
+    setResponseActionsError(null);
+
+    void fetchAlertResponseActions(token, selectedAlertId)
+      .then((response) => {
+        if (!isActive) {
+          return;
+        }
+
+        setResponseActions(response);
+      })
+      .catch((requestError: unknown) => {
+        if (!isActive) {
+          return;
+        }
+
+        setResponseActionsError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Response actions could not be loaded.",
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setResponseActionsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [token, selectedAlertId, reloadKey, refreshVersion]);
+
   const handleRetry = () => {
     setReloadKey((currentValue) => currentValue + 1);
   };
@@ -278,25 +364,28 @@ export function AlertsPage() {
     }
   };
 
-  const handleCreateIncident = async () => {
+  const handleExecuteResponseAction = async (actionType: ResponseActionType) => {
     if (!token || !selectedAlertId) {
       return;
     }
 
-    setIncidentCreateLoading(true);
-    setIncidentMessage(null);
+    setResponseActionLoading(actionType);
+    setResponseActionMessage(null);
 
     try {
-      const incident = await createIncident(token, { alert_id: selectedAlertId });
-      navigate(`/incidents?incidentId=${incident.id}`);
+      const action = await executeAlertResponseAction(token, selectedAlertId, {
+        action_type: actionType,
+      });
+      setResponseActionMessage(action.result_summary);
+      setReloadKey((currentValue) => currentValue + 1);
     } catch (requestError) {
-      setIncidentMessage(
+      setResponseActionMessage(
         requestError instanceof Error
           ? requestError.message
-          : "The incident could not be created from this alert.",
+          : "The response action could not be completed.",
       );
     } finally {
-      setIncidentCreateLoading(false);
+      setResponseActionLoading(null);
     }
   };
 
@@ -305,7 +394,9 @@ export function AlertsPage() {
   const listItems = alertsResponse?.items ?? [];
   const selectedSourceNote = selectedAlert ? getSourceToolNote(selectedAlert.source_tool) : null;
   const canEditStatus = canUpdateAlerts(user?.role);
-  const canCreateIncident = canManageIncidents(user?.role);
+  const canRunResponseActions = canManageIncidents(user?.role);
+  const recommendedActions = responseActions?.recommended_actions ?? [];
+  const responseActionHistory = responseActions?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -625,45 +716,153 @@ export function AlertsPage() {
               <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-brand-black">Incident escalation</p>
+                    <p className="text-sm font-semibold text-brand-black">Response actions</p>
                     <p className="mt-1 text-xs text-brand-black/55">
-                      Create a case from this alert to move it into the incident management workflow.
+                      Run lab-safe escalation or containment actions and review the response audit
+                      history for this alert.
                     </p>
                   </div>
-                  <StatusBadge variant={selectedAlert.status}>
-                    {selectedAlert.status.replace("_", " ")}
-                  </StatusBadge>
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={handleCreateIncident}
-                    className="btn-primary"
-                    disabled={!canCreateIncident || incidentCreateLoading}
-                  >
-                    {incidentCreateLoading ? "Creating..." : "Create incident from alert"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/incidents")}
-                    className="btn-secondary"
-                  >
+                  <button type="button" onClick={() => navigate("/incidents")} className="btn-secondary">
                     Open incidents
                   </button>
                 </div>
 
-                <p className="mt-3 text-xs text-brand-black/55">
-                  {canCreateIncident
-                    ? "New incidents open in the Incidents module for assignment, notes, and status management."
-                    : "Viewer accounts can review alerts but cannot create incidents."}
-                </p>
-
-                {incidentMessage ? (
-                  <div className="mt-4 rounded-[1.25rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-3 text-sm text-brand-black/75">
-                    {incidentMessage}
+                {responseActionsError ? (
+                  <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {responseActionsError}
                   </div>
                 ) : null}
+
+                {responseActionsLoading && !responseActions ? (
+                  <div className="mt-4 h-40 animate-pulse rounded-[1.5rem] bg-brand-light/70" />
+                ) : (
+                  <div className="mt-4 space-y-5">
+                    <div className="grid gap-3">
+                      {recommendedActions.length > 0 ? (
+                        recommendedActions.map((action) => (
+                          <div
+                            key={action.action_type}
+                            className="rounded-[1.25rem] border border-brand-black/8 bg-brand-light/45 p-4"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-semibold text-brand-black">
+                                    {action.label}
+                                  </p>
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ring-1 ring-inset ${
+                                      action.automated
+                                        ? "bg-sky-100 text-sky-700 ring-sky-200"
+                                        : "bg-brand-black/5 text-brand-black/70 ring-brand-black/10"
+                                    }`}
+                                  >
+                                    {action.automated ? "Auto-ready" : "Manual"}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-sm leading-6 text-brand-black/68">
+                                  {action.description}
+                                </p>
+                                {action.target_label ? (
+                                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-brand-black/45">
+                                    Target: {action.target_label}
+                                  </p>
+                                ) : null}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleExecuteResponseAction(action.action_type)}
+                                className={action.available ? "btn-primary" : "btn-secondary"}
+                                disabled={
+                                  !canRunResponseActions ||
+                                  !action.available ||
+                                  responseActionLoading !== null
+                                }
+                              >
+                                {responseActionLoading === action.action_type
+                                  ? "Running..."
+                                  : action.available
+                                    ? "Run action"
+                                    : "Already applied"}
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-[1.25rem] border border-dashed border-brand-black/10 bg-brand-light/45 px-4 py-5 text-sm text-brand-black/55">
+                          No response actions are available for this alert yet.
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-brand-black/55">
+                      {canRunResponseActions
+                        ? "Admins and analysts can run these actions. Containment changes are recorded as lab-safe simulated responses only."
+                        : "Viewer accounts can review the response plan and audit trail but cannot run response actions."}
+                    </p>
+
+                    {responseActionMessage ? (
+                      <div className="rounded-[1.25rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-3 text-sm text-brand-black/75">
+                        {responseActionMessage}
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-brand-black">Audit history</p>
+                        <p className="text-xs uppercase tracking-[0.16em] text-brand-black/40">
+                          {responseActionHistory.length} entries
+                        </p>
+                      </div>
+
+                      {responseActionHistory.length > 0 ? (
+                        <div className="space-y-3">
+                          {responseActionHistory.map((action) => (
+                            <div
+                              key={action.id}
+                              className="rounded-[1.25rem] border border-brand-black/8 bg-white p-4"
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-brand-black">
+                                  {getResponseActionLabel(action.action_type)}
+                                </p>
+                                <span
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ring-1 ring-inset ${getResponseModeTone(action.execution_mode)}`}
+                                >
+                                  {action.execution_mode}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ring-1 ring-inset ${getResponseActionTone(action)}`}
+                                >
+                                  {action.status}
+                                </span>
+                              </div>
+
+                              <p className="mt-3 text-sm leading-6 text-brand-black/70">
+                                {action.result_summary}
+                              </p>
+
+                              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs uppercase tracking-[0.12em] text-brand-black/42">
+                                <span>By {action.performed_by_name}</span>
+                                {action.target_label ? <span>Target {action.target_label}</span> : null}
+                                <span>{formatDateTime(action.created_at)}</span>
+                              </div>
+
+                              {action.notes ? (
+                                <p className="mt-3 text-sm text-brand-black/58">{action.notes}</p>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-[1.25rem] border border-dashed border-brand-black/10 bg-brand-light/45 px-4 py-5 text-sm text-brand-black/55">
+                          No response actions have been recorded for this alert yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

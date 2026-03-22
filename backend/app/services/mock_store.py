@@ -7,6 +7,9 @@ from app.core.enums import (
     IncidentStatus,
     IntegrationHealth,
     IntegrationTool,
+    ResponseActionMode,
+    ResponseActionStatus,
+    ResponseActionType,
     ReportStatus,
     ReportType,
     UserRole,
@@ -360,6 +363,65 @@ DEMO_INCIDENTS: list[dict] = [
         "opened_at": hours_ago(45),
         "closed_at": hours_ago(36),
     },
+]
+
+DEMO_RESPONSE_ACTIONS: list[dict] = [
+    {
+        "id": "response-001",
+        "alert_id": "alert-003",
+        "action_type": ResponseActionType.CREATE_INCIDENT,
+        "status": ResponseActionStatus.COMPLETED,
+        "execution_mode": ResponseActionMode.AUTOMATED,
+        "target_label": "incident-001",
+        "notes": "Critical privileged access alert automatically escalated into the incident workflow.",
+        "result_summary": "Incident incident-001 was opened automatically for analyst review.",
+        "performed_by_user_id": None,
+        "performed_by_name": "AegisCore Automation",
+        "incident_id": "incident-001",
+        "created_at": hours_ago(7),
+    },
+    {
+        "id": "response-002",
+        "alert_id": "alert-003",
+        "action_type": ResponseActionType.MARK_INVESTIGATING,
+        "status": ResponseActionStatus.COMPLETED,
+        "execution_mode": ResponseActionMode.AUTOMATED,
+        "target_label": "investigating",
+        "notes": "Critical privileged access alert automatically moved into investigation.",
+        "result_summary": "Alert status updated to investigating.",
+        "performed_by_user_id": None,
+        "performed_by_name": "AegisCore Automation",
+        "incident_id": "incident-001",
+        "created_at": hours_ago(7),
+    },
+    {
+        "id": "response-003",
+        "alert_id": "alert-004",
+        "action_type": ResponseActionType.ISOLATE_ASSET,
+        "status": ResponseActionStatus.COMPLETED,
+        "execution_mode": ResponseActionMode.MANUAL,
+        "target_label": "lab-gateway-01",
+        "notes": "Containment rehearsal recorded for the exposed management service finding.",
+        "result_summary": "Asset lab-gateway-01 was recorded as isolated in the lab-only response log.",
+        "performed_by_user_id": "user-admin",
+        "performed_by_name": "AegisCore Admin",
+        "incident_id": "incident-002",
+        "created_at": hours_ago(10),
+    },
+]
+
+DEMO_BLOCKED_IPS: list[dict] = []
+
+DEMO_DISABLED_ACCOUNTS: list[dict] = []
+
+DEMO_ISOLATED_ASSETS: list[dict] = [
+    {
+        "asset": "lab-gateway-01",
+        "alert_id": "alert-004",
+        "created_at": hours_ago(10),
+        "created_by_user_id": "user-admin",
+        "execution_mode": ResponseActionMode.MANUAL,
+    }
 ]
 
 DEMO_LOGS: list[dict] = [

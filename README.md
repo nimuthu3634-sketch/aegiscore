@@ -250,14 +250,18 @@ accounts above unless you intentionally enable `ALLOW_SELF_REGISTRATION=true` in
 3. Open the Dashboard to see seeded alerts, incidents, charts, AI insights,
    and recent activity.
 4. Open Alerts and Incidents to review the seeded workflow data.
-5. Open Integrations and use `Import sample data` on:
+5. In Alerts, open an alert to review the response-action panel. High-risk imported alerts
+   now auto-escalate into investigation and incident workflow, while manual containment
+   actions such as IP blocking and asset isolation are recorded as lab-safe simulated
+   responses with audit history.
+6. Open Integrations and use `Import sample data` on:
 
    - Wazuh
    - Suricata
    - Nmap
    - Hydra
 
-6. Watch the live alert toast and notification badge update through
+7. Watch the live alert toast and notification badge update through
    WebSockets when new alerts are imported.
 7. Open Reports to generate a report snapshot and export JSON if needed.
 

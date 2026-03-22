@@ -113,6 +113,9 @@ def create_alert(
 
     apply_anomaly_scoring(alert_record, reference_alerts=DEMO_ALERTS)
     DEMO_ALERTS.append(alert_record)
+    from app.services.response_actions import run_automatic_response_workflow
+
+    run_automatic_response_workflow(alert_record["id"])
     broadcast_alert_created(alert_record)
     return alert_record
 

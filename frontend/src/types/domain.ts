@@ -4,6 +4,17 @@ export type AlertStatus = "new" | "triaged" | "investigating" | "resolved";
 
 export type IncidentStatus = "open" | "triaged" | "in_progress" | "resolved";
 
+export type ResponseActionType =
+  | "create_incident"
+  | "block_source_ip"
+  | "isolate_asset"
+  | "disable_account"
+  | "mark_investigating";
+
+export type ResponseActionStatus = "completed" | "skipped";
+
+export type ResponseActionMode = "automated" | "manual";
+
 export type AssignmentStatus = "assigned" | "unassigned" | "escalated";
 
 export type ReportStatus = "draft" | "scheduled" | "ready";
@@ -104,6 +115,40 @@ export interface AlertFilters {
 
 export interface AlertStatusUpdatePayload {
   status: AlertStatus;
+}
+
+export interface ResponseActionSuggestion {
+  action_type: ResponseActionType;
+  label: string;
+  description: string;
+  target_label: string | null;
+  available: boolean;
+  automated: boolean;
+}
+
+export interface ResponseActionRecord {
+  id: string;
+  alert_id: string;
+  action_type: ResponseActionType;
+  status: ResponseActionStatus;
+  execution_mode: ResponseActionMode;
+  target_label: string | null;
+  notes: string;
+  result_summary: string;
+  performed_by_user_id: string | null;
+  performed_by_name: string;
+  incident_id: string | null;
+  created_at: string;
+}
+
+export interface AlertResponseActionsResponse {
+  items: ResponseActionRecord[];
+  recommended_actions: ResponseActionSuggestion[];
+}
+
+export interface ResponseActionExecutePayload {
+  action_type: ResponseActionType;
+  notes?: string;
 }
 
 export interface DashboardRecentIncident {

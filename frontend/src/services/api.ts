@@ -3,6 +3,7 @@ import type {
   AlertApiRecord,
   AlertFilters,
   AlertListResponse,
+  AlertResponseActionsResponse,
   AlertStatusUpdatePayload,
   DashboardAnomalySummaryResponse,
   DashboardChartsResponse,
@@ -27,6 +28,8 @@ import type {
   ReportApiRecord,
   ReportFilters,
   ReportGeneratePayload,
+  ResponseActionExecutePayload,
+  ResponseActionRecord,
   ReportsSummaryResponse,
   SuricataImportPayload,
   SuricataImportResponse,
@@ -186,6 +189,29 @@ export async function patchAlertStatus(
 ) {
   return request<AlertApiRecord>(`/alerts/${alertId}/status`, {
     method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchAlertResponseActions(token: string, alertId: string) {
+  return request<AlertResponseActionsResponse>(`/alerts/${alertId}/response-actions`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function executeAlertResponseAction(
+  token: string,
+  alertId: string,
+  payload: ResponseActionExecutePayload,
+) {
+  return request<ResponseActionRecord>(`/alerts/${alertId}/response-actions`, {
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
     },
