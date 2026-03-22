@@ -117,6 +117,12 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
 
         rule = alert_payload.get("rule", {})
         agent = alert_payload.get("agent", {})
+        data_payload = alert_payload.get("data", {}) if isinstance(alert_payload.get("data"), dict) else {}
+        syscheck_payload = (
+            alert_payload.get("syscheck", {})
+            if isinstance(alert_payload.get("syscheck"), dict)
+            else {}
+        )
         source = str(agent.get("name") or alert_payload.get("manager", {}).get("name") or "wazuh-agent")
         timestamp = normalize_timestamp(alert_payload.get("timestamp") or alert_payload.get("@timestamp"))
         level_value = _numeric_wazuh_level(rule.get("level"))
@@ -125,6 +131,13 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
         title = str(rule.get("description") or "Imported Wazuh alert")
         description = _build_alert_description(alert_payload)
         confidence_score = min(0.99, 0.45 + (level_value / 20))
+        finding_metadata = {
+            "event_type": event_type,
+            "source_ip": data_payload.get("srcip") or data_payload.get("source_ip"),
+            "username": data_payload.get("user"),
+            "path": syscheck_payload.get("path"),
+            "rule_groups": rule.get("groups", []),
+        }
 
         create_log_record(
             {
@@ -135,7 +148,11 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
                 "event_type": event_type,
                 "raw_log": alert_payload,
             },
-            extra_fields={"integration_ref": integration_ref},
+            extra_fields={
+                "integration_ref": integration_ref,
+                "finding_metadata": finding_metadata,
+                "parser_status": "normalized",
+            },
         )
         imported_log_count += 1
 
@@ -148,7 +165,11 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
             status_value=AlertStatus.NEW,
             confidence_score=round(confidence_score, 2),
             created_at=timestamp,
-            extra_fields={"integration_ref": integration_ref},
+            extra_fields={
+                "integration_ref": integration_ref,
+                "finding_metadata": finding_metadata,
+                "parser_status": "normalized",
+            },
         )
         imported_alert_count += 1
         existing_references.add(integration_ref)

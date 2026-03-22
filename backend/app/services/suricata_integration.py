@@ -126,6 +126,13 @@ def import_suricata_events(events: list[dict]) -> dict:
         alert_data = event_payload.get("alert", {})
         source = _build_source(event_payload)
         severity = _map_suricata_severity(alert_data.get("severity"))
+        finding_metadata = {
+            "event_type": event_type,
+            "source_ip": event_payload.get("src_ip"),
+            "destination_ip": event_payload.get("dest_ip"),
+            "signature": alert_data.get("signature"),
+            "category": alert_data.get("category"),
+        }
 
         create_log_record(
             {
@@ -136,7 +143,11 @@ def import_suricata_events(events: list[dict]) -> dict:
                 "event_type": event_type,
                 "raw_log": event_payload,
             },
-            extra_fields={"integration_ref": integration_ref},
+            extra_fields={
+                "integration_ref": integration_ref,
+                "finding_metadata": finding_metadata,
+                "parser_status": "normalized",
+            },
         )
         imported_log_count += 1
 
@@ -151,7 +162,11 @@ def import_suricata_events(events: list[dict]) -> dict:
                 status_value=AlertStatus.NEW,
                 confidence_score=round(confidence_score, 2),
                 created_at=timestamp,
-                extra_fields={"integration_ref": integration_ref},
+                extra_fields={
+                    "integration_ref": integration_ref,
+                    "finding_metadata": finding_metadata,
+                    "parser_status": "normalized",
+                },
             )
             imported_alert_count += 1
 

@@ -62,6 +62,9 @@ The repository is organized as a monorepo with:
 - Live alert stream readiness and anomaly summaries now read from the merged
   persisted alert view too, so newly imported alerts still appear in those demo
   flows after a restart.
+- Imported alert/log context such as integration references, parser status,
+  lab-only markers, and finding metadata now persists too, so restart-safe
+  workflows keep the same enrichment they had before the reload.
 
 - This means a fresh setup already looks populated for presentations.
 

@@ -18,6 +18,10 @@ def _log_from_model(log_entry: LogEntry) -> dict:
         "normalized_log": log_entry.normalized_log,
         "event_type": log_entry.event_type,
         "severity": log_entry.severity,
+        "integration_ref": log_entry.integration_ref,
+        "finding_metadata": log_entry.finding_metadata or {},
+        "parser_status": log_entry.parser_status,
+        "lab_only": log_entry.lab_only,
         "created_at": ensure_utc(log_entry.created_at),
     }
 
@@ -60,6 +64,10 @@ def _persist_log_record(log_record: dict) -> None:
                 raw_log=log_record["raw_log"],
                 normalized_log=log_record["normalized_log"],
                 event_type=log_record["event_type"],
+                integration_ref=log_record.get("integration_ref"),
+                finding_metadata=log_record.get("finding_metadata", {}),
+                parser_status=log_record.get("parser_status"),
+                lab_only=log_record.get("lab_only", False),
                 created_at=log_record["created_at"],
             )
         )

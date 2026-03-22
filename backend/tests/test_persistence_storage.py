@@ -24,6 +24,7 @@ from app.services import users as users_service
 from app.services import virtualbox_lab as virtualbox_lab_service
 from app.services.dashboard import get_dashboard_summary
 from app.services.hydra_integration import import_hydra_results
+from app.services.nmap_integration import import_nmap_results
 from app.services.websocket import build_alert_stream_ready_payload
 from app.services.mock_store import (
     DEMO_ALERTS,
@@ -284,3 +285,49 @@ def test_persisted_alerts_drive_anomaly_summary_and_live_ready_payload(sqlite_st
     ready_payload = build_alert_stream_ready_payload()
     assert ready_payload["latest_alert"] is not None
     assert ready_payload["latest_alert"]["id"] == created_alert["id"]
+
+
+def test_imported_alert_and_log_metadata_survive_memory_reset(sqlite_storage) -> None:
+    import_result = import_nmap_results(
+        [
+            {
+                "host": "lab-admin-02",
+                "open_ports": [
+                    {"port": 22, "service_name": "ssh", "protocol": "tcp", "state": "open"},
+                    {"port": 3389, "service_name": "rdp", "protocol": "tcp", "state": "open"},
+                ],
+                "service_names": ["ssh", "rdp"],
+                "scan_timestamp": "2026-03-22T14:10:00Z",
+                "scan_notes": "Persistence metadata verification import",
+            }
+        ]
+    )
+    assert import_result["imported_alert_count"] == 1
+    assert import_result["imported_log_count"] == 1
+
+    created_alert = next(
+        alert
+        for alert in DEMO_ALERTS
+        if alert["source_tool"] == IntegrationTool.NMAP and alert["source"] == "lab-admin-02"
+    )
+    created_log = next(
+        log_entry
+        for log_entry in DEMO_LOGS
+        if log_entry["source_tool"] == IntegrationTool.NMAP and log_entry["source"] == "lab-admin-02"
+    )
+
+    DEMO_ALERTS[:] = [alert for alert in DEMO_ALERTS if alert["id"] != created_alert["id"]]
+    DEMO_LOGS[:] = [log_entry for log_entry in DEMO_LOGS if log_entry["id"] != created_log["id"]]
+
+    reloaded_alert = alerts_service.get_alert_by_id(created_alert["id"])
+    reloaded_log = logs_service.get_log_by_id(created_log["id"])
+
+    assert reloaded_alert["integration_ref"] == created_alert["integration_ref"]
+    assert reloaded_alert["finding_metadata"]["host"] == "lab-admin-02"
+    assert reloaded_alert["parser_status"] == "normalized"
+    assert reloaded_alert["lab_only"] is True
+
+    assert reloaded_log["integration_ref"] == created_log["integration_ref"]
+    assert reloaded_log["finding_metadata"]["service_names"] == ["rdp", "ssh"]
+    assert reloaded_log["parser_status"] == "normalized"
+    assert reloaded_log["lab_only"] is True

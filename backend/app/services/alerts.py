@@ -26,6 +26,10 @@ def _alert_from_model(alert: Alert) -> dict:
         "anomaly_score": alert.anomaly_score,
         "is_anomalous": alert.is_anomalous,
         "anomaly_explanation": alert.anomaly_explanation,
+        "integration_ref": alert.integration_ref,
+        "finding_metadata": alert.finding_metadata or {},
+        "parser_status": alert.parser_status,
+        "lab_only": alert.lab_only,
         "created_at": ensure_utc(alert.created_at),
     }
 
@@ -73,6 +77,10 @@ def _persist_alert_record(alert_record: dict) -> None:
                 anomaly_score=alert_record["anomaly_score"],
                 is_anomalous=alert_record["is_anomalous"],
                 anomaly_explanation=alert_record["anomaly_explanation"],
+                integration_ref=alert_record.get("integration_ref"),
+                finding_metadata=alert_record.get("finding_metadata", {}),
+                parser_status=alert_record.get("parser_status"),
+                lab_only=alert_record.get("lab_only", False),
                 created_at=alert_record["created_at"],
             )
         )

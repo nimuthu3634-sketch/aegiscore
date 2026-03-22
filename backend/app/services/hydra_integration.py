@@ -141,7 +141,12 @@ def import_hydra_results(results: list[dict]) -> dict:
                 "event_type": "credential_assessment",
                 "raw_log": raw_log,
             },
-            extra_fields={"integration_ref": integration_ref, "finding_metadata": finding_metadata},
+            extra_fields={
+                "integration_ref": integration_ref,
+                "finding_metadata": finding_metadata,
+                "parser_status": "normalized",
+                "lab_only": True,
+            },
         )
         imported_log_count += 1
 
@@ -154,7 +159,12 @@ def import_hydra_results(results: list[dict]) -> dict:
             status_value=AlertStatus.NEW,
             confidence_score=round(_confidence_score(severity), 2),
             created_at=timestamp,
-            extra_fields={"integration_ref": integration_ref, "finding_metadata": finding_metadata},
+            extra_fields={
+                "integration_ref": integration_ref,
+                "finding_metadata": finding_metadata,
+                "parser_status": "normalized",
+                "lab_only": True,
+            },
         )
         imported_alert_count += 1
         existing_references.add(integration_ref)
