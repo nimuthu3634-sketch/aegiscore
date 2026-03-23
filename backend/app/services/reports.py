@@ -37,6 +37,7 @@ SOURCE_TOOL_ORDER = [
     IntegrationTool.SURICATA,
     IntegrationTool.NMAP,
     IntegrationTool.HYDRA,
+    IntegrationTool.LANL,
     IntegrationTool.VIRTUALBOX,
 ]
 INCIDENT_STATUS_ORDER = [

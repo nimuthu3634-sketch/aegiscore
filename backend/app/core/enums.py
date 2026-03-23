@@ -64,6 +64,7 @@ class IntegrationTool(str, Enum):
     SURICATA = "suricata"
     NMAP = "nmap"
     HYDRA = "hydra"
+    LANL = "lanl"
     VIRTUALBOX = "virtualbox"
 
 

@@ -7,6 +7,7 @@ const toolLabels = {
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
+  lanl: "LANL",
   virtualbox: "VirtualBox",
 };
 

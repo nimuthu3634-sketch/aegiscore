@@ -19,6 +19,9 @@ import type {
   HydraImportResponse,
   HydraIntegrationStatus,
   IntegrationApiRecord,
+  LanlDatasetType,
+  LanlImportResponse,
+  LanlIntegrationStatus,
   LogEntryRecord,
   LogIngestPayload,
   LogListResponse,
@@ -45,10 +48,12 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const bodyIsFormData = typeof FormData !== "undefined" && options?.body instanceof FormData;
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(bodyIsFormData ? {} : { "Content-Type": "application/json" }),
       ...(options?.headers ?? {}),
     },
   });
@@ -443,6 +448,42 @@ export async function importHydraResults(token: string, payload: HydraImportPayl
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchLanlIntegrationStatus(token: string) {
+  return request<LanlIntegrationStatus>("/integrations/lanl/status", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function uploadLanlDataset(
+  token: string,
+  options: {
+    datasetType: LanlDatasetType;
+    datasetFile: File;
+    maxRecords: number;
+    redteamFile?: File | null;
+  },
+) {
+  const formData = new FormData();
+  formData.append("dataset_type", options.datasetType);
+  formData.append("dataset_file", options.datasetFile);
+  formData.append("max_records", String(options.maxRecords));
+
+  if (options.redteamFile) {
+    formData.append("redteam_file", options.redteamFile);
+  }
+
+  return request<LanlImportResponse>("/integrations/lanl/import", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
   });
 }
 

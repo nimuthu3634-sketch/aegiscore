@@ -65,6 +65,9 @@ The repository is organized as a monorepo with:
 - Imported alert/log context such as integration references, parser status,
   lab-only markers, and finding metadata now persists too, so restart-safe
   workflows keep the same enrichment they had before the reload.
+- A real-world dataset workflow is now available for the LANL Comprehensive
+  dataset, so you can upload official `auth.txt.gz`, `dns.txt.gz`, and
+  `flows.txt.gz` slices without committing the raw dataset into Git.
 - The Alerts page now supports event-type filtering, and both Alerts and Logs
   detail views expose the preserved import context for analyst review.
 - Incident details now include linked alert intelligence such as event type,
@@ -287,6 +290,39 @@ accounts above unless you intentionally enable `ALLOW_SELF_REGISTRATION=true` in
    WebSockets when new alerts are imported.
 9. Open Reports to generate a report snapshot and export JSON if needed.
 
+## Real-world LANL workflow
+
+Use this when you want a public real-world enterprise dataset instead of the
+seeded demo payloads.
+
+1. Download the official LANL Comprehensive dataset files outside this repo:
+   `auth.txt.gz`, `dns.txt.gz`, or `flows.txt.gz`.
+2. Optionally download `redteam.txt.gz` if you want auth imports to recognize
+   known compromise paths from the LANL ground-truth file.
+3. Open the **Integrations** page and find the **LANL Comprehensive dataset**
+   section.
+4. Choose a dataset type:
+
+   - `Authentication` for `auth.txt.gz`
+   - `DNS` for `dns.txt.gz`
+   - `Network flows` for `flows.txt.gz`
+
+5. Set a reasonable `Max records` value such as `1000` for the first import.
+6. Upload the dataset file. For auth imports, optionally upload the red-team
+   file as well.
+7. Review the generated alerts in **Alerts**, the normalized records in
+   **Logs**, and the aggregated source counts in **Dashboard** and **Reports**.
+
+LANL import notes:
+
+- raw LANL files are not bundled into this repository
+- AegisCore preserves the LANL event ordering by anchoring imported relative
+  times at import time
+- imported LANL records are marked as real-world imports, not lab-only demo
+  artifacts
+- a small prep utility is available at `scripts/lanl_prepare.py` for download
+  and slicing workflows
+
 ## Sample data sources available
 
 The project includes demo/sample sources for:
@@ -297,6 +333,10 @@ The project includes demo/sample sources for:
 - Hydra authorized lab-only result ingestion
 - Generic log ingestion payloads
 - VirtualBox lab environment tracking
+
+The project also supports importing the real-world **LANL Comprehensive**
+dataset through the Integrations page, but those raw files are intentionally
+not stored in the repository because of their size.
 
 Reference files in `docs/`:
 
@@ -318,6 +358,81 @@ Use the **Integrations** page in the frontend:
 - Hydra card -> `Import sample data`
 
 Use the **Logs** page to inspect log entries and compare raw vs normalized data.
+
+## LANL preparation utility
+
+Use the LANL prep utility when you want a smaller upload-friendly slice of the
+real-world dataset instead of a huge raw file.
+
+Important note:
+
+- the script does not bypass the official LANL request/download flow
+- get the direct official file URL from the LANL dataset page first, then use
+  the `download` command below
+
+Activate the backend virtual environment first so the script can reuse the same
+LANL parsers as the API.
+
+### Download an official LANL file
+
+```bash
+python scripts/lanl_prepare.py download \
+  --dataset-type auth \
+  --url "<direct official LANL file URL>"
+```
+
+PowerShell:
+
+```powershell
+py scripts/lanl_prepare.py download `
+  --dataset-type auth `
+  --url "<direct official LANL file URL>"
+```
+
+By default, downloads are stored in `data/lanl/raw/`, which is ignored by Git.
+
+### Prepare a smaller LANL auth slice
+
+```bash
+python scripts/lanl_prepare.py prepare \
+  --dataset-type auth \
+  --input data/lanl/raw/auth.txt.gz \
+  --output data/lanl/prepared/auth-alert-candidates-1500.txt.gz \
+  --redteam-input data/lanl/raw/redteam.txt.gz \
+  --only-alert-candidates \
+  --max-records 1500 \
+  --summary-json data/lanl/prepared/auth-alert-candidates-1500.summary.json
+```
+
+PowerShell:
+
+```powershell
+py scripts/lanl_prepare.py prepare `
+  --dataset-type auth `
+  --input data/lanl/raw/auth.txt.gz `
+  --output data/lanl/prepared/auth-alert-candidates-1500.txt.gz `
+  --redteam-input data/lanl/raw/redteam.txt.gz `
+  --only-alert-candidates `
+  --max-records 1500 `
+  --summary-json data/lanl/prepared/auth-alert-candidates-1500.summary.json
+```
+
+Useful prep options:
+
+- `--only-alert-candidates`: for `auth`, keeps failed logons and red-team matches;
+  for `flows`, keeps sensitive or high-volume records
+- `--skip-records`: skips a number of selected rows before writing the slice
+- `--summary-json`: writes a quick machine-readable summary you can keep with the slice
+
+Recommended first runs:
+
+- `auth`: use `--only-alert-candidates --max-records 1000`
+- `dns`: use `--max-records 1000` first, because DNS alerts are volume-based
+- `flows`: use `--only-alert-candidates --max-records 1000`
+
+After preparing a slice, upload the resulting `.txt.gz` file through the
+**Integrations** page. For auth imports, upload the prepared red-team file in
+the optional red-team field as well.
 
 ### Important safety boundary
 
@@ -398,6 +513,8 @@ Important routes:
 - `POST /integrations/suricata/import`
 - `POST /integrations/nmap/import`
 - `POST /integrations/hydra/import`
+- `GET /integrations/lanl/status`
+- `POST /integrations/lanl/import`
 - `WS /ws/alerts`
 
 ## Frontend overview

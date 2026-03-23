@@ -23,7 +23,9 @@ export type ReportType = "executive" | "incident" | "operations" | "analytics";
 
 export type IntegrationStatus = "connected" | "degraded" | "pending" | "offline";
 
-export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra" | "virtualbox";
+export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra" | "lanl" | "virtualbox";
+
+export type LanlDatasetType = "auth" | "dns" | "flows";
 
 export type VirtualMachineStatus = "running" | "stopped" | "paused" | "provisioning";
 
@@ -498,6 +500,26 @@ export interface HydraImportPayload {
 export interface HydraIntegrationStatus extends IntegrationImportStatus {}
 
 export interface HydraImportResponse extends IntegrationImportResponse {}
+
+export interface LanlIntegrationStatus {
+  tool_name: "lanl";
+  status: IntegrationStatus;
+  last_sync_at: string | null;
+  notes: string;
+  imported_alert_count: number;
+  imported_log_count: number;
+  last_import_at: string | null;
+  last_import_message: string | null;
+  supported_dataset_types: LanlDatasetType[];
+  redteam_supported: boolean;
+  latest_imported_alert_titles: string[];
+}
+
+export interface LanlImportResponse extends IntegrationImportResponse {
+  dataset_type: LanlDatasetType;
+  processed_record_count: number;
+  redteam_match_count: number;
+}
 
 export interface VirtualMachineRecord {
   id: string;

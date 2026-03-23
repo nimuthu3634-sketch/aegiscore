@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.enums import IntegrationHealth, IntegrationTool, VirtualMachineStatus
 from app.schemas.base import ORMModel
@@ -101,6 +101,31 @@ class HydraImportResponse(DemoImportResponse):
 
 class HydraStatusResponse(DemoIntegrationStatusResponse):
     pass
+
+
+class LanlStatusResponse(BaseModel):
+    tool_name: IntegrationTool = IntegrationTool.LANL
+    status: IntegrationHealth
+    last_sync_at: datetime | None = None
+    notes: str
+    imported_alert_count: int = 0
+    imported_log_count: int = 0
+    last_import_at: datetime | None = None
+    last_import_message: str | None = None
+    supported_dataset_types: list[str] = Field(default_factory=lambda: ["auth", "dns", "flows"])
+    redteam_supported: bool = True
+    latest_imported_alert_titles: list[str] = Field(default_factory=list)
+
+
+class LanlImportResponse(BaseModel):
+    dataset_type: str
+    processed_record_count: int
+    imported_alert_count: int
+    imported_log_count: int
+    skipped_count: int
+    redteam_match_count: int = 0
+    last_import_at: datetime
+    message: str
 
 
 class VirtualMachineRead(ORMModel):

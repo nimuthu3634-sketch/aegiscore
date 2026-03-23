@@ -53,6 +53,7 @@ const sourceLabels: Record<NonNullable<IncidentApiRecord["source_tool"]>, string
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
+  lanl: "LANL",
   virtualbox: "VirtualBox",
 };
 

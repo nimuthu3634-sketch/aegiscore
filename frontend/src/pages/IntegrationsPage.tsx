@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   fetchHydraIntegrationStatus,
   fetchIntegrationStatuses,
+  fetchLanlIntegrationStatus,
   fetchNmapIntegrationStatus,
   fetchSuricataIntegrationStatus,
   fetchWazuhIntegrationStatus,
@@ -20,6 +21,7 @@ import {
   importNmapResults,
   importSuricataEvents,
   importWazuhAlerts,
+  uploadLanlDataset,
 } from "@/services/api";
 import type { UserRole } from "@/types/auth";
 import type {
@@ -27,6 +29,8 @@ import type {
   IntegrationApiRecord,
   IntegrationImportResponse,
   IntegrationImportStatus,
+  LanlDatasetType,
+  LanlIntegrationStatus,
   NmapIntegrationStatus,
   SourceToolKey,
   SuricataIntegrationStatus,
@@ -122,6 +126,12 @@ const workflowCards: WorkflowCard[] = [
   },
 ];
 
+const lanlDatasetTypeOptions: Array<{ value: LanlDatasetType; label: string }> = [
+  { value: "auth", label: "Authentication" },
+  { value: "dns", label: "DNS" },
+  { value: "flows", label: "Network flows" },
+];
+
 export function IntegrationsPage() {
   const { token, user } = useAuth();
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationApiRecord[]>([]);
@@ -129,8 +139,15 @@ export function IntegrationsPage() {
   const [suricataStatus, setSuricataStatus] = useState<SuricataIntegrationStatus | null>(null);
   const [nmapStatus, setNmapStatus] = useState<NmapIntegrationStatus | null>(null);
   const [hydraStatus, setHydraStatus] = useState<HydraIntegrationStatus | null>(null);
+  const [lanlStatus, setLanlStatus] = useState<LanlIntegrationStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeImportTool, setActiveImportTool] = useState<ImportableTool | null>(null);
+  const [lanlDatasetType, setLanlDatasetType] = useState<LanlDatasetType>("auth");
+  const [lanlDatasetFile, setLanlDatasetFile] = useState<File | null>(null);
+  const [lanlRedteamFile, setLanlRedteamFile] = useState<File | null>(null);
+  const [lanlMaxRecords, setLanlMaxRecords] = useState("1000");
+  const [lanlUploadLoading, setLanlUploadLoading] = useState(false);
+  const [lanlUploadMessage, setLanlUploadMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -150,8 +167,9 @@ export function IntegrationsPage() {
       fetchSuricataIntegrationStatus(token),
       fetchNmapIntegrationStatus(token),
       fetchHydraIntegrationStatus(token),
+      fetchLanlIntegrationStatus(token),
     ])
-      .then(([statuses, wazuh, suricata, nmap, hydra]) => {
+      .then(([statuses, wazuh, suricata, nmap, hydra, lanl]) => {
         if (!isActive) {
           return;
         }
@@ -161,6 +179,7 @@ export function IntegrationsPage() {
         setSuricataStatus(suricata);
         setNmapStatus(nmap);
         setHydraStatus(hydra);
+        setLanlStatus(lanl);
       })
       .catch((requestError: unknown) => {
         if (!isActive) {
@@ -217,6 +236,36 @@ export function IntegrationsPage() {
       );
     } finally {
       setActiveImportTool(null);
+    }
+  };
+
+  const handleLanlUpload = async () => {
+    if (!token || !lanlDatasetFile) {
+      return;
+    }
+
+    setLanlUploadLoading(true);
+    setLanlUploadMessage(null);
+
+    try {
+      const maxRecords = Number.parseInt(lanlMaxRecords, 10);
+      const response = await uploadLanlDataset(token, {
+        datasetType: lanlDatasetType,
+        datasetFile: lanlDatasetFile,
+        redteamFile: lanlDatasetType === "auth" ? lanlRedteamFile : null,
+        maxRecords: Number.isFinite(maxRecords) ? maxRecords : 1000,
+      });
+
+      setLanlUploadMessage(
+        `${response.message} ${response.redteam_match_count > 0 ? `${response.redteam_match_count} red-team matches were recognized.` : ""}`.trim(),
+      );
+      setReloadKey((currentValue) => currentValue + 1);
+    } catch (requestError) {
+      setLanlUploadMessage(
+        requestError instanceof Error ? requestError.message : "LANL upload could not be completed.",
+      );
+    } finally {
+      setLanlUploadLoading(false);
     }
   };
 
@@ -428,6 +477,163 @@ export function IntegrationsPage() {
               </div>
             );
           })}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="LANL Comprehensive dataset"
+        description="Import real-world enterprise auth, DNS, or network-flow slices from the Los Alamos National Laboratory comprehensive dataset without bundling raw data into the repo."
+      >
+        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="rounded-[1.75rem] border border-brand-black/8 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">
+                  Real-world dataset
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-brand-black">LANL upload status</h3>
+              </div>
+              <StatusBadge variant={lanlStatus?.status ?? "pending"}>
+                {lanlStatus?.status ?? "pending"}
+              </StatusBadge>
+            </div>
+
+            <p className="mt-4 text-sm leading-6 text-brand-black/70">
+              {lanlStatus?.notes ??
+                "Use official LANL auth.txt.gz, dns.txt.gz, or flows.txt.gz files. Optional redteam.txt.gz enrichment improves authentication alerting."}
+            </p>
+
+            <div className="mt-5 rounded-[1.25rem] bg-brand-light/70 p-4">
+              <div className="space-y-3 text-sm text-brand-black/70">
+                <div className="flex justify-between gap-4">
+                  <span>Imported alerts</span>
+                  <span className="font-semibold text-brand-black">
+                    {lanlStatus?.imported_alert_count ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span>Imported logs</span>
+                  <span className="font-semibold text-brand-black">
+                    {lanlStatus?.imported_log_count ?? 0}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span>Last import</span>
+                  <span className="font-semibold text-brand-black">
+                    {formatDateTime(lanlStatus?.last_import_at ?? null)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {lanlStatus?.latest_imported_alert_titles.length ? (
+              <div className="mt-5 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-black/45">
+                  Latest generated alerts
+                </p>
+                {lanlStatus.latest_imported_alert_titles.map((title) => (
+                  <div key={title} className="rounded-[1rem] bg-brand-light/70 px-3 py-2 text-sm text-brand-black/72">
+                    {title}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-[1.75rem] border border-brand-black/8 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">
+                  Upload workflow
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-brand-black">
+                  Prepare and import LANL slices
+                </h3>
+              </div>
+              <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
+                Raw dataset not bundled
+              </span>
+            </div>
+
+            <p className="mt-4 text-sm leading-6 text-brand-black/70">
+              Download the official dataset outside the repo, then upload only the slice you want to analyze. AegisCore preserves the LANL relative event order and converts the batch into alerts and normalized logs.
+            </p>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <label className="block text-sm font-medium text-brand-black">
+                Dataset type
+                <select
+                  value={lanlDatasetType}
+                  onChange={(event) => setLanlDatasetType(event.target.value as LanlDatasetType)}
+                  className="input-shell mt-2 w-full bg-brand-light/60"
+                >
+                  {lanlDatasetTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-brand-black">
+                Max records
+                <input
+                  type="number"
+                  min={1}
+                  max={20000}
+                  value={lanlMaxRecords}
+                  onChange={(event) => setLanlMaxRecords(event.target.value)}
+                  className="input-shell mt-2 w-full bg-brand-light/60"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              <label className="block text-sm font-medium text-brand-black">
+                Dataset file
+                <input
+                  type="file"
+                  accept=".txt,.gz,.csv"
+                  onChange={(event) => setLanlDatasetFile(event.target.files?.[0] ?? null)}
+                  className="mt-2 block w-full text-sm text-brand-black/70"
+                />
+              </label>
+
+              {lanlDatasetType === "auth" ? (
+                <label className="block text-sm font-medium text-brand-black">
+                  Optional redteam file
+                  <input
+                    type="file"
+                    accept=".txt,.gz,.csv"
+                    onChange={(event) => setLanlRedteamFile(event.target.files?.[0] ?? null)}
+                    className="mt-2 block w-full text-sm text-brand-black/70"
+                  />
+                </label>
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleLanlUpload}
+                className="btn-primary"
+                disabled={!canImport || !lanlDatasetFile || lanlUploadLoading}
+              >
+                {lanlUploadLoading ? "Uploading..." : "Import LANL dataset"}
+              </button>
+              <p className="text-xs leading-5 text-brand-black/55">
+                {canImport
+                  ? "Admins and analysts can upload auth.txt.gz, dns.txt.gz, or flows.txt.gz. Use redteam.txt.gz only with auth imports."
+                  : "Viewer accounts can inspect status, but only admins and analysts can run imports."}
+              </p>
+            </div>
+
+            {lanlUploadMessage ? (
+              <div className="mt-4 rounded-[1.25rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-3 text-sm text-brand-black/75">
+                {lanlUploadMessage}
+              </div>
+            ) : null}
+          </div>
         </div>
       </SectionCard>
 

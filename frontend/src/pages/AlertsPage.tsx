@@ -50,6 +50,7 @@ const sourceToolOptions: Array<{ value: "all" | SourceToolKey; label: string }> 
   { value: "suricata", label: "Suricata" },
   { value: "nmap", label: "Nmap" },
   { value: "hydra", label: "Hydra" },
+  { value: "lanl", label: "LANL" },
   { value: "virtualbox", label: "VirtualBox" },
 ];
 
@@ -59,7 +60,10 @@ const eventTypeOptions: Array<{ value: string; label: string }> = [
   { value: "file_integrity", label: "File Integrity" },
   { value: "user_account", label: "User Account" },
   { value: "network", label: "Network" },
+  { value: "dns_resolution", label: "DNS Resolution" },
   { value: "malware", label: "Malware" },
+  { value: "network_flow", label: "Network Flow" },
+  { value: "compromise", label: "Compromise" },
   { value: "privilege_change", label: "Privilege Change" },
   { value: "reconnaissance", label: "Reconnaissance" },
   { value: "scan_result", label: "Scan Result" },
@@ -73,6 +77,7 @@ const toolLabels: Record<SourceToolKey, string> = {
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
+  lanl: "LANL",
   virtualbox: "VirtualBox",
 };
 

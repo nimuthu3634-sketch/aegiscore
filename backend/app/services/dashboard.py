@@ -14,7 +14,7 @@ SEVERITY_ORDER = [
     AlertSeverity.LOW,
 ]
 
-SOURCE_TOOL_ORDER = ["wazuh", "suricata", "nmap", "hydra", "virtualbox"]
+SOURCE_TOOL_ORDER = ["wazuh", "suricata", "nmap", "hydra", "lanl", "virtualbox"]
 
 
 def _incident_updated_at(incident: dict) -> datetime:

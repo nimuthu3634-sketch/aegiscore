@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from app.core.enums import AlertSeverity
 from app.utils.log_normalization import normalize_log_payload, normalize_source_tool, normalize_timestamp
 
 
@@ -121,6 +122,251 @@ def _hydra_severity(payload: dict[str, Any]) -> int:
         return 5
 
     return 2
+
+
+LANL_PARSER_REFERENCE_TS = "2026-01-01T00:00:00Z"
+LANL_FAILURE_VALUES = {"0", "f", "fail", "failed", "failure", "false", "denied"}
+LANL_SENSITIVE_PORTS = {22, 23, 445, 3389, 5985, 5986, 1433, 3306, 5432, 6379}
+
+
+def _parse_lanl_int(value: str) -> int:
+    cleaned_value = value.strip()
+    if not cleaned_value:
+        raise ValueError("LANL record field was empty.")
+    return int(cleaned_value)
+
+
+def _parse_lanl_port(value: str) -> int | None:
+    cleaned_value = value.strip()
+    if not cleaned_value or not cleaned_value.isdigit():
+        return None
+    return int(cleaned_value)
+
+
+def _normalize_lanl_user(value: str) -> str:
+    cleaned_value = value.strip().lower()
+    return cleaned_value.split("@", 1)[0] if "@" in cleaned_value else cleaned_value
+
+
+def parse_lanl_auth_record(row: list[str], *, redteam_match: bool = False) -> dict[str, object]:
+    if len(row) < 9:
+        raise ValueError("LANL auth records must contain 9 columns.")
+
+    relative_time_seconds = _parse_lanl_int(row[0])
+    source_user = row[1].strip()
+    destination_user = row[2].strip()
+    source_computer = row[3].strip() or "lanl-auth-source"
+    destination_computer = row[4].strip() or "lanl-auth-target"
+    authentication_type = row[5].strip()
+    logon_type = row[6].strip()
+    auth_orientation = row[7].strip()
+    auth_outcome = row[8].strip()
+    auth_success = auth_outcome.strip().lower() not in LANL_FAILURE_VALUES
+
+    severity = (
+        AlertSeverity.CRITICAL
+        if redteam_match
+        else AlertSeverity.HIGH
+        if not auth_success
+        else AlertSeverity.MEDIUM
+    )
+    event_type = "compromise" if redteam_match else "authentication"
+    message = (
+        f"LANL auth event {source_user or 'unknown-user'} from {source_computer} "
+        f"to {destination_computer} ended with {auth_outcome or 'unknown'}."
+    )
+    raw_log = {
+        "relative_time_seconds": relative_time_seconds,
+        "source_user": source_user,
+        "destination_user": destination_user,
+        "source_computer": source_computer,
+        "destination_computer": destination_computer,
+        "authentication_type": authentication_type,
+        "logon_type": logon_type,
+        "auth_orientation": auth_orientation,
+        "auth_outcome": auth_outcome,
+        "redteam_match": redteam_match,
+        "message": message,
+        "source_ip": source_computer,
+        "destination_ip": destination_computer,
+        "user": _normalize_lanl_user(source_user) or source_user,
+    }
+    normalized_event = normalize_log_payload(
+        {
+            "source": source_computer,
+            "source_tool": "lanl",
+            "timestamp": LANL_PARSER_REFERENCE_TS,
+            "severity": severity.value,
+            "event_type": event_type,
+            "raw_log": raw_log,
+        }
+    )
+
+    return {
+        "source": source_computer,
+        "source_tool": "lanl",
+        "event_type": event_type,
+        "severity": severity,
+        "relative_time_seconds": relative_time_seconds,
+        "title": (
+            "Known red-team authentication path observed in LANL data"
+            if redteam_match
+            else "Failed authentication activity observed in LANL data"
+            if not auth_success
+            else "LANL authentication event imported"
+        ),
+        "message": message,
+        "normalized_event": normalized_event["normalized_log"],
+        "raw_event": raw_log,
+        "finding_metadata": {
+            "dataset_source": "lanl_comprehensive",
+            "dataset_type": "auth",
+            "relative_time_seconds": relative_time_seconds,
+            "source_user": source_user,
+            "destination_user": destination_user,
+            "source_computer": source_computer,
+            "destination_computer": destination_computer,
+            "authentication_type": authentication_type,
+            "logon_type": logon_type,
+            "auth_orientation": auth_orientation,
+            "auth_outcome": auth_outcome,
+            "redteam_match": redteam_match,
+            "event_type": event_type,
+        },
+        "parser_status": "normalized",
+        "lab_only": False,
+    }
+
+
+def parse_lanl_dns_record(row: list[str]) -> dict[str, object]:
+    if len(row) < 3:
+        raise ValueError("LANL DNS records must contain 3 columns.")
+
+    relative_time_seconds = _parse_lanl_int(row[0])
+    source_computer = row[1].strip() or "lanl-dns-source"
+    resolved_name = row[2].strip() or "unknown-destination"
+    message = f"LANL DNS record: {source_computer} resolved {resolved_name}."
+    raw_log = {
+        "relative_time_seconds": relative_time_seconds,
+        "source_computer": source_computer,
+        "resolved_name": resolved_name,
+        "message": message,
+        "source_ip": source_computer,
+        "destination_ip": resolved_name,
+    }
+    normalized_event = normalize_log_payload(
+        {
+            "source": source_computer,
+            "source_tool": "lanl",
+            "timestamp": LANL_PARSER_REFERENCE_TS,
+            "severity": AlertSeverity.LOW.value,
+            "event_type": "dns_resolution",
+            "raw_log": raw_log,
+        }
+    )
+
+    return {
+        "source": source_computer,
+        "source_tool": "lanl",
+        "event_type": "dns_resolution",
+        "severity": AlertSeverity.LOW,
+        "relative_time_seconds": relative_time_seconds,
+        "title": "LANL DNS event imported",
+        "message": message,
+        "normalized_event": normalized_event["normalized_log"],
+        "raw_event": raw_log,
+        "finding_metadata": {
+            "dataset_source": "lanl_comprehensive",
+            "dataset_type": "dns",
+            "relative_time_seconds": relative_time_seconds,
+            "source_computer": source_computer,
+            "resolved_name": resolved_name,
+            "event_type": "dns_resolution",
+        },
+        "parser_status": "normalized",
+        "lab_only": False,
+    }
+
+
+def parse_lanl_flow_record(row: list[str]) -> dict[str, object]:
+    if len(row) < 9:
+        raise ValueError("LANL flow records must contain 9 columns.")
+
+    relative_time_seconds = _parse_lanl_int(row[0])
+    duration_seconds = _parse_lanl_int(row[1])
+    source_computer = row[2].strip() or "lanl-flow-source"
+    source_port = row[3].strip()
+    destination_computer = row[4].strip() or "lanl-flow-target"
+    destination_port = row[5].strip()
+    protocol = row[6].strip().lower() or "unknown"
+    packet_count = _parse_lanl_int(row[7])
+    byte_count = _parse_lanl_int(row[8])
+    numeric_destination_port = _parse_lanl_port(destination_port)
+    severity = (
+        AlertSeverity.HIGH
+        if numeric_destination_port in LANL_SENSITIVE_PORTS or byte_count >= 10_000_000
+        else AlertSeverity.MEDIUM
+        if duration_seconds >= 3600 or packet_count >= 10_000
+        else AlertSeverity.LOW
+    )
+    message = (
+        f"LANL flow from {source_computer}:{source_port} to "
+        f"{destination_computer}:{destination_port} used {protocol.upper()}."
+    )
+    raw_log = {
+        "relative_time_seconds": relative_time_seconds,
+        "duration_seconds": duration_seconds,
+        "source_computer": source_computer,
+        "source_port": source_port,
+        "destination_computer": destination_computer,
+        "destination_port": destination_port,
+        "protocol": protocol,
+        "packet_count": packet_count,
+        "byte_count": byte_count,
+        "message": message,
+        "source_ip": source_computer,
+        "destination_ip": destination_computer,
+        "port": destination_port,
+    }
+    normalized_event = normalize_log_payload(
+        {
+            "source": source_computer,
+            "source_tool": "lanl",
+            "timestamp": LANL_PARSER_REFERENCE_TS,
+            "severity": severity.value,
+            "event_type": "network_flow",
+            "raw_log": raw_log,
+        }
+    )
+
+    return {
+        "source": source_computer,
+        "source_tool": "lanl",
+        "event_type": "network_flow",
+        "severity": severity,
+        "relative_time_seconds": relative_time_seconds,
+        "title": "LANL network flow imported",
+        "message": message,
+        "normalized_event": normalized_event["normalized_log"],
+        "raw_event": raw_log,
+        "finding_metadata": {
+            "dataset_source": "lanl_comprehensive",
+            "dataset_type": "flows",
+            "relative_time_seconds": relative_time_seconds,
+            "duration_seconds": duration_seconds,
+            "source_computer": source_computer,
+            "source_port": source_port,
+            "destination_computer": destination_computer,
+            "destination_port": destination_port,
+            "protocol": protocol,
+            "packet_count": packet_count,
+            "byte_count": byte_count,
+            "sensitive_port_match": numeric_destination_port in LANL_SENSITIVE_PORTS,
+            "event_type": "network_flow",
+        },
+        "parser_status": "normalized",
+        "lab_only": False,
+    }
 
 
 def parse_wazuh_event(payload: Mapping[str, object]) -> dict[str, object]:

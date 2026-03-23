@@ -36,6 +36,7 @@ const toolLabels: Record<SourceToolKey, string> = {
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
+  lanl: "LANL",
   virtualbox: "VirtualBox",
 };
 

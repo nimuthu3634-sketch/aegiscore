@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
 from app.core.enums import UserRole
 from app.schemas.integrations import (
@@ -6,6 +6,8 @@ from app.schemas.integrations import (
     HydraImportResponse,
     HydraStatusResponse,
     IntegrationRead,
+    LanlImportResponse,
+    LanlStatusResponse,
     NmapImportRequest,
     NmapImportResponse,
     NmapStatusResponse,
@@ -21,6 +23,7 @@ from app.schemas.integrations import (
 )
 from app.services.hydra_integration import get_hydra_status, import_hydra_results
 from app.services.integrations import list_integrations
+from app.services.lanl_integration import get_lanl_status, import_lanl_dataset_file
 from app.services.nmap_integration import get_nmap_status, import_nmap_results
 from app.services.suricata_integration import get_suricata_status, import_suricata_events
 from app.services.virtualbox_lab import create_virtual_machine, list_virtual_machines, update_virtual_machine
@@ -103,6 +106,30 @@ def import_hydra_demo_data(
 ) -> HydraImportResponse:
     result = import_hydra_results([item.model_dump() for item in payload.results])
     return HydraImportResponse.model_validate(result)
+
+
+@router.get("/lanl/status", response_model=LanlStatusResponse)
+def get_lanl_integration_status(
+    current_user: dict = Depends(get_current_active_user),
+) -> LanlStatusResponse:
+    return LanlStatusResponse.model_validate(get_lanl_status())
+
+
+@router.post("/lanl/import", response_model=LanlImportResponse, status_code=status.HTTP_201_CREATED)
+def import_lanl_dataset(
+    dataset_type: str = Form(...),
+    dataset_file: UploadFile = File(...),
+    redteam_file: UploadFile | None = File(default=None),
+    max_records: int = Form(default=1000),
+    current_user: dict = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+) -> LanlImportResponse:
+    result = import_lanl_dataset_file(
+        dataset_type,
+        dataset_file,
+        redteam_file=redteam_file,
+        max_records=max_records,
+    )
+    return LanlImportResponse.model_validate(result)
 
 
 @router.get("/virtualbox/lab", response_model=list[VirtualMachineRead])
