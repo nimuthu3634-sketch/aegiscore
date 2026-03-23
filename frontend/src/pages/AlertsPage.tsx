@@ -488,11 +488,15 @@ export function AlertsPage() {
           </label>
 
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black">
+            <label
+              htmlFor="alerts-severity-filter"
+              className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black"
+            >
               <FilterIcon className="h-4 w-4" />
-              Severity
-            </div>
+              <span>Severity</span>
+            </label>
             <select
+              id="alerts-severity-filter"
               value={severityFilter}
               onChange={(event) => {
                 setSeverityFilter(event.target.value as "all" | SeverityLevel);
@@ -509,11 +513,15 @@ export function AlertsPage() {
           </div>
 
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black">
+            <label
+              htmlFor="alerts-status-filter"
+              className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black"
+            >
               <FilterIcon className="h-4 w-4" />
-              Status
-            </div>
+              <span>Status</span>
+            </label>
             <select
+              id="alerts-status-filter"
               value={statusFilter}
               onChange={(event) => {
                 setStatusFilter(event.target.value as "all" | AlertStatus);
@@ -530,11 +538,15 @@ export function AlertsPage() {
           </div>
 
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black">
+            <label
+              htmlFor="alerts-source-tool-filter"
+              className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black"
+            >
               <FilterIcon className="h-4 w-4" />
-              Source Tool
-            </div>
+              <span>Source Tool</span>
+            </label>
             <select
+              id="alerts-source-tool-filter"
               value={sourceToolFilter}
               onChange={(event) => {
                 setSourceToolFilter(event.target.value as "all" | SourceToolKey);
@@ -551,11 +563,15 @@ export function AlertsPage() {
           </div>
 
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black">
+            <label
+              htmlFor="alerts-event-type-filter"
+              className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black"
+            >
               <FilterIcon className="h-4 w-4" />
-              Event Type
-            </div>
+              <span>Event Type</span>
+            </label>
             <select
+              id="alerts-event-type-filter"
               value={eventTypeFilter}
               onChange={(event) => {
                 setEventTypeFilter(event.target.value);
@@ -802,7 +818,11 @@ export function AlertsPage() {
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <label htmlFor="alert-status-update" className="sr-only">
+                    Update alert status
+                  </label>
                   <select
+                    id="alert-status-update"
                     value={statusDraft}
                     onChange={(event) => setStatusDraft(event.target.value as AlertStatus)}
                     className="input-shell w-full bg-brand-light/50"
