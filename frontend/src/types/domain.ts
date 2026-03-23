@@ -179,6 +179,13 @@ export interface IncidentApiRecord {
   id: string;
   alert_id: string | null;
   alert_title: string | null;
+  alert_event_type: string | null;
+  alert_anomaly_score: number | null;
+  alert_is_anomalous: boolean | null;
+  alert_parser_status: string | null;
+  alert_integration_ref: string | null;
+  alert_lab_only: boolean;
+  alert_finding_metadata: Record<string, unknown>;
   title: string;
   priority: SeverityLevel;
   status: IncidentStatus;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AnomalyScoreBadge } from "@/components/AnomalyScoreBadge";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
@@ -207,6 +207,8 @@ const alertColumns: DataTableColumn<AlertApiRecord>[] = [
 
 export function AlertsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryAlertId = searchParams.get("alertId");
   const { token, user } = useAuth();
   const { refreshVersion } = useRealtime();
   const [alertsResponse, setAlertsResponse] = useState<AlertListResponse | null>(null);
@@ -233,6 +235,12 @@ export function AlertsPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (queryAlertId) {
+      setSelectedAlertId(queryAlertId);
+    }
+  }, [queryAlertId]);
+
+  useEffect(() => {
     if (!token) {
       return;
     }
@@ -257,6 +265,10 @@ export function AlertsPage() {
 
         setAlertsResponse(response);
         setSelectedAlertId((currentId) => {
+          if (queryAlertId && response.items.some((alert) => alert.id === queryAlertId)) {
+            return queryAlertId;
+          }
+
           if (response.items.length === 0) {
             return null;
           }
@@ -296,6 +308,7 @@ export function AlertsPage() {
     page,
     reloadKey,
     refreshVersion,
+    queryAlertId,
   ]);
 
   useEffect(() => {

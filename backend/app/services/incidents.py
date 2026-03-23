@@ -103,11 +103,23 @@ def _serialize_incident(incident: dict) -> dict:
     title = incident.get("title") or (alert["title"] if alert else "Incident review")
     affected_asset = incident.get("affected_asset") or (alert["source"] if alert else "Unknown asset")
     summary = incident.get("summary") or (alert["description"] if alert else incident["notes"])
+    alert_finding_metadata = (
+        alert.get("finding_metadata", {})
+        if alert and isinstance(alert.get("finding_metadata"), dict)
+        else {}
+    )
 
     return {
         "id": incident["id"],
         "alert_id": incident.get("alert_id"),
         "alert_title": alert["title"] if alert else None,
+        "alert_event_type": alert.get("event_type") if alert else None,
+        "alert_anomaly_score": float(alert["anomaly_score"]) if alert else None,
+        "alert_is_anomalous": bool(alert["is_anomalous"]) if alert else None,
+        "alert_parser_status": alert.get("parser_status") if alert else None,
+        "alert_integration_ref": alert.get("integration_ref") if alert else None,
+        "alert_lab_only": bool(alert.get("lab_only", False)) if alert else False,
+        "alert_finding_metadata": alert_finding_metadata,
         "title": title,
         "priority": incident["priority"],
         "status": incident["status"],

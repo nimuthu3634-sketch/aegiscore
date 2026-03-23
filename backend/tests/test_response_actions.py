@@ -179,3 +179,39 @@ def test_alert_event_type_filter_and_import_context_are_exposed_via_api() -> Non
     assert log_payload["lab_only"] is True
     assert log_payload["parser_status"] == "normalized"
     assert log_payload["integration_ref"] == created_log["integration_ref"]
+
+
+def test_incident_api_exposes_linked_alert_context() -> None:
+    headers = _admin_headers()
+
+    response = client.post(
+        "/integrations/hydra/import",
+        json={
+            "results": [
+                {
+                    "target_system": "lab-case-01",
+                    "protocol": "ssh",
+                    "result_summary": "Authorized classroom credential assessment import recorded a valid credential match.",
+                    "timestamp": "2026-03-23T10:15:00Z",
+                    "notes": "Incident context exposure verification import",
+                }
+            ]
+        },
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    created_alert = next(alert for alert in DEMO_ALERTS if alert["source"] == "lab-case-01")
+    linked_incident = next(
+        incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == created_alert["id"]
+    )
+
+    incident_response = client.get(f"/incidents/{linked_incident['id']}", headers=headers)
+    assert incident_response.status_code == 200
+    incident_payload = incident_response.json()
+
+    assert incident_payload["alert_id"] == created_alert["id"]
+    assert incident_payload["alert_event_type"] == "credential_assessment"
+    assert incident_payload["alert_lab_only"] is True
+    assert incident_payload["alert_parser_status"] == "normalized"
+    assert incident_payload["alert_integration_ref"] == created_alert["integration_ref"]

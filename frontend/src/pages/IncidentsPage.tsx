@@ -41,6 +41,13 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatTitle(value: string) {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 const sourceLabels: Record<NonNullable<IncidentApiRecord["source_tool"]>, string> = {
   wazuh: "Wazuh",
   suricata: "Suricata",
@@ -287,6 +294,13 @@ export function IncidentsPage() {
   const incidents = incidentsResponse?.items ?? [];
   const assignees = incidentsResponse?.available_assignees ?? [];
   const canEdit = canManageIncidents(user?.role);
+  const selectedSourceNote =
+    selectedIncident && selectedIncident.alert_lab_only
+      ? getSourceNote(selectedIncident.source_tool)
+      : null;
+  const selectedAlertFindingMetadataEntries = selectedIncident
+    ? Object.entries(selectedIncident.alert_finding_metadata ?? {})
+    : [];
 
   const summaryMetrics = useMemo(() => {
     return {
@@ -457,9 +471,9 @@ export function IncidentsPage() {
                   </p>
                 </div>
 
-                {getSourceNote(selectedIncident.source_tool) ? (
+                {selectedSourceNote ? (
                   <div className="rounded-[1.5rem] border border-brand-orange/20 bg-brand-orange/5 px-4 py-4 text-sm text-brand-black/70">
-                    {getSourceNote(selectedIncident.source_tool)}. This incident is linked to a safe
+                    {selectedSourceNote}. This incident is linked to a safe
                     imported assessment artifact rather than an offensive automation workflow.
                   </div>
                 ) : null}
@@ -492,8 +506,48 @@ export function IncidentsPage() {
                       <dd>{selectedIncident.alert_title ?? "Manual incident"}</dd>
                     </div>
                     <div className="flex justify-between gap-4">
+                      <dt>Alert event type</dt>
+                      <dd>
+                        {selectedIncident.alert_event_type
+                          ? formatTitle(selectedIncident.alert_event_type)
+                          : "Not available"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
                       <dt>Source tool</dt>
                       <dd>{getSourceLabel(selectedIncident.source_tool)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt>Alert AI score</dt>
+                      <dd>
+                        {selectedIncident.alert_anomaly_score !== null
+                          ? `${Math.round(selectedIncident.alert_anomaly_score * 100)}%`
+                          : "Not available"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt>Alert anomaly flag</dt>
+                      <dd>
+                        {selectedIncident.alert_is_anomalous === null
+                          ? "Not available"
+                          : selectedIncident.alert_is_anomalous
+                            ? "Anomalous"
+                            : "Within baseline"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt>Parser status</dt>
+                      <dd>{selectedIncident.alert_parser_status ?? "Not supplied"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt>Lab-only import</dt>
+                      <dd>{selectedIncident.alert_lab_only ? "Yes" : "No"}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt>Import reference</dt>
+                      <dd className="max-w-[60%] break-all text-right">
+                        {selectedIncident.alert_integration_ref ?? "Not supplied"}
+                      </dd>
                     </div>
                     <div className="flex justify-between gap-4">
                       <dt>Affected asset</dt>
@@ -508,7 +562,28 @@ export function IncidentsPage() {
                       <dd>{formatDateTime(selectedIncident.updated_at)}</dd>
                     </div>
                   </dl>
+
+                  {selectedIncident.alert_id ? (
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/alerts?alertId=${selectedIncident.alert_id}`)}
+                        className="btn-secondary"
+                      >
+                        Open linked alert
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
+
+                {selectedAlertFindingMetadataEntries.length > 0 ? (
+                  <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                    <p className="text-sm font-semibold text-brand-black">Linked alert metadata</p>
+                    <pre className="mt-4 overflow-x-auto rounded-[1.25rem] bg-brand-light/70 p-4 text-xs leading-6 text-brand-black/70">
+                      {JSON.stringify(selectedIncident.alert_finding_metadata, null, 2)}
+                    </pre>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </SectionCard>

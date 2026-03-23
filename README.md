@@ -67,6 +67,9 @@ The repository is organized as a monorepo with:
   workflows keep the same enrichment they had before the reload.
 - The Alerts page now supports event-type filtering, and both Alerts and Logs
   detail views expose the preserved import context for analyst review.
+- Incident details now include linked alert intelligence such as event type,
+  AI score, parser/import context, and a quick jump back to the originating
+  alert.
 
 - This means a fresh setup already looks populated for presentations.
 

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -17,6 +18,13 @@ class IncidentRead(ORMModel):
     id: str
     alert_id: str | None
     alert_title: str | None
+    alert_event_type: str | None = None
+    alert_anomaly_score: float | None = None
+    alert_is_anomalous: bool | None = None
+    alert_parser_status: str | None = None
+    alert_integration_ref: str | None = None
+    alert_lab_only: bool = False
+    alert_finding_metadata: dict[str, Any] = {}
     title: str
     priority: AlertSeverity
     status: IncidentStatus
