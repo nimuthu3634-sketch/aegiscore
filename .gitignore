@@ -9,7 +9,37 @@ backend/**/*.pyc
 backend/.pytest_cache
 
 # Local data
-data/
+data/**
+!data/
+!data/README.md
+!data/lanl/
+!data/lanl/README.md
+!data/lanl/raw/
+!data/lanl/raw/.gitkeep
+!data/lanl/prepared/
+!data/lanl/prepared/.gitkeep
+!data/imports/
+!data/imports/README.md
+!data/imports/wazuh/
+!data/imports/wazuh/.gitkeep
+!data/imports/suricata/
+!data/imports/suricata/.gitkeep
+!data/imports/nmap/
+!data/imports/nmap/.gitkeep
+!data/imports/hydra/
+!data/imports/hydra/.gitkeep
+!data/unsw_nb15/
+!data/unsw_nb15/README.md
+!data/unsw_nb15/raw/
+!data/unsw_nb15/raw/.gitkeep
+!data/unsw_nb15/prepared/
+!data/unsw_nb15/prepared/.gitkeep
+!data/cicids2017/
+!data/cicids2017/README.md
+!data/cicids2017/raw/
+!data/cicids2017/raw/.gitkeep
+!data/cicids2017/prepared/
+!data/cicids2017/prepared/.gitkeep
 
 # Environment
 .env

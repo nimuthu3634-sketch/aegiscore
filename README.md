@@ -433,6 +433,83 @@ Reference files in `docs/`:
 - `docs/sample-hydra-results.json`
 - `docs/sample-log-ingest-payloads.json`
 
+## Local raw dataset folders
+
+The repository now includes a tracked `data/` scaffold so you have a clear
+place to keep raw datasets locally without committing the files themselves.
+
+Use:
+
+- `data/lanl/raw/` for official LANL raw files
+- `data/lanl/prepared/` for smaller LANL slices and summaries
+- `data/imports/wazuh/` for local Wazuh JSON payloads
+- `data/imports/suricata/` for local Suricata JSON payloads
+- `data/imports/nmap/` for local Nmap JSON payloads
+- `data/imports/hydra/` for local Hydra JSON payloads
+- `data/unsw_nb15/raw/` for local UNSW-NB15 source CSV files
+- `data/unsw_nb15/prepared/` for merged or cleaned UNSW-NB15 outputs
+- `data/cicids2017/raw/` for local CICIDS2017 source CSV files
+- `data/cicids2017/prepared/` for merged or cleaned CICIDS2017 outputs
+
+Only the folder placeholders and README files are tracked. Actual dataset files
+remain ignored by Git.
+
+## Preparing UNSW-NB15 and CICIDS2017
+
+Use the public-dataset prep script when you want clean, merged CSV files for
+defensive analytics, presentation-friendly slices, or future ML experiments.
+
+If your files live outside the repo, register them once in the local manifest:
+
+```powershell
+py scripts/register_local_datasets.py `
+  --path "E:\New\NUSW-NB15_features.csv" `
+  --path "E:\New\UNSW_NB15_training-set.csv" `
+  --path "E:\New\UNSW_NB15_testing-set.csv" `
+  --path "E:\New\UNSW-NB15_1.csv" `
+  --path "E:\New\UNSW-NB15_2.csv" `
+  --path "E:\New\UNSW-NB15_3.csv" `
+  --path "E:\New\UNSW-NB15_4.csv" `
+  --path "E:\New\UNSW-NB15_LIST_EVENTS.csv" `
+  --path "E:\Monday-WorkingHours.pcap_ISCX.csv" `
+  --path "E:\Tuesday-WorkingHours.pcap_ISCX.csv" `
+  --path "E:\Wednesday-workingHours.pcap_ISCX.csv" `
+  --path "E:\Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv" `
+  --path "E:\Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv" `
+  --path "E:\Friday-WorkingHours-Morning.pcap_ISCX.csv" `
+  --path "E:\Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv" `
+  --path "E:\Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
+```
+
+Prepare both dataset families from that manifest:
+
+```powershell
+py scripts/prepare_public_datasets.py all --max-rows-per-label 3000
+```
+
+Or prepare them individually:
+
+```powershell
+py scripts/prepare_public_datasets.py unsw_nb15 --source auto --max-rows-per-label 3000
+py scripts/prepare_public_datasets.py cicids2017 --max-rows-per-label 3000
+```
+
+Outputs:
+
+- `data/unsw_nb15/prepared/unsw_nb15_prepared.csv`
+- `data/unsw_nb15/prepared/unsw_nb15_prepared.summary.json`
+- `data/cicids2017/prepared/cicids2017_prepared.csv`
+- `data/cicids2017/prepared/cicids2017_prepared.summary.json`
+
+Notes:
+
+- `UNSW-NB15` auto mode prefers the labeled training/testing splits when they
+  are available in the manifest. If they are not present, the script falls back
+  to the raw split files plus the feature reference CSV.
+- `CICIDS2017` headers are normalized into stable lowercase snake_case columns.
+- `--max-rows-per-label` is optional but recommended for student-demo workflows
+  so the merged outputs stay manageable.
+
 ## How to import sample data
 
 ### Recommended demo path

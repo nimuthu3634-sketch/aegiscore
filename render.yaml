@@ -45,11 +45,18 @@ services:
           name: aegiscore-postgres
           property: port
       - key: REDIS_URL
-        fromDatabase:
+        fromService:
           name: aegiscore-redis
+          type: keyvalue
           property: connectionString
       - key: CORS_ORIGINS
         sync: false
+
+  - type: keyvalue
+    name: aegiscore-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
 
 databases:
   - name: aegiscore-postgres
@@ -57,9 +64,4 @@ databases:
     databaseName: aegiscore
     user: aegiscore
     postgresMajorVersion: "16"
-    ipAllowList: []
-
-  - name: aegiscore-redis
-    plan: free
-    maxmemoryPolicy: allkeys-lru
     ipAllowList: []
