@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -12,12 +13,17 @@ class AlertRead(ORMModel):
     description: str
     source: str
     source_tool: IntegrationTool
+    event_type: str
     severity: AlertSeverity
     status: AlertStatus
     confidence_score: float
     anomaly_score: float
     is_anomalous: bool
     anomaly_explanation: str
+    integration_ref: str | None = None
+    parser_status: str | None = None
+    lab_only: bool = False
+    finding_metadata: dict[str, Any] = {}
     created_at: datetime
 
 

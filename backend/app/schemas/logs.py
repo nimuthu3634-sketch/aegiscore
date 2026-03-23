@@ -24,6 +24,10 @@ class LogEntryRead(ORMModel):
     normalized_log: dict[str, Any]
     event_type: str
     severity: AlertSeverity
+    integration_ref: str | None = None
+    parser_status: str | None = None
+    lab_only: bool = False
+    finding_metadata: dict[str, Any] = {}
     created_at: datetime
 
 

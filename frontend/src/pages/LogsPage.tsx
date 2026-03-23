@@ -206,9 +206,15 @@ export function LogsPage() {
 
   const logs = logsResponse?.items ?? [];
   const canIngest = canIngestLogs(user?.role);
-  const selectedLabOnlyNote = selectedLog ? getLabOnlyNote(selectedLog.source_tool) : null;
+  const selectedLabOnlyNote =
+    selectedLog && selectedLog.lab_only
+      ? (getLabOnlyNote(selectedLog.source_tool) ?? "Imported lab-only assessment result")
+      : null;
   const sourceToolCount = useMemo(() => new Set(logs.map((log) => log.source_tool)).size, [logs]);
   const latestTimestamp = logs[0]?.created_at;
+  const selectedFindingMetadataEntries = selectedLog
+    ? Object.entries(selectedLog.finding_metadata ?? {})
+    : [];
 
   return (
     <div className="space-y-6">
@@ -361,7 +367,28 @@ export function LogsPage() {
                     {formatDateTime(selectedLog.created_at)}
                   </p>
                 </div>
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Parser status</p>
+                  <p className="mt-3 text-sm font-semibold text-brand-black">
+                    {selectedLog.parser_status ?? "Not supplied"}
+                  </p>
+                </div>
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Import reference</p>
+                  <p className="mt-3 break-all text-sm font-semibold text-brand-black">
+                    {selectedLog.integration_ref ?? "Not supplied"}
+                  </p>
+                </div>
               </div>
+
+              {selectedFindingMetadataEntries.length > 0 ? (
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                  <p className="text-sm font-semibold text-brand-black">Finding metadata</p>
+                  <pre className="mt-4 overflow-x-auto rounded-[1.25rem] bg-brand-surface p-4 text-xs leading-6 text-brand-muted">
+                    {JSON.stringify(selectedLog.finding_metadata, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">

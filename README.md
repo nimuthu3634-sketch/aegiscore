@@ -65,6 +65,8 @@ The repository is organized as a monorepo with:
 - Imported alert/log context such as integration references, parser status,
   lab-only markers, and finding metadata now persists too, so restart-safe
   workflows keep the same enrichment they had before the reload.
+- The Alerts page now supports event-type filtering, and both Alerts and Logs
+  detail views expose the preserved import context for analyst review.
 
 - This means a fresh setup already looks populated for presentations.
 
@@ -268,16 +270,19 @@ accounts above unless you intentionally enable `ALLOW_SELF_REGISTRATION=true` in
    now auto-escalate into investigation and incident workflow, while manual containment
    actions such as IP blocking and asset isolation are recorded as lab-safe simulated
    responses with audit history.
-6. Open Integrations and use `Import sample data` on:
+6. Use the alert event-type filter to focus on categories such as authentication,
+   file integrity, scan results, or credential assessment, then review the
+   preserved parser/import context in the detail panel.
+7. Open Integrations and use `Import sample data` on:
 
    - Wazuh
    - Suricata
    - Nmap
    - Hydra
 
-7. Watch the live alert toast and notification badge update through
+8. Watch the live alert toast and notification badge update through
    WebSockets when new alerts are imported.
-7. Open Reports to generate a report snapshot and export JSON if needed.
+9. Open Reports to generate a report snapshot and export JSON if needed.
 
 ## Sample data sources available
 

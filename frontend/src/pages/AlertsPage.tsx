@@ -53,6 +53,21 @@ const sourceToolOptions: Array<{ value: "all" | SourceToolKey; label: string }> 
   { value: "virtualbox", label: "VirtualBox" },
 ];
 
+const eventTypeOptions: Array<{ value: string; label: string }> = [
+  { value: "all", label: "All event types" },
+  { value: "authentication", label: "Authentication" },
+  { value: "file_integrity", label: "File Integrity" },
+  { value: "user_account", label: "User Account" },
+  { value: "network", label: "Network" },
+  { value: "malware", label: "Malware" },
+  { value: "privilege_change", label: "Privilege Change" },
+  { value: "reconnaissance", label: "Reconnaissance" },
+  { value: "scan_result", label: "Scan Result" },
+  { value: "credential_assessment", label: "Credential Assessment" },
+  { value: "configuration", label: "Configuration" },
+  { value: "security_alert", label: "Security Alert" },
+];
+
 const toolLabels: Record<SourceToolKey, string> = {
   wazuh: "Wazuh",
   suricata: "Suricata",
@@ -72,6 +87,13 @@ function formatDateTime(value: string) {
 
 function getSourceToolLabel(sourceTool: SourceToolKey) {
   return toolLabels[sourceTool];
+}
+
+function formatEventTypeLabel(eventType: string) {
+  return eventType
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function getSourceToolNote(sourceTool: SourceToolKey) {
@@ -151,6 +173,15 @@ const alertColumns: DataTableColumn<AlertApiRecord>[] = [
     ),
   },
   {
+    key: "event_type",
+    header: "Event Type",
+    render: (alert) => (
+      <span className="inline-flex rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-black/68">
+        {formatEventTypeLabel(alert.event_type)}
+      </span>
+    ),
+  },
+  {
     key: "severity",
     header: "Severity",
     render: (alert) => <SeverityBadge level={alert.severity} />,
@@ -186,6 +217,7 @@ export function AlertsPage() {
   const [severityFilter, setSeverityFilter] = useState<"all" | SeverityLevel>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | AlertStatus>("all");
   const [sourceToolFilter, setSourceToolFilter] = useState<"all" | SourceToolKey>("all");
+  const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [listLoading, setListLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -214,6 +246,7 @@ export function AlertsPage() {
       severity: severityFilter === "all" ? undefined : severityFilter,
       status: statusFilter === "all" ? undefined : statusFilter,
       source_tool: sourceToolFilter === "all" ? undefined : sourceToolFilter,
+      event_type: eventTypeFilter === "all" ? undefined : eventTypeFilter,
       page,
       page_size: 8,
     })
@@ -253,7 +286,17 @@ export function AlertsPage() {
     return () => {
       isActive = false;
     };
-  }, [token, searchQuery, severityFilter, statusFilter, sourceToolFilter, page, reloadKey, refreshVersion]);
+  }, [
+    token,
+    searchQuery,
+    severityFilter,
+    statusFilter,
+    sourceToolFilter,
+    eventTypeFilter,
+    page,
+    reloadKey,
+    refreshVersion,
+  ]);
 
   useEffect(() => {
     if (!token || !selectedAlertId) {
@@ -392,11 +435,17 @@ export function AlertsPage() {
   const totalPages = alertsResponse?.total_pages ?? 1;
   const totalItems = alertsResponse?.total_items ?? 0;
   const listItems = alertsResponse?.items ?? [];
-  const selectedSourceNote = selectedAlert ? getSourceToolNote(selectedAlert.source_tool) : null;
+  const selectedSourceNote =
+    selectedAlert && selectedAlert.lab_only
+      ? (getSourceToolNote(selectedAlert.source_tool) ?? "Imported lab-only assessment result")
+      : null;
   const canEditStatus = canUpdateAlerts(user?.role);
   const canRunResponseActions = canManageIncidents(user?.role);
   const recommendedActions = responseActions?.recommended_actions ?? [];
   const responseActionHistory = responseActions?.items ?? [];
+  const selectedFindingMetadataEntries = selectedAlert
+    ? Object.entries(selectedAlert.finding_metadata ?? {})
+    : [];
 
   return (
     <div className="space-y-6">
@@ -410,7 +459,7 @@ export function AlertsPage() {
           </button>
         }
       >
-        <div className="grid gap-4 xl:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_0.95fr]">
           <label className="input-shell flex items-center gap-3">
             <SearchIcon className="h-4 w-4 text-brand-black/45" />
             <input
@@ -481,6 +530,27 @@ export function AlertsPage() {
               className="input-shell w-full bg-white"
             >
               {sourceToolOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-black">
+              <FilterIcon className="h-4 w-4" />
+              Event Type
+            </div>
+            <select
+              value={eventTypeFilter}
+              onChange={(event) => {
+                setEventTypeFilter(event.target.value);
+                setPage(1);
+              }}
+              className="input-shell w-full bg-white"
+            >
+              {eventTypeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -597,6 +667,14 @@ export function AlertsPage() {
                   </div>
                 </div>
                 <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Event type</p>
+                  <div className="mt-3">
+                    <span className="inline-flex rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-black/68">
+                      {formatEventTypeLabel(selectedAlert.event_type)}
+                    </span>
+                  </div>
+                </div>
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Status</p>
                   <div className="mt-3">
                     <StatusBadge variant={selectedAlert.status}>
@@ -643,8 +721,26 @@ export function AlertsPage() {
                     <dd>{getSourceToolLabel(selectedAlert.source_tool)}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
+                    <dt>Event type</dt>
+                    <dd>{formatEventTypeLabel(selectedAlert.event_type)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
                     <dt>Source Asset</dt>
                     <dd>{selectedAlert.source}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Parser status</dt>
+                    <dd>{selectedAlert.parser_status ?? "Not supplied"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Lab-only import</dt>
+                    <dd>{selectedAlert.lab_only ? "Yes" : "No"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Import reference</dt>
+                    <dd className="truncate text-right">
+                      {selectedAlert.integration_ref ?? "Not supplied"}
+                    </dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt>Analyst confidence</dt>
@@ -660,6 +756,24 @@ export function AlertsPage() {
                   </div>
                 </dl>
               </div>
+
+              {selectedFindingMetadataEntries.length > 0 ? (
+                <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
+                  <p className="text-sm font-semibold text-brand-black">Finding metadata</p>
+                  <dl className="mt-4 space-y-3 text-sm text-brand-black/70">
+                    {selectedFindingMetadataEntries.map(([key, value]) => (
+                      <div key={key} className="flex justify-between gap-4">
+                        <dt>{formatEventTypeLabel(key)}</dt>
+                        <dd className="max-w-[60%] text-right">
+                          {typeof value === "string"
+                            ? value
+                            : JSON.stringify(value)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
 
               <div className="rounded-[1.5rem] border border-brand-black/8 bg-white p-4">
                 <div className="flex items-center justify-between gap-3">

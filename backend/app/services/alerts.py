@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.services.anomaly import apply_anomaly_scoring, ensure_demo_alerts_scored
 from app.core.enums import AlertSeverity, AlertStatus, IntegrationTool
 from app.models.alert import Alert
+from app.services.logs import load_log_records
 from app.services.mock_store import DEMO_ALERTS
 from app.services.persistence import run_with_optional_db
 from app.services.record_ids import next_prefixed_id
@@ -34,6 +35,72 @@ def _alert_from_model(alert: Alert) -> dict:
     }
 
 
+def _normalize_event_type(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized_value = value.strip().lower().replace(" ", "_")
+    return normalized_value or None
+
+
+def _resolve_alert_event_type(alert_record: dict) -> str:
+    explicit_event_type = _normalize_event_type(alert_record.get("event_type"))
+    if explicit_event_type:
+        return explicit_event_type
+
+    finding_metadata = (
+        alert_record.get("finding_metadata", {})
+        if isinstance(alert_record.get("finding_metadata"), dict)
+        else {}
+    )
+    metadata_event_type = _normalize_event_type(finding_metadata.get("event_type"))
+    if metadata_event_type:
+        return metadata_event_type
+
+    integration_ref = alert_record.get("integration_ref")
+    if integration_ref:
+        related_log = next(
+            (
+                log_entry
+                for log_entry in load_log_records()
+                if log_entry.get("integration_ref") == integration_ref
+            ),
+            None,
+        )
+        if related_log and related_log.get("event_type"):
+            return _normalize_event_type(related_log["event_type"]) or "security_alert"
+
+    candidate_logs = [
+        log_entry
+        for log_entry in load_log_records()
+        if log_entry.get("source") == alert_record.get("source")
+        and log_entry.get("source_tool") == alert_record.get("source_tool")
+    ]
+    if candidate_logs:
+        closest_log = min(
+            candidate_logs,
+            key=lambda log_entry: abs(
+                (log_entry["created_at"] - alert_record["created_at"]).total_seconds()
+            ),
+        )
+        return _normalize_event_type(closest_log.get("event_type")) or "security_alert"
+
+    return "security_alert"
+
+
+def _enrich_alert_record(alert_record: dict) -> dict:
+    enriched_record = dict(alert_record)
+    enriched_record["finding_metadata"] = (
+        alert_record.get("finding_metadata", {})
+        if isinstance(alert_record.get("finding_metadata"), dict)
+        else {}
+    )
+    enriched_record["parser_status"] = alert_record.get("parser_status")
+    enriched_record["lab_only"] = bool(alert_record.get("lab_only", False))
+    enriched_record["event_type"] = _resolve_alert_event_type(alert_record)
+    return enriched_record
+
+
 def _load_persisted_alerts() -> list[dict]:
     def operation(db) -> list[dict]:
         alerts = db.scalars(select(Alert).order_by(Alert.created_at.desc())).all()
@@ -55,7 +122,7 @@ def load_alert_records() -> list[dict]:
         else:
             merged_alerts[persisted_alert["id"]] = persisted_alert
 
-    return list(merged_alerts.values())
+    return [_enrich_alert_record(alert) for alert in merged_alerts.values()]
 
 
 def _sorted_alerts() -> list[dict]:
@@ -94,6 +161,7 @@ def _matches_filters(
     severity: AlertSeverity | None,
     status_filter: AlertStatus | None,
     source_tool: IntegrationTool | None,
+    event_type: str | None,
     search: str | None,
 ) -> bool:
     if severity and alert["severity"] != severity:
@@ -103,6 +171,9 @@ def _matches_filters(
         return False
 
     if source_tool and alert["source_tool"] != source_tool:
+        return False
+
+    if event_type and alert.get("event_type") != _normalize_event_type(event_type):
         return False
 
     if not search:
@@ -126,6 +197,7 @@ def list_alerts(
     severity: AlertSeverity | None = None,
     status_filter: AlertStatus | None = None,
     source_tool: IntegrationTool | None = None,
+    event_type: str | None = None,
     search: str | None = None,
     page: int = 1,
     page_size: int = 10,
@@ -133,7 +205,7 @@ def list_alerts(
     filtered_alerts = [
         alert
         for alert in _sorted_alerts()
-        if _matches_filters(alert, severity, status_filter, source_tool, search)
+        if _matches_filters(alert, severity, status_filter, source_tool, event_type, search)
     ]
 
     total_items = len(filtered_alerts)
@@ -186,6 +258,7 @@ def create_alert(
         alert_record.update(extra_fields)
 
     apply_anomaly_scoring(alert_record, reference_alerts=load_alert_records())
+    alert_record = _enrich_alert_record(alert_record)
     DEMO_ALERTS.append(alert_record)
     _persist_alert_record(alert_record)
     from app.services.response_actions import run_automatic_response_workflow

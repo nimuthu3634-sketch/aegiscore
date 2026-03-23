@@ -87,12 +87,17 @@ export interface AlertApiRecord {
   description: string;
   source: string;
   source_tool: SourceToolKey;
+  event_type: string;
   severity: SeverityLevel;
   status: AlertStatus;
   confidence_score: number;
   anomaly_score: number;
   is_anomalous: boolean;
   anomaly_explanation: string;
+  integration_ref: string | null;
+  parser_status: string | null;
+  lab_only: boolean;
+  finding_metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -109,6 +114,7 @@ export interface AlertFilters {
   severity?: SeverityLevel;
   status?: AlertStatus;
   source_tool?: SourceToolKey;
+  event_type?: string;
   page?: number;
   page_size?: number;
 }
@@ -221,6 +227,10 @@ export interface LogEntryRecord {
   normalized_log: Record<string, unknown>;
   event_type: string;
   severity: SeverityLevel;
+  integration_ref: string | null;
+  parser_status: string | null;
+  lab_only: boolean;
+  finding_metadata: Record<string, unknown>;
   created_at: string;
 }
 

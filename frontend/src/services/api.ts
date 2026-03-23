@@ -162,6 +162,10 @@ export async function fetchAlerts(token: string, filters: AlertFilters = {}) {
     queryParams.set("source_tool", filters.source_tool);
   }
 
+  if (filters.event_type) {
+    queryParams.set("event_type", filters.event_type);
+  }
+
   queryParams.set("page", String(filters.page ?? 1));
   queryParams.set("page_size", String(filters.page_size ?? 8));
 

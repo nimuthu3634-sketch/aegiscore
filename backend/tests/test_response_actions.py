@@ -131,3 +131,51 @@ def test_high_risk_import_automatically_escalates_into_incident_workflow() -> No
         incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == created_alert["id"]
     )
     assert linked_incident["title"] == created_alert["title"]
+
+
+def test_alert_event_type_filter_and_import_context_are_exposed_via_api() -> None:
+    headers = _admin_headers()
+
+    filtered_response = client.get("/alerts?event_type=authentication", headers=headers)
+    assert filtered_response.status_code == 200
+    filtered_items = filtered_response.json()["items"]
+    assert any(
+        item["id"] == "alert-001" and item["event_type"] == "authentication"
+        for item in filtered_items
+    )
+
+    import_response = client.post(
+        "/integrations/nmap/import",
+        json={
+            "results": [
+                {
+                    "host": "lab-context-01",
+                    "open_ports": [{"port": 3389, "service_name": "rdp", "protocol": "tcp"}],
+                    "service_names": ["rdp"],
+                    "scan_timestamp": "2026-03-23T09:45:00Z",
+                    "scan_notes": "API context exposure verification import",
+                }
+            ]
+        },
+        headers=headers,
+    )
+    assert import_response.status_code == 201
+
+    created_alert = next(alert for alert in DEMO_ALERTS if alert["source"] == "lab-context-01")
+    created_log = next(log_entry for log_entry in DEMO_LOGS if log_entry["source"] == "lab-context-01")
+
+    alert_detail = client.get(f"/alerts/{created_alert['id']}", headers=headers)
+    assert alert_detail.status_code == 200
+    alert_payload = alert_detail.json()
+    assert alert_payload["event_type"] == "scan_result"
+    assert alert_payload["lab_only"] is True
+    assert alert_payload["parser_status"] == "normalized"
+    assert alert_payload["integration_ref"] == created_alert["integration_ref"]
+
+    log_detail = client.get(f"/logs/{created_log['id']}", headers=headers)
+    assert log_detail.status_code == 200
+    log_payload = log_detail.json()
+    assert log_payload["event_type"] == "scan_result"
+    assert log_payload["lab_only"] is True
+    assert log_payload["parser_status"] == "normalized"
+    assert log_payload["integration_ref"] == created_log["integration_ref"]
