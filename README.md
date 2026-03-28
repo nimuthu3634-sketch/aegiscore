@@ -153,6 +153,10 @@ URLs:
 - backend docs: <http://localhost:8000/docs>
 - NGINX entrypoint: <http://localhost:8081>
 
+When running through nginx on `8081`, the frontend still talks to the backend API
+on `8000` and the WebSocket endpoint on `8000` to avoid route collisions with
+frontend pages such as `/alerts`, `/incidents`, and `/logs`.
+
 ### Full Docker startup
 
 ```powershell
