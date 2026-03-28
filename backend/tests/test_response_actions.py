@@ -91,7 +91,7 @@ def test_block_source_ip_action_updates_alert_and_records_audit_history() -> Non
     assert history[0]["result_summary"] == "Source IP 10.0.0.22 was added to the simulated lab blocklist."
 
 
-def test_high_risk_import_automatically_escalates_into_incident_workflow() -> None:
+def test_high_risk_import_requires_manual_response_actions() -> None:
     headers = _admin_headers()
 
     response = client.post(
@@ -114,22 +114,30 @@ def test_high_risk_import_automatically_escalates_into_incident_workflow() -> No
     assert response.json()["imported_alert_count"] == 1
 
     created_alert = next(alert for alert in DEMO_ALERTS if alert["source"] == "lab-auto-01")
-    assert created_alert["status"] == "investigating"
+    assert created_alert["status"] == "new"
 
     response_actions = client.get(
         f"/alerts/{created_alert['id']}/response-actions",
         headers=headers,
     )
     assert response_actions.status_code == 200
-    history = response_actions.json()["items"]
+    payload = response_actions.json()
+    history = payload["items"]
+    suggestions = {item["action_type"]: item for item in payload["recommended_actions"]}
 
-    action_modes = {(item["action_type"], item["execution_mode"]) for item in history}
-    assert ("mark_investigating", "automated") in action_modes
-    assert ("create_incident", "automated") in action_modes
+    assert history == []
+    assert suggestions["mark_investigating"]["available"] is True
+    assert suggestions["create_incident"]["available"] is True
 
-    linked_incident = next(
-        incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == created_alert["id"]
+    create_incident_response = client.post(
+        f"/alerts/{created_alert['id']}/response-actions",
+        json={"action_type": "create_incident"},
+        headers=headers,
     )
+    assert create_incident_response.status_code == 201
+    assert create_incident_response.json()["execution_mode"] == "manual"
+
+    linked_incident = next(incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == created_alert["id"])
     assert linked_incident["title"] == created_alert["title"]
 
 
@@ -202,9 +210,14 @@ def test_incident_api_exposes_linked_alert_context() -> None:
     assert response.status_code == 201
 
     created_alert = next(alert for alert in DEMO_ALERTS if alert["source"] == "lab-case-01")
-    linked_incident = next(
-        incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == created_alert["id"]
+    create_incident_response = client.post(
+        f"/alerts/{created_alert['id']}/response-actions",
+        json={"action_type": "create_incident"},
+        headers=headers,
     )
+    assert create_incident_response.status_code == 201
+
+    linked_incident = next(incident for incident in DEMO_INCIDENTS if incident.get("alert_id") == created_alert["id"])
 
     incident_response = client.get(f"/incidents/{linked_incident['id']}", headers=headers)
     assert incident_response.status_code == 200

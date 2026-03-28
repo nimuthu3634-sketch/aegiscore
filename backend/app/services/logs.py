@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy import select
 
+from app.core.enums import SUPPORTED_INTEGRATION_TOOL_VALUES
 from app.models.log_entry import LogEntry
 from app.services.mock_store import DEMO_LOGS
 from app.services.persistence import run_with_optional_db
@@ -34,6 +35,10 @@ def _load_persisted_logs() -> list[dict]:
     return run_with_optional_db(operation, lambda: [])
 
 
+def _normalize_tool_value(source_tool: object) -> str:
+    return str(getattr(source_tool, "value", source_tool or "")).strip().lower()
+
+
 def load_log_records() -> list[dict]:
     merged_logs = {log_entry["id"]: dict(log_entry) for log_entry in DEMO_LOGS}
 
@@ -46,7 +51,11 @@ def load_log_records() -> list[dict]:
         else:
             merged_logs[persisted_log["id"]] = persisted_log
 
-    return list(merged_logs.values())
+    return [
+        log_entry
+        for log_entry in merged_logs.values()
+        if _normalize_tool_value(log_entry.get("source_tool")) in SUPPORTED_INTEGRATION_TOOL_VALUES
+    ]
 
 
 def _sorted_logs() -> list[dict]:

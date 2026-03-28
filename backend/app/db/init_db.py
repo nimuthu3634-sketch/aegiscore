@@ -6,7 +6,6 @@ from app.models import (  # noqa: F401
     integration_import_state,
     integration_status,
     log_entry,
-    report,
     response_action,
     user,
 )

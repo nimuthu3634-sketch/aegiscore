@@ -7,7 +7,7 @@ export type NavItem = {
     | "alerts"
     | "incidents"
     | "logs"
-    | "reports"
+    | "analytics"
     | "integrations"
     | "settings";
 };
@@ -17,7 +17,7 @@ export const navigationItems: NavItem[] = [
   { label: "Alerts", path: "/alerts", description: "Triage queue", icon: "alerts" },
   { label: "Incidents", path: "/incidents", description: "Case workflow", icon: "incidents" },
   { label: "Logs", path: "/logs", description: "Ingestion feed", icon: "logs" },
-  { label: "Reports", path: "/reports", description: "Executive views", icon: "reports" },
+  { label: "Analytics", path: "/analytics", description: "AI insights", icon: "analytics" },
   {
     label: "Integrations",
     path: "/integrations",

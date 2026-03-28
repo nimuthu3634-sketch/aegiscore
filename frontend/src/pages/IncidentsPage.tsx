@@ -53,8 +53,6 @@ const sourceLabels: Record<NonNullable<IncidentApiRecord["source_tool"]>, string
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
-  lanl: "LANL",
-  virtualbox: "VirtualBox",
 };
 
 function getSourceLabel(sourceTool: IncidentApiRecord["source_tool"]) {
@@ -347,7 +345,7 @@ export function IncidentsPage() {
           <div className="rounded-[1.5rem] border border-brand-black/8 bg-brand-light/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Resolved</p>
             <p className="mt-3 text-2xl font-semibold text-brand-black">{summaryMetrics.resolved}</p>
-            <p className="mt-1 text-sm text-brand-black/60">Ready for reporting follow-up</p>
+            <p className="mt-1 text-sm text-brand-black/60">Ready for closure review</p>
           </div>
         </div>
       </SectionCard>

@@ -87,8 +87,6 @@ def identify_event_type(source_tool: str, raw_log: dict[str, Any], explicit_even
         return "scan_result"
     if normalized_tool == "hydra":
         return "credential_assessment"
-    if normalized_tool == "virtualbox":
-        return "virtualization"
 
     message = " ".join(str(value) for value in raw_log.values()).lower()
     if any(

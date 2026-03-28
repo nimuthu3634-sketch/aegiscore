@@ -1,19 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { VirtualLabSection } from "@/components/VirtualLabSection";
 import { PlugIcon, ShieldIcon } from "@/components/Icons";
 import { SectionCard } from "@/components/SectionCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { hydraDemoResults } from "@/data/hydraDemoResults";
-import { integrations as integrationMetadata } from "@/data/mock";
 import { nmapDemoResults } from "@/data/nmapDemoResults";
 import { suricataDemoEvents } from "@/data/suricataDemoEvents";
 import { wazuhDemoAlerts } from "@/data/wazuhDemoAlerts";
 import { useAuth } from "@/hooks/useAuth";
 import {
   fetchHydraIntegrationStatus,
-  fetchIntegrationStatuses,
-  fetchLanlIntegrationStatus,
   fetchNmapIntegrationStatus,
   fetchSuricataIntegrationStatus,
   fetchWazuhIntegrationStatus,
@@ -21,21 +17,68 @@ import {
   importNmapResults,
   importSuricataEvents,
   importWazuhAlerts,
-  uploadLanlDataset,
 } from "@/services/api";
 import type { UserRole } from "@/types/auth";
 import type {
   HydraIntegrationStatus,
-  IntegrationApiRecord,
   IntegrationImportResponse,
-  IntegrationImportStatus,
-  LanlDatasetType,
-  LanlIntegrationStatus,
   NmapIntegrationStatus,
-  SourceToolKey,
   SuricataIntegrationStatus,
   WazuhIntegrationStatus,
 } from "@/types/domain";
+
+type ImportableTool = "wazuh" | "suricata" | "nmap" | "hydra";
+
+type IntegrationCard = {
+  tool: ImportableTool;
+  name: string;
+  vendor: string;
+  title: string;
+  description: string;
+  emptyState: string;
+  labOnly?: boolean;
+};
+
+const integrationCards: IntegrationCard[] = [
+  {
+    tool: "wazuh",
+    name: "Wazuh",
+    vendor: "Endpoint telemetry",
+    title: "Host monitoring and alert ingestion",
+    description:
+      "Wazuh alert JSON is normalized into SOC alerts and supporting log records for analyst triage.",
+    emptyState: "No imported Wazuh alerts yet.",
+  },
+  {
+    tool: "suricata",
+    name: "Suricata",
+    vendor: "Network IDS",
+    title: "Network alert ingestion",
+    description:
+      "Suricata events are converted into normalized network telemetry and alert records for the dashboard.",
+    emptyState: "No imported Suricata alerts yet.",
+  },
+  {
+    tool: "nmap",
+    name: "Nmap",
+    vendor: "Lab result ingestion",
+    title: "Authorized scan-result ingestion",
+    description:
+      "AegisCore parses imported Nmap findings for visualization only and does not execute scans.",
+    emptyState: "No imported Nmap findings yet.",
+    labOnly: true,
+  },
+  {
+    tool: "hydra",
+    name: "Hydra",
+    vendor: "Lab result ingestion",
+    title: "Authorized credential-result ingestion",
+    description:
+      "Imported Hydra result artifacts are stored as classroom-safe findings without offensive automation.",
+    emptyState: "No imported Hydra findings yet.",
+    labOnly: true,
+  },
+];
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -54,19 +97,7 @@ function canImportPrimaryIntegrations(userRole: UserRole | undefined) {
   return userRole === "admin" || userRole === "analyst";
 }
 
-function isImportableTool(value: SourceToolKey): value is ImportableTool {
-  return value === "wazuh" || value === "suricata" || value === "nmap" || value === "hydra";
-}
-
-function isLabAssessmentTool(value: SourceToolKey) {
-  return value === "nmap" || value === "hydra";
-}
-
-function getImportMetricLabel(tool: SourceToolKey) {
-  return isLabAssessmentTool(tool) ? "Imported findings" : "Imported alerts";
-}
-
-function getDemoPayloadLabel(tool: ImportableTool) {
+function getImportPayloadLabel(tool: ImportableTool) {
   if (tool === "wazuh") {
     return "alerts";
   }
@@ -78,76 +109,14 @@ function getDemoPayloadLabel(tool: ImportableTool) {
   return "assessment result sets";
 }
 
-const toolNameLookup: Record<string, SourceToolKey> = {
-  Wazuh: "wazuh",
-  Suricata: "suricata",
-  Nmap: "nmap",
-  Hydra: "hydra",
-  VirtualBox: "virtualbox",
-};
-
-type ImportableTool = "wazuh" | "suricata" | "nmap" | "hydra";
-
-type WorkflowCard = {
-  tool: ImportableTool;
-  title: string;
-  description: string;
-  emptyState: string;
-};
-
-const workflowCards: WorkflowCard[] = [
-  {
-    tool: "wazuh",
-    title: "Wazuh host telemetry",
-    description:
-      "Wazuh-style alert JSON can be imported on demand to create AegisCore alerts and normalized host log entries.",
-    emptyState: "No imported Wazuh alerts yet.",
-  },
-  {
-    tool: "suricata",
-    title: "Suricata network telemetry",
-    description:
-      "Suricata EVE-style events can be imported to generate network alerts and normalized logs for operational review.",
-    emptyState: "No imported Suricata alerts yet.",
-  },
-  {
-    tool: "nmap",
-    title: "Nmap assessment results",
-    description:
-      "Authorized Nmap result files are parsed into findings for service-exposure review. AegisCore does not run scans.",
-    emptyState: "No imported Nmap assessment findings yet.",
-  },
-  {
-    tool: "hydra",
-    title: "Hydra assessment results",
-    description:
-      "Authorized Hydra result artifacts are imported as credential-assessment findings. No offensive automation is supported.",
-    emptyState: "No imported Hydra assessment findings yet.",
-  },
-];
-
-const lanlDatasetTypeOptions: Array<{ value: LanlDatasetType; label: string }> = [
-  { value: "auth", label: "Authentication" },
-  { value: "dns", label: "DNS" },
-  { value: "flows", label: "Network flows" },
-];
-
 export function IntegrationsPage() {
   const { token, user } = useAuth();
-  const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationApiRecord[]>([]);
   const [wazuhStatus, setWazuhStatus] = useState<WazuhIntegrationStatus | null>(null);
   const [suricataStatus, setSuricataStatus] = useState<SuricataIntegrationStatus | null>(null);
   const [nmapStatus, setNmapStatus] = useState<NmapIntegrationStatus | null>(null);
   const [hydraStatus, setHydraStatus] = useState<HydraIntegrationStatus | null>(null);
-  const [lanlStatus, setLanlStatus] = useState<LanlIntegrationStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeImportTool, setActiveImportTool] = useState<ImportableTool | null>(null);
-  const [lanlDatasetType, setLanlDatasetType] = useState<LanlDatasetType>("auth");
-  const [lanlDatasetFile, setLanlDatasetFile] = useState<File | null>(null);
-  const [lanlRedteamFile, setLanlRedteamFile] = useState<File | null>(null);
-  const [lanlMaxRecords, setLanlMaxRecords] = useState("1000");
-  const [lanlUploadLoading, setLanlUploadLoading] = useState(false);
-  const [lanlUploadMessage, setLanlUploadMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -162,24 +131,20 @@ export function IntegrationsPage() {
     setError(null);
 
     void Promise.all([
-      fetchIntegrationStatuses(token),
       fetchWazuhIntegrationStatus(token),
       fetchSuricataIntegrationStatus(token),
       fetchNmapIntegrationStatus(token),
       fetchHydraIntegrationStatus(token),
-      fetchLanlIntegrationStatus(token),
     ])
-      .then(([statuses, wazuh, suricata, nmap, hydra, lanl]) => {
+      .then(([wazuh, suricata, nmap, hydra]) => {
         if (!isActive) {
           return;
         }
 
-        setIntegrationStatuses(statuses);
         setWazuhStatus(wazuh);
         setSuricataStatus(suricata);
         setNmapStatus(nmap);
         setHydraStatus(hydra);
-        setLanlStatus(lanl);
       })
       .catch((requestError: unknown) => {
         if (!isActive) {
@@ -239,55 +204,12 @@ export function IntegrationsPage() {
     }
   };
 
-  const handleLanlUpload = async () => {
-    if (!token || !lanlDatasetFile) {
-      return;
-    }
-
-    setLanlUploadLoading(true);
-    setLanlUploadMessage(null);
-
-    try {
-      const maxRecords = Number.parseInt(lanlMaxRecords, 10);
-      const response = await uploadLanlDataset(token, {
-        datasetType: lanlDatasetType,
-        datasetFile: lanlDatasetFile,
-        redteamFile: lanlDatasetType === "auth" ? lanlRedteamFile : null,
-        maxRecords: Number.isFinite(maxRecords) ? maxRecords : 1000,
-      });
-
-      setLanlUploadMessage(
-        `${response.message} ${response.redteam_match_count > 0 ? `${response.redteam_match_count} red-team matches were recognized.` : ""}`.trim(),
-      );
-      setReloadKey((currentValue) => currentValue + 1);
-    } catch (requestError) {
-      setLanlUploadMessage(
-        requestError instanceof Error ? requestError.message : "LANL upload could not be completed.",
-      );
-    } finally {
-      setLanlUploadLoading(false);
-    }
+  const statusLookup = {
+    wazuh: wazuhStatus,
+    suricata: suricataStatus,
+    nmap: nmapStatus,
+    hydra: hydraStatus,
   };
-
-  const mergedIntegrations = useMemo(() => {
-    const statusLookup = new Map(integrationStatuses.map((item) => [item.tool_name, item]));
-
-    return integrationMetadata.map((integration) => ({
-      ...integration,
-      toolKey: toolNameLookup[integration.name],
-      apiStatus: statusLookup.get(toolNameLookup[integration.name]),
-    }));
-  }, [integrationStatuses]);
-
-  const detailedStatusLookup = useMemo<Record<ImportableTool, IntegrationImportStatus | null>>(
-    () => ({
-      wazuh: wazuhStatus,
-      suricata: suricataStatus,
-      nmap: nmapStatus,
-      hydra: hydraStatus,
-    }),
-    [hydraStatus, nmapStatus, suricataStatus, wazuhStatus],
-  );
 
   const canImport = canImportPrimaryIntegrations(user?.role);
 
@@ -295,7 +217,7 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <SectionCard
         title="Integration readiness"
-        description="Monitor host telemetry, network telemetry, authorized assessment-result imports, and the VirtualBox environment from one unified workspace."
+        description="Track the four proposal-approved ingestion paths and import demo data for walkthroughs."
         eyebrow="Integrations"
         action={
           <button
@@ -320,39 +242,36 @@ export function IntegrationsPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {mergedIntegrations.map((integration) => {
-            const liveStatus = integration.apiStatus;
-            const toolKey = integration.toolKey;
-            const importableTool = isImportableTool(toolKey) ? toolKey : null;
-            const detailedStatus = importableTool ? detailedStatusLookup[importableTool] : null;
-            const isVirtualBox = toolKey === "virtualbox";
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {integrationCards.map((card) => {
+            const status = statusLookup[card.tool];
 
             return (
               <div
-                key={integration.id}
+                key={card.tool}
                 className="rounded-[1.75rem] border border-brand-black/8 bg-white p-5 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-light text-brand-orange">
                     <PlugIcon className="h-5 w-5" />
                   </div>
-                  <StatusBadge variant={liveStatus?.status ?? integration.status}>
-                    {liveStatus?.status ?? integration.status}
+                  <StatusBadge variant={status?.status ?? "pending"}>
+                    {status?.status ?? "pending"}
                   </StatusBadge>
                 </div>
 
                 <div className="mt-5">
-                  <p className="text-lg font-semibold text-brand-black">{integration.name}</p>
-                  <p className="mt-1 text-sm text-brand-black/55">{integration.vendor}</p>
+                  <p className="text-lg font-semibold text-brand-black">{card.name}</p>
+                  <p className="mt-1 text-sm text-brand-black/55">{card.vendor}</p>
                 </div>
 
-                <p className="mt-4 text-sm leading-6 text-brand-black/70">{integration.description}</p>
+                <p className="mt-4 text-sm font-semibold text-brand-black">{card.title}</p>
+                <p className="mt-2 text-sm leading-6 text-brand-black/70">{card.description}</p>
 
-                {integration.labOnly ? (
+                {card.labOnly ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-orange">
-                      {integration.note ?? "Authorized assessment result ingestion"}
+                      Authorized lab-only result ingestion
                     </span>
                     <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
                       No offensive automation
@@ -360,71 +279,49 @@ export function IntegrationsPage() {
                   </div>
                 ) : null}
 
-                {isVirtualBox ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-orange">
-                      Visualization and tracking
-                    </span>
-                    <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
-                      No direct VM control
-                    </span>
-                  </div>
-                ) : null}
-
                 <div className="mt-5 rounded-[1.25rem] bg-brand-light/70 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-brand-black/45">Last sync</p>
-                  <p className="mt-2 text-sm font-medium text-brand-black">
-                    {liveStatus ? formatDateTime(liveStatus.last_sync_at) : integration.lastSync}
-                  </p>
+                  <div className="space-y-3 text-sm text-brand-black/70">
+                    <div className="flex justify-between gap-4">
+                      <span>Imported alerts</span>
+                      <span className="font-semibold text-brand-black">
+                        {status?.imported_alert_count ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Imported logs</span>
+                      <span className="font-semibold text-brand-black">
+                        {status?.imported_log_count ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Last import</span>
+                      <span className="font-semibold text-brand-black">
+                        {formatDateTime(status?.last_import_at ?? null)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-                  {detailedStatus ? (
-                    <div className="mt-4 space-y-3 text-sm text-brand-black/70">
-                      <div className="flex justify-between gap-4">
-                        <span>{getImportMetricLabel(toolKey)}</span>
-                        <span className="font-semibold text-brand-black">
-                          {detailedStatus.imported_alert_count}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span>Imported logs</span>
-                        <span className="font-semibold text-brand-black">
-                          {detailedStatus.imported_log_count}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <span>Last import</span>
-                        <span className="font-semibold text-brand-black">
-                          {formatDateTime(detailedStatus.last_import_at)}
-                        </span>
-                      </div>
+                <div className="mt-5 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => handleImportSampleData(card.tool)}
+                    className="btn-primary w-full"
+                    disabled={!canImport || activeImportTool !== null}
+                  >
+                    {activeImportTool === card.tool ? "Importing data..." : "Import sample data"}
+                  </button>
+                  <p className="text-xs leading-5 text-brand-black/55">
+                    {canImport
+                      ? `${status?.available_demo_payloads ?? 0} ${getImportPayloadLabel(card.tool)} are ready for guided imports.`
+                      : "Viewer accounts can inspect status, but only admins and analysts can run imports."}
+                  </p>
+                  {status?.last_import_message ? (
+                    <div className="rounded-[1.25rem] border border-brand-black/8 bg-brand-light/60 px-4 py-3 text-xs leading-5 text-brand-black/65">
+                      {status.last_import_message}
                     </div>
                   ) : null}
                 </div>
-
-                {detailedStatus && importableTool ? (
-                  <div className="mt-5 space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => handleImportSampleData(importableTool)}
-                      className="btn-primary w-full"
-                      disabled={!canImport || activeImportTool !== null}
-                    >
-                      {activeImportTool === importableTool
-                        ? "Importing data..."
-                        : "Import available data"}
-                    </button>
-                    <p className="text-xs leading-5 text-brand-black/55">
-                      {canImport
-                        ? `${detailedStatus.available_demo_payloads} ${getDemoPayloadLabel(importableTool)} are ready to import for ${integration.name} workflows.`
-                        : "Viewer accounts can inspect status, but only admins and analysts can run imports."}
-                    </p>
-                    {detailedStatus.last_import_message ? (
-                      <div className="rounded-[1.25rem] border border-brand-black/8 bg-brand-light/60 px-4 py-3 text-xs leading-5 text-brand-black/65">
-                        {detailedStatus.last_import_message}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
               </div>
             );
           })}
@@ -432,37 +329,24 @@ export function IntegrationsPage() {
       </SectionCard>
 
       <SectionCard
-        title="Telemetry and assessment workflows"
-        description="AegisCore keeps operational telemetry and authorized assessment imports in one unified view while preserving clear safety boundaries."
+        title="Safety boundaries"
+        description="The proposal scope stays defensive and presentation-friendly while still giving analysts live ingestion demos."
         tone="dark"
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {workflowCards.map((card) => {
-            const status = detailedStatusLookup[card.tool];
-            const isLabOnly = card.tool === "nmap" || card.tool === "hydra";
+          {integrationCards.map((card) => {
+            const status = statusLookup[card.tool];
 
             return (
               <div
-                key={card.tool}
+                key={`${card.tool}-latest`}
                 className="rounded-[1.5rem] border border-brand-white/10 bg-brand-white/5 p-5"
               >
                 <div className="flex items-center gap-3">
                   <ShieldIcon className="h-5 w-5 text-brand-orange" />
-                  <p className="font-semibold text-white">{card.title}</p>
+                  <p className="font-semibold text-white">{card.name}</p>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-brand-muted">{card.description}</p>
-
-                {isLabOnly ? (
-                  <div className="mt-4 space-y-2">
-                    <div className="rounded-[1rem] bg-brand-orange/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-orange">
-                      Authorized assessment result ingestion
-                    </div>
-                    <div className="rounded-[1rem] bg-brand-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-muted">
-                      No offensive automation
-                    </div>
-                  </div>
-                ) : null}
-
                 <div className="mt-4 space-y-2 text-sm text-brand-muted">
                   {status?.latest_imported_alert_titles.length ? (
                     status.latest_imported_alert_titles.map((title) => (
@@ -479,170 +363,6 @@ export function IntegrationsPage() {
           })}
         </div>
       </SectionCard>
-
-      <SectionCard
-        title="LANL Comprehensive dataset"
-        description="Import real-world enterprise auth, DNS, or network-flow slices from the Los Alamos National Laboratory comprehensive dataset without bundling raw data into the repo."
-      >
-        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-[1.75rem] border border-brand-black/8 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">
-                  Real-world dataset
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-black">LANL upload status</h3>
-              </div>
-              <StatusBadge variant={lanlStatus?.status ?? "pending"}>
-                {lanlStatus?.status ?? "pending"}
-              </StatusBadge>
-            </div>
-
-            <p className="mt-4 text-sm leading-6 text-brand-black/70">
-              {lanlStatus?.notes ??
-                "Use official LANL auth.txt.gz, dns.txt.gz, or flows.txt.gz files. Optional redteam.txt.gz enrichment improves authentication alerting."}
-            </p>
-
-            <div className="mt-5 rounded-[1.25rem] bg-brand-light/70 p-4">
-              <div className="space-y-3 text-sm text-brand-black/70">
-                <div className="flex justify-between gap-4">
-                  <span>Imported alerts</span>
-                  <span className="font-semibold text-brand-black">
-                    {lanlStatus?.imported_alert_count ?? 0}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span>Imported logs</span>
-                  <span className="font-semibold text-brand-black">
-                    {lanlStatus?.imported_log_count ?? 0}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span>Last import</span>
-                  <span className="font-semibold text-brand-black">
-                    {formatDateTime(lanlStatus?.last_import_at ?? null)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {lanlStatus?.latest_imported_alert_titles.length ? (
-              <div className="mt-5 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-black/45">
-                  Latest generated alerts
-                </p>
-                {lanlStatus.latest_imported_alert_titles.map((title) => (
-                  <div key={title} className="rounded-[1rem] bg-brand-light/70 px-3 py-2 text-sm text-brand-black/72">
-                    {title}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-[1.75rem] border border-brand-black/8 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-orange">
-                  Upload workflow
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-black">
-                  Prepare and import LANL slices
-                </h3>
-              </div>
-              <span className="rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-black/55">
-                Raw dataset not bundled
-              </span>
-            </div>
-
-            <p className="mt-4 text-sm leading-6 text-brand-black/70">
-              Download the official dataset outside the repo, then upload only the slice you want to analyze. AegisCore preserves the LANL relative event order and converts the batch into alerts and normalized logs.
-            </p>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label className="block text-sm font-medium text-brand-black">
-                Dataset type
-                <select
-                  value={lanlDatasetType}
-                  onChange={(event) => setLanlDatasetType(event.target.value as LanlDatasetType)}
-                  className="input-shell mt-2 w-full bg-brand-light/60"
-                >
-                  {lanlDatasetTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block text-sm font-medium text-brand-black">
-                Max records
-                <input
-                  type="number"
-                  min={1}
-                  max={20000}
-                  value={lanlMaxRecords}
-                  onChange={(event) => setLanlMaxRecords(event.target.value)}
-                  className="input-shell mt-2 w-full bg-brand-light/60"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 grid gap-4">
-              <label className="block text-sm font-medium text-brand-black">
-                Dataset file
-                <input
-                  type="file"
-                  accept=".txt,.gz,.csv"
-                  onChange={(event) => setLanlDatasetFile(event.target.files?.[0] ?? null)}
-                  className="mt-2 block w-full text-sm text-brand-black/70"
-                />
-              </label>
-
-              {lanlDatasetType === "auth" ? (
-                <label className="block text-sm font-medium text-brand-black">
-                  Optional redteam file
-                  <input
-                    type="file"
-                    accept=".txt,.gz,.csv"
-                    onChange={(event) => setLanlRedteamFile(event.target.files?.[0] ?? null)}
-                    className="mt-2 block w-full text-sm text-brand-black/70"
-                  />
-                </label>
-              ) : null}
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleLanlUpload}
-                className="btn-primary"
-                disabled={!canImport || !lanlDatasetFile || lanlUploadLoading}
-              >
-                {lanlUploadLoading ? "Uploading..." : "Import LANL dataset"}
-              </button>
-              <p className="text-xs leading-5 text-brand-black/55">
-                {canImport
-                  ? "Admins and analysts can upload auth.txt.gz, dns.txt.gz, or flows.txt.gz. Use redteam.txt.gz only with auth imports."
-                  : "Viewer accounts can inspect status, but only admins and analysts can run imports."}
-              </p>
-            </div>
-
-            {lanlUploadMessage ? (
-              <div className="mt-4 rounded-[1.25rem] border border-brand-orange/15 bg-brand-orange/5 px-4 py-3 text-sm text-brand-black/75">
-                {lanlUploadMessage}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </SectionCard>
-
-      <VirtualLabSection
-        token={token ?? null}
-        canManage={canImport}
-        refreshKey={reloadKey}
-        onLabUpdated={() => setReloadKey((currentValue) => currentValue + 1)}
-      />
     </div>
   );
 }

@@ -7,8 +7,6 @@ const toolLabels = {
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
-  lanl: "LANL",
-  virtualbox: "VirtualBox",
 };
 
 export function LiveAlertToast() {
@@ -53,7 +51,7 @@ export function LiveAlertToast() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <SeverityBadge level={latestAlert.severity} />
                 <span className="rounded-full bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-muted">
-                  auto-refresh queued
+                  workspace refresh queued
                 </span>
               </div>
             </div>

@@ -4,7 +4,12 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 
 from app.services.anomaly import apply_anomaly_scoring, ensure_demo_alerts_scored
-from app.core.enums import AlertSeverity, AlertStatus, IntegrationTool
+from app.core.enums import (
+    AlertSeverity,
+    AlertStatus,
+    IntegrationTool,
+    SUPPORTED_INTEGRATION_TOOL_VALUES,
+)
 from app.models.alert import Alert
 from app.services.logs import load_log_records
 from app.services.mock_store import DEMO_ALERTS
@@ -109,6 +114,10 @@ def _load_persisted_alerts() -> list[dict]:
     return run_with_optional_db(operation, lambda: [])
 
 
+def _normalize_tool_value(source_tool: object) -> str:
+    return str(getattr(source_tool, "value", source_tool or "")).strip().lower()
+
+
 def load_alert_records() -> list[dict]:
     ensure_demo_alerts_scored()
     merged_alerts = {alert["id"]: dict(alert) for alert in DEMO_ALERTS}
@@ -122,7 +131,11 @@ def load_alert_records() -> list[dict]:
         else:
             merged_alerts[persisted_alert["id"]] = persisted_alert
 
-    return [_enrich_alert_record(alert) for alert in merged_alerts.values()]
+    return [
+        _enrich_alert_record(alert)
+        for alert in merged_alerts.values()
+        if _normalize_tool_value(alert.get("source_tool")) in SUPPORTED_INTEGRATION_TOOL_VALUES
+    ]
 
 
 def _sorted_alerts() -> list[dict]:
@@ -261,9 +274,6 @@ def create_alert(
     alert_record = _enrich_alert_record(alert_record)
     DEMO_ALERTS.append(alert_record)
     _persist_alert_record(alert_record)
-    from app.services.response_actions import run_automatic_response_workflow
-
-    run_automatic_response_workflow(alert_record["id"])
     broadcast_alert_created(alert_record)
     return alert_record
 

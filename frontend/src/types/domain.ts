@@ -13,21 +13,13 @@ export type ResponseActionType =
 
 export type ResponseActionStatus = "completed" | "skipped";
 
-export type ResponseActionMode = "automated" | "manual";
+export type ResponseActionMode = "manual";
 
 export type AssignmentStatus = "assigned" | "unassigned" | "escalated";
 
-export type ReportStatus = "draft" | "scheduled" | "ready";
-
-export type ReportType = "executive" | "incident" | "operations" | "analytics";
-
 export type IntegrationStatus = "connected" | "degraded" | "pending" | "offline";
 
-export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra" | "lanl" | "virtualbox";
-
-export type LanlDatasetType = "auth" | "dns" | "flows";
-
-export type VirtualMachineStatus = "running" | "stopped" | "paused" | "provisioning";
+export type SourceToolKey = "wazuh" | "suricata" | "nmap" | "hydra";
 
 export interface DashboardSummaryResponse {
   total_alerts: number;
@@ -131,7 +123,6 @@ export interface ResponseActionSuggestion {
   description: string;
   target_label: string | null;
   available: boolean;
-  automated: boolean;
 }
 
 export interface ResponseActionRecord {
@@ -278,7 +269,7 @@ export interface SeverityChartPoint {
 export interface AlertRecord {
   id: string;
   title: string;
-  source: "Wazuh" | "Suricata" | "Nmap" | "Hydra" | "VirtualBox";
+  source: "Wazuh" | "Suricata" | "Nmap" | "Hydra";
   asset: string;
   severity: SeverityLevel;
   status: AlertStatus;
@@ -297,117 +288,6 @@ export interface IncidentRecord {
   affectedAsset: string;
   updatedAt: string;
   summary: string;
-}
-
-export interface ReportSeverityPoint {
-  severity: SeverityLevel;
-  count: number;
-}
-
-export interface ReportSourceToolPoint {
-  source_tool: SourceToolKey;
-  count: number;
-}
-
-export interface ReportIncidentStatusPoint {
-  status: IncidentStatus;
-  count: number;
-}
-
-export interface ReportsAnomalySummary {
-  model_name: string;
-  trained_on_events: number;
-  feature_labels: string[];
-  trained_at: string;
-  average_anomaly_score: number;
-  anomalous_alert_count: number;
-  high_anomaly_alert_count: number;
-  top_anomalous_alerts: AlertApiRecord[];
-}
-
-export interface ReportsSummaryResponse {
-  date_from: string | null;
-  date_to: string | null;
-  reports_generated: number;
-  draft_reports: number;
-  ready_reports: number;
-  filtered_alert_count: number;
-  filtered_incident_count: number;
-  alerts_by_severity: ReportSeverityPoint[];
-  alerts_by_source_tool: ReportSourceToolPoint[];
-  incidents_by_status: ReportIncidentStatusPoint[];
-  anomaly_summary: ReportsAnomalySummary;
-}
-
-export interface ReportSummarySnapshot {
-  reports_generated: number;
-  draft_reports: number;
-  ready_reports: number;
-  filtered_alert_count: number;
-  filtered_incident_count: number;
-  anomalous_alert_count: number;
-  high_anomaly_alert_count: number;
-  average_anomaly_score: number;
-}
-
-export interface ReportContentDateRange {
-  date_from: string | null;
-  date_to: string | null;
-}
-
-export interface ReportContentSnapshot {
-  date_range: ReportContentDateRange;
-  summary: ReportSummarySnapshot;
-  alerts_by_severity: ReportSeverityPoint[];
-  alerts_by_source_tool: ReportSourceToolPoint[];
-  incidents_by_status: ReportIncidentStatusPoint[];
-  anomaly_summary: ReportsAnomalySummary;
-}
-
-export interface ReportApiRecord {
-  id: string;
-  title: string;
-  report_type: ReportType;
-  generated_by_user_id: string | null;
-  generated_by_name: string | null;
-  content_json: ReportContentSnapshot;
-  status: ReportStatus;
-  created_at: string;
-}
-
-export interface ReportFilters {
-  date_from?: string;
-  date_to?: string;
-}
-
-export interface ReportGeneratePayload extends ReportFilters {
-  title?: string;
-  report_type: ReportType;
-}
-
-export interface ReportMetric {
-  label: string;
-  value: string;
-  detail: string;
-}
-
-export interface ReportTrendPoint {
-  label: string;
-  incidents: number;
-}
-
-export interface ReportCategoryPoint {
-  label: string;
-  value: number;
-}
-
-export interface ReportRecord {
-  id: string;
-  name: string;
-  owner: string;
-  range: string;
-  status: ReportStatus;
-  generatedAt: string;
 }
 
 export interface IntegrationRecord {
@@ -500,54 +380,6 @@ export interface HydraImportPayload {
 export interface HydraIntegrationStatus extends IntegrationImportStatus {}
 
 export interface HydraImportResponse extends IntegrationImportResponse {}
-
-export interface LanlIntegrationStatus {
-  tool_name: "lanl";
-  status: IntegrationStatus;
-  last_sync_at: string | null;
-  notes: string;
-  imported_alert_count: number;
-  imported_log_count: number;
-  last_import_at: string | null;
-  last_import_message: string | null;
-  supported_dataset_types: LanlDatasetType[];
-  redteam_supported: boolean;
-  latest_imported_alert_titles: string[];
-}
-
-export interface LanlImportResponse extends IntegrationImportResponse {
-  dataset_type: LanlDatasetType;
-  processed_record_count: number;
-  redteam_match_count: number;
-}
-
-export interface VirtualMachineRecord {
-  id: string;
-  vm_name: string;
-  role: string;
-  os_type: string;
-  ip_address: string;
-  status: VirtualMachineStatus;
-  notes: string;
-}
-
-export interface VirtualMachineCreatePayload {
-  vm_name: string;
-  role: string;
-  os_type: string;
-  ip_address: string;
-  status: VirtualMachineStatus;
-  notes: string;
-}
-
-export interface VirtualMachineUpdatePayload {
-  vm_name?: string;
-  role?: string;
-  os_type?: string;
-  ip_address?: string;
-  status?: VirtualMachineStatus;
-  notes?: string;
-}
 
 export interface SettingsItem {
   label: string;

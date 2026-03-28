@@ -7,7 +7,7 @@ import {
   IncidentIcon,
   LogIcon,
   PlugIcon,
-  ReportIcon,
+  ReportIcon as AnalyticsIcon,
   SettingsIcon,
   ShieldIcon,
 } from "@/components/Icons";
@@ -25,7 +25,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     alerts: AlertTriangleIcon,
     incidents: IncidentIcon,
     logs: LogIcon,
-    reports: ReportIcon,
+    analytics: AnalyticsIcon,
     integrations: PlugIcon,
     settings: SettingsIcon,
   } as const;
@@ -123,7 +123,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               </span>
             </div>
             <p className="mt-3 text-xs leading-6 text-brand-black/70">
-              Auth, dashboard, alerts, incidents, logs, reports, integrations, and realtime
+              Auth, dashboard, alerts, incidents, logs, analytics, integrations, and realtime
               updates are available across the workspace.
             </p>
           </div>

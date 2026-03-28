@@ -1,9 +1,6 @@
 from app.core.enums import AlertSeverity
 from app.ingestion.parsers import (
     parse_lab_import,
-    parse_lanl_auth_record,
-    parse_lanl_dns_record,
-    parse_lanl_flow_record,
     parse_suricata_event,
     parse_wazuh_event,
 )
@@ -94,37 +91,3 @@ def test_parse_hydra_lab_import_marks_lab_only_credential_assessment() -> None:
     assert parsed["severity"] == AlertSeverity.CRITICAL
     assert parsed["lab_only"] is True
     assert parsed["parser_status"] == "normalized"
-
-
-def test_parse_lanl_auth_record_marks_redteam_matches_as_compromise() -> None:
-    parsed = parse_lanl_auth_record(
-        [
-            "930",
-            "U24@DOM1",
-            "U24@DOM1",
-            "C17693",
-            "C612",
-            "Kerberos",
-            "Network",
-            "LogOn",
-            "Success",
-        ],
-        redteam_match=True,
-    )
-
-    assert parsed["source"] == "C17693"
-    assert parsed["event_type"] == "compromise"
-    assert parsed["severity"] == AlertSeverity.CRITICAL
-    assert parsed["finding_metadata"]["redteam_match"] is True
-    assert parsed["normalized_event"]["observables"]["actor"] == "u24"
-
-
-def test_parse_lanl_dns_and_flow_records_normalize_network_fields() -> None:
-    dns_parsed = parse_lanl_dns_record(["600", "C101", "internal-web"])
-    flow_parsed = parse_lanl_flow_record(["605", "120", "C101", "49821", "C202", "445", "tcp", "42", "10240"])
-
-    assert dns_parsed["event_type"] == "dns_resolution"
-    assert dns_parsed["normalized_event"]["observables"]["destination_ip"] == "internal-web"
-    assert flow_parsed["event_type"] == "network_flow"
-    assert flow_parsed["severity"] == AlertSeverity.HIGH
-    assert flow_parsed["normalized_event"]["observables"]["port"] == "445"

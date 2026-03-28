@@ -7,7 +7,7 @@ import {
   AlertTriangleIcon,
   ArrowUpRightIcon,
   IncidentIcon,
-  ReportIcon,
+  ReportIcon as AnalyticsIcon,
   ShieldIcon,
 } from "@/components/Icons";
 import { SectionCard } from "@/components/SectionCard";
@@ -44,7 +44,7 @@ const statIcons = [
   <ShieldIcon key="shield" className="h-5 w-5" />,
   <AlertTriangleIcon key="alert" className="h-5 w-5" />,
   <IncidentIcon key="incident" className="h-5 w-5" />,
-  <ReportIcon key="report" className="h-5 w-5" />,
+  <AnalyticsIcon key="analytics" className="h-5 w-5" />,
 ];
 
 const toolLabels: Record<SourceToolKey, string> = {
@@ -52,8 +52,6 @@ const toolLabels: Record<SourceToolKey, string> = {
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
-  lanl: "LANL",
-  virtualbox: "VirtualBox",
 };
 
 function formatDateTime(value: string) {
@@ -387,7 +385,7 @@ export function DashboardPage() {
               label="Resolved Incidents"
               value={dashboard.summary.resolved_incidents.toString()}
               change={`${dashboard.recentIncidents.filter((incident) => incident.status === "resolved").length} recently closed`}
-              helper="Ready for reporting and follow-up"
+              helper="Ready for walkthrough review and follow-up"
               tone="success"
               icon={statIcons[3]}
             />
@@ -396,7 +394,7 @@ export function DashboardPage() {
           <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
             <ChartCard
               title="Alerts over time"
-              description="Daily alert volume over the latest seven-day reporting window."
+              description="Daily alert volume over the latest seven-day review window."
               data={dashboard.charts.alerts_over_time.map((point) => ({
                 name: point.label,
                 total: point.total,

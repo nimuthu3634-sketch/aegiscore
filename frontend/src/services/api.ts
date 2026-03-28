@@ -18,28 +18,17 @@ import type {
   HydraImportPayload,
   HydraImportResponse,
   HydraIntegrationStatus,
-  IntegrationApiRecord,
-  LanlDatasetType,
-  LanlImportResponse,
-  LanlIntegrationStatus,
   LogEntryRecord,
   LogIngestPayload,
   LogListResponse,
   NmapImportPayload,
   NmapImportResponse,
   NmapIntegrationStatus,
-  ReportApiRecord,
-  ReportFilters,
-  ReportGeneratePayload,
   ResponseActionExecutePayload,
   ResponseActionRecord,
-  ReportsSummaryResponse,
   SuricataImportPayload,
   SuricataImportResponse,
   SuricataIntegrationStatus,
-  VirtualMachineCreatePayload,
-  VirtualMachineRecord,
-  VirtualMachineUpdatePayload,
   WazuhImportPayload,
   WazuhImportResponse,
   WazuhIntegrationStatus,
@@ -314,67 +303,6 @@ export async function ingestLog(token: string, payload: LogIngestPayload) {
   });
 }
 
-export async function fetchReports(token: string, filters: ReportFilters = {}) {
-  const queryParams = new URLSearchParams();
-
-  if (filters.date_from) {
-    queryParams.set("date_from", filters.date_from);
-  }
-
-  if (filters.date_to) {
-    queryParams.set("date_to", filters.date_to);
-  }
-
-  const queryString = queryParams.toString();
-
-  return request<ReportApiRecord[]>(`/reports${queryString ? `?${queryString}` : ""}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-export async function fetchReportsSummary(token: string, filters: ReportFilters = {}) {
-  const queryParams = new URLSearchParams();
-
-  if (filters.date_from) {
-    queryParams.set("date_from", filters.date_from);
-  }
-
-  if (filters.date_to) {
-    queryParams.set("date_to", filters.date_to);
-  }
-
-  const queryString = queryParams.toString();
-
-  return request<ReportsSummaryResponse>(`/reports/summary${queryString ? `?${queryString}` : ""}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-export async function generateReport(token: string, payload: ReportGeneratePayload) {
-  return request<ReportApiRecord>("/reports/generate", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function fetchIntegrationStatuses(token: string) {
-  return request<IntegrationApiRecord[]>("/integrations/status", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
 export async function fetchWazuhIntegrationStatus(token: string) {
   return request<WazuhIntegrationStatus>("/integrations/wazuh/status", {
     method: "GET",
@@ -444,75 +372,6 @@ export async function fetchHydraIntegrationStatus(token: string) {
 export async function importHydraResults(token: string, payload: HydraImportPayload) {
   return request<HydraImportResponse>("/integrations/hydra/import", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function fetchLanlIntegrationStatus(token: string) {
-  return request<LanlIntegrationStatus>("/integrations/lanl/status", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-export async function uploadLanlDataset(
-  token: string,
-  options: {
-    datasetType: LanlDatasetType;
-    datasetFile: File;
-    maxRecords: number;
-    redteamFile?: File | null;
-  },
-) {
-  const formData = new FormData();
-  formData.append("dataset_type", options.datasetType);
-  formData.append("dataset_file", options.datasetFile);
-  formData.append("max_records", String(options.maxRecords));
-
-  if (options.redteamFile) {
-    formData.append("redteam_file", options.redteamFile);
-  }
-
-  return request<LanlImportResponse>("/integrations/lanl/import", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-}
-
-export async function fetchVirtualLabMachines(token: string) {
-  return request<VirtualMachineRecord[]>("/integrations/virtualbox/lab", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-}
-
-export async function createVirtualLabMachine(token: string, payload: VirtualMachineCreatePayload) {
-  return request<VirtualMachineRecord>("/integrations/virtualbox/lab", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function patchVirtualLabMachine(
-  token: string,
-  vmId: string,
-  payload: VirtualMachineUpdatePayload,
-) {
-  return request<VirtualMachineRecord>(`/integrations/virtualbox/lab/${vmId}`, {
-    method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
     },

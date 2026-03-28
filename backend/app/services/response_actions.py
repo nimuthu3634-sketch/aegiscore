@@ -5,7 +5,6 @@ from sqlalchemy import select
 from fastapi import HTTPException, status
 
 from app.core.enums import (
-    AlertSeverity,
     AlertStatus,
     ResponseActionMode,
     ResponseActionStatus,
@@ -26,7 +25,7 @@ from app.services.record_ids import next_prefixed_id
 from app.services.users import get_user_by_id
 from app.utils.time import ensure_utc, utc_now
 
-AUTOMATION_ACTOR_NAME = "AegisCore Automation"
+ANALYST_ACTOR_NAME = "SOC Analyst"
 
 
 def _first_present(*values):
@@ -46,7 +45,7 @@ def _response_action_from_model(action: ResponseAction) -> dict:
         "alert_id": action.alert_id,
         "action_type": action.action_type,
         "status": action.status,
-        "execution_mode": action.execution_mode,
+        "execution_mode": ResponseActionMode.MANUAL,
         "target_label": action.target_label,
         "notes": action.notes,
         "result_summary": action.result_summary,
@@ -79,7 +78,21 @@ def load_response_action_records() -> list[dict]:
         else:
             merged_actions[persisted_action["id"]] = persisted_action
 
-    return list(merged_actions.values())
+    filtered_actions: list[dict] = []
+    for action in merged_actions.values():
+        try:
+            get_alert_by_id(action["alert_id"])
+        except HTTPException:
+            continue
+
+        filtered_actions.append(
+            {
+                **action,
+                "execution_mode": ResponseActionMode.MANUAL,
+            }
+        )
+
+    return filtered_actions
 
 
 def _persist_response_action(action_record: dict) -> None:
@@ -182,11 +195,9 @@ def _find_user_name(user_id: str | None) -> str | None:
 
 def _resolve_actor(actor: dict | None, execution_mode: ResponseActionMode) -> tuple[str | None, str]:
     if actor is None:
-        return None, AUTOMATION_ACTOR_NAME
+        return None, ANALYST_ACTOR_NAME
 
-    return actor.get("id"), actor.get("full_name") or _find_user_name(actor.get("id")) or (
-        AUTOMATION_ACTOR_NAME if execution_mode == ResponseActionMode.AUTOMATED else "SOC Analyst"
-    )
+    return actor.get("id"), actor.get("full_name") or _find_user_name(actor.get("id")) or ANALYST_ACTOR_NAME
 
 
 def _serialize_action(action_record: dict) -> dict:
@@ -194,7 +205,8 @@ def _serialize_action(action_record: dict) -> dict:
     performed_by_name = action_record.get("performed_by_name") or _find_user_name(performed_by_user_id)
     return {
         **action_record,
-        "performed_by_name": performed_by_name or AUTOMATION_ACTOR_NAME,
+        "execution_mode": ResponseActionMode.MANUAL,
+        "performed_by_name": performed_by_name or ANALYST_ACTOR_NAME,
     }
 
 
@@ -219,7 +231,7 @@ def _record_action(
         "alert_id": alert_id,
         "action_type": action_type,
         "status": action_status,
-        "execution_mode": execution_mode,
+        "execution_mode": ResponseActionMode.MANUAL,
         "target_label": target_label,
         "notes": notes,
         "result_summary": result_summary,
@@ -284,7 +296,6 @@ def _build_suggestions(alert: dict) -> list[dict]:
             ),
             "target_label": incident["id"] if incident else targets["asset"],
             "available": incident is None,
-            "automated": _is_high_risk_alert(alert),
         },
         {
             "action_type": ResponseActionType.MARK_INVESTIGATING,
@@ -296,7 +307,6 @@ def _build_suggestions(alert: dict) -> list[dict]:
             ),
             "target_label": alert["status"].value.replace("_", " "),
             "available": alert["status"] not in {AlertStatus.INVESTIGATING, AlertStatus.RESOLVED},
-            "automated": _is_high_risk_alert(alert),
         },
         {
             "action_type": ResponseActionType.ISOLATE_ASSET,
@@ -308,7 +318,6 @@ def _build_suggestions(alert: dict) -> list[dict]:
             ),
             "target_label": targets["asset"],
             "available": bool(targets["asset"]) and not _is_asset_isolated(targets["asset"]),
-            "automated": False,
         },
     ]
 
@@ -324,7 +333,6 @@ def _build_suggestions(alert: dict) -> list[dict]:
                 ),
                 "target_label": targets["source_ip"],
                 "available": not _is_ip_blocked(targets["source_ip"]),
-                "automated": False,
             }
         )
 
@@ -345,20 +353,10 @@ def _build_suggestions(alert: dict) -> list[dict]:
                 ),
                 "target_label": targets["account"],
                 "available": not _is_account_disabled(targets["account"]),
-                "automated": False,
             }
         )
 
     return suggestions
-
-
-def _is_high_risk_alert(alert: dict) -> bool:
-    anomaly_score = float(alert.get("anomaly_score", 0.0))
-    if alert["severity"] == AlertSeverity.CRITICAL:
-        return True
-    if alert["severity"] == AlertSeverity.HIGH and alert.get("is_anomalous"):
-        return True
-    return anomaly_score >= 0.85
 
 
 def list_response_actions(alert_id: str) -> dict:
@@ -588,34 +586,3 @@ def execute_response_action(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="Unsupported response action.",
     )
-
-
-def run_automatic_response_workflow(alert_id: str) -> list[dict]:
-    alert = get_alert_by_id(alert_id)
-    if not _is_high_risk_alert(alert):
-        return []
-
-    actions: list[dict] = []
-    if alert["status"] not in {AlertStatus.INVESTIGATING, AlertStatus.RESOLVED}:
-        actions.append(
-            execute_response_action(
-                alert_id=alert_id,
-                action_type=ResponseActionType.MARK_INVESTIGATING,
-                actor=None,
-                notes="High-risk alert automatically moved into investigation for the lab workflow.",
-                execution_mode=ResponseActionMode.AUTOMATED,
-            )
-        )
-
-    if _find_existing_incident(alert_id) is None:
-        actions.append(
-            execute_response_action(
-                alert_id=alert_id,
-                action_type=ResponseActionType.CREATE_INCIDENT,
-                actor=None,
-                notes="High-risk alert automatically escalated into the incident workflow.",
-                execution_mode=ResponseActionMode.AUTOMATED,
-            )
-        )
-
-    return actions

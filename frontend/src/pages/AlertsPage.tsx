@@ -50,8 +50,6 @@ const sourceToolOptions: Array<{ value: "all" | SourceToolKey; label: string }> 
   { value: "suricata", label: "Suricata" },
   { value: "nmap", label: "Nmap" },
   { value: "hydra", label: "Hydra" },
-  { value: "lanl", label: "LANL" },
-  { value: "virtualbox", label: "VirtualBox" },
 ];
 
 const eventTypeOptions: Array<{ value: string; label: string }> = [
@@ -77,8 +75,6 @@ const toolLabels: Record<SourceToolKey, string> = {
   suricata: "Suricata",
   nmap: "Nmap",
   hydra: "Hydra",
-  lanl: "LANL",
-  virtualbox: "VirtualBox",
 };
 
 function formatDateTime(value: string) {
@@ -147,10 +143,6 @@ function getResponseActionTone(action: ResponseActionRecord) {
 }
 
 function getResponseModeTone(mode: ResponseActionRecord["execution_mode"]) {
-  if (mode === "automated") {
-    return "bg-sky-100 text-sky-700 ring-sky-200";
-  }
-
   return "bg-brand-black/5 text-brand-black/70 ring-brand-black/10";
 }
 
@@ -902,14 +894,8 @@ export function AlertsPage() {
                                   <p className="text-sm font-semibold text-brand-black">
                                     {action.label}
                                   </p>
-                                  <span
-                                    className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ring-1 ring-inset ${
-                                      action.automated
-                                        ? "bg-sky-100 text-sky-700 ring-sky-200"
-                                        : "bg-brand-black/5 text-brand-black/70 ring-brand-black/10"
-                                    }`}
-                                  >
-                                    {action.automated ? "Auto-ready" : "Manual"}
+                                  <span className="inline-flex items-center rounded-full bg-brand-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-black/70 ring-1 ring-inset ring-brand-black/10">
+                                    Manual
                                   </span>
                                 </div>
                                 <p className="mt-2 text-sm leading-6 text-brand-black/68">

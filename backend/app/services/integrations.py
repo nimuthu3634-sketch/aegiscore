@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from app.core.enums import IntegrationHealth, IntegrationTool
+from app.core.enums import IntegrationHealth, IntegrationTool, SUPPORTED_INTEGRATION_TOOL_VALUES
 from app.models.integration_import_state import IntegrationImportState
 from app.models.integration_status import IntegrationStatus
 from app.services.alerts import load_alert_records
@@ -49,6 +49,10 @@ def _load_persisted_import_states() -> list[dict]:
     return run_with_optional_db(operation, lambda: [])
 
 
+def _normalize_tool_value(tool_name: object) -> str:
+    return str(getattr(tool_name, "value", tool_name or "")).strip().lower()
+
+
 def load_integration_records() -> list[dict]:
     merged_records = {
         integration["tool_name"]: dict(integration)
@@ -73,7 +77,11 @@ def load_integration_records() -> list[dict]:
                 **import_state,
             }
 
-    return list(merged_records.values())
+    return [
+        integration
+        for integration in merged_records.values()
+        if _normalize_tool_value(integration.get("tool_name")) in SUPPORTED_INTEGRATION_TOOL_VALUES
+    ]
 
 
 def _augment_integration_status(integration: dict) -> dict:

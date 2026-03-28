@@ -45,7 +45,21 @@ def load_incident_records() -> list[dict]:
         else:
             merged_incidents[persisted_incident["id"]] = persisted_incident
 
-    return list(merged_incidents.values())
+    filtered_incidents: list[dict] = []
+    for incident in merged_incidents.values():
+        alert_id = incident.get("alert_id")
+        if not alert_id:
+            filtered_incidents.append(incident)
+            continue
+
+        try:
+            get_alert_by_id(alert_id)
+        except HTTPException:
+            continue
+
+        filtered_incidents.append(incident)
+
+    return filtered_incidents
 
 
 def _persist_incident_record(incident_record: dict) -> None:

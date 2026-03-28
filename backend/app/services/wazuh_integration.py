@@ -10,6 +10,11 @@ from app.utils.log_normalization import normalize_timestamp
 from app.utils.time import utc_now
 
 
+def _rule_payload(alert_payload: dict) -> dict:
+    rule = alert_payload.get("rule", {})
+    return rule if isinstance(rule, dict) else {}
+
+
 def _map_wazuh_level(level_value: int | str | float | None) -> AlertSeverity:
     try:
         numeric_level = float(level_value) if level_value is not None else 0
@@ -33,7 +38,7 @@ def _numeric_wazuh_level(level_value: int | str | float | None) -> float:
 
 
 def _extract_event_type(alert_payload: dict) -> str:
-    rule = alert_payload.get("rule", {})
+    rule = _rule_payload(alert_payload)
     groups = [str(item).lower() for item in rule.get("groups", [])]
     description = str(rule.get("description", "")).lower()
     full_log = str(alert_payload.get("full_log", "")).lower()
@@ -64,13 +69,19 @@ def _extract_event_type(alert_payload: dict) -> str:
 def _wazuh_reference(alert_payload: dict) -> str:
     payload_id = alert_payload.get("id")
     timestamp = alert_payload.get("timestamp") or alert_payload.get("@timestamp") or "unknown-time"
-    rule = alert_payload.get("rule", {})
-    rule_id = rule.get("id") or rule.get("description") or "unknown-rule"
+    rule = _rule_payload(alert_payload)
+    rule_id = (
+        rule.get("id")
+        or rule.get("description")
+        or alert_payload.get("rule")
+        or alert_payload.get("message")
+        or "unknown-rule"
+    )
     return f"wazuh:{payload_id or rule_id}:{timestamp}"
 
 
 def _build_alert_description(alert_payload: dict) -> str:
-    rule = alert_payload.get("rule", {})
+    rule = _rule_payload(alert_payload)
     description = str(rule.get("description") or "Wazuh alert imported into AegisCore.")
     full_log = str(alert_payload.get("full_log") or alert_payload.get("message") or "").strip()
 
@@ -115,7 +126,7 @@ def import_wazuh_alerts(alerts: list[dict]) -> dict:
             skipped_count += 1
             continue
 
-        rule = alert_payload.get("rule", {})
+        rule = _rule_payload(alert_payload)
         agent = alert_payload.get("agent", {})
         data_payload = alert_payload.get("data", {}) if isinstance(alert_payload.get("data"), dict) else {}
         syscheck_payload = (

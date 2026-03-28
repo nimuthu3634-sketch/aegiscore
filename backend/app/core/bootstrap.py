@@ -13,20 +13,16 @@ from app.models.incident import Incident
 from app.models.integration_import_state import IntegrationImportState
 from app.models.integration_status import IntegrationStatus
 from app.models.log_entry import LogEntry
-from app.models.report import Report
 from app.models.response_action import ResponseAction
 from app.models.user import User
-from app.models.virtual_machine import VirtualMachine
 from app.services.anomaly import train_demo_anomaly_model
 from app.services.mock_store import (
     DEMO_ALERTS,
     DEMO_INCIDENTS,
     DEMO_INTEGRATIONS,
     DEMO_LOGS,
-    DEMO_REPORTS,
     DEMO_RESPONSE_ACTIONS,
     DEMO_USERS,
-    DEMO_VIRTUAL_MACHINES,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,18 +108,6 @@ def _seed_database_demo_records() -> dict[str, int]:
                 created_at=record["created_at"],
             ),
         ),
-        "reports": _sync_records(
-            DEMO_REPORTS,
-            lambda record: Report(
-                id=record["id"],
-                title=record["title"],
-                report_type=record["report_type"],
-                generated_by_user_id=record.get("generated_by_user_id"),
-                content_json=record["content_json"],
-                status=record["status"],
-                created_at=record["created_at"],
-            ),
-        ),
         "integrations": _sync_records(
             DEMO_INTEGRATIONS,
             lambda record: IntegrationStatus(
@@ -156,18 +140,6 @@ def _seed_database_demo_records() -> dict[str, int]:
                 performed_by_user_id=record.get("performed_by_user_id"),
                 incident_id=record.get("incident_id"),
                 created_at=record["created_at"],
-            ),
-        ),
-        "virtual_machines": _sync_records(
-            DEMO_VIRTUAL_MACHINES,
-            lambda record: VirtualMachine(
-                id=record["id"],
-                vm_name=record["vm_name"],
-                role=record["role"],
-                os_type=record["os_type"],
-                ip_address=record["ip_address"],
-                status=record["status"],
-                notes=record.get("notes", ""),
             ),
         ),
     }

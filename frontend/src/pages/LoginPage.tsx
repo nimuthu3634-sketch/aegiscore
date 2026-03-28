@@ -62,14 +62,14 @@ export function LoginPage() {
 
             <p className="relative mt-8 max-w-2xl text-lg leading-8 text-brand-muted">
               A polished Security Operations Center dashboard for monitoring, incident handling,
-              and cybersecurity reporting.
+              and explainable cybersecurity analytics.
             </p>
 
             <div className="relative mt-10 grid gap-4 sm:grid-cols-3">
               {[
                 { title: "Admin", detail: "Controls integrations and oversight." },
                 { title: "Analyst", detail: "Works alerts and incident queues." },
-                { title: "Viewer", detail: "Observes reports and outcomes." },
+                { title: "Viewer", detail: "Observes dashboards, alerts, and outcomes." },
               ].map((role) => (
                 <div
                   key={role.title}
@@ -98,7 +98,7 @@ export function LoginPage() {
                   <p className="font-semibold text-white">Operational interface</p>
                 </div>
                 <p className="mt-3 text-sm leading-7 text-brand-muted">
-                  Branded sidebar, executive dashboard cards, clean tables, and drill-down panels.
+                  Branded sidebar, dashboard cards, clean tables, and drill-down panels.
                 </p>
               </div>
             </div>

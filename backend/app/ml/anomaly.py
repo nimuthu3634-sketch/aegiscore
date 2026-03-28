@@ -153,14 +153,6 @@ class DemoAnomalyDetector:
                 "port_options": [53, 80, 443],
             },
             {
-                "source_tool": "virtualbox",
-                "event_family": "configuration",
-                "text": "routine snapshot integrity check for the virtual lab",
-                "severity": "low",
-                "source_prefix": "hypervisor-lab-",
-                "port_options": [],
-            },
-            {
                 "source_tool": "nmap",
                 "event_family": "scan_result",
                 "text": "authorized lab scan baseline import with expected services",
@@ -337,9 +329,6 @@ class DemoAnomalyDetector:
         anomaly_score: float,
     ) -> str:
         if anomaly_score < 0.55:
-            if str(event.get("source_tool") or "").lower() == "virtualbox":
-                return "within the learned baseline for lab infrastructure changes"
-
             return "within the learned demo baseline"
 
         if feature_map["login_keyword_hits"] >= 2 and (
@@ -365,9 +354,6 @@ class DemoAnomalyDetector:
 
         if anomaly_score >= 0.6:
             return "combined anomaly pattern across severity and source activity"
-
-        if str(event.get("source_tool") or "").lower() == "virtualbox":
-            return "within the learned baseline for lab infrastructure changes"
 
         return "combined anomaly pattern across severity and source activity"
 

@@ -46,19 +46,6 @@ class IncidentStatus(str, Enum):
     RESOLVED = "resolved"
 
 
-class ReportStatus(str, Enum):
-    DRAFT = "draft"
-    SCHEDULED = "scheduled"
-    READY = "ready"
-
-
-class ReportType(str, Enum):
-    EXECUTIVE = "executive"
-    INCIDENT = "incident"
-    OPERATIONS = "operations"
-    ANALYTICS = "analytics"
-
-
 class IntegrationTool(str, Enum):
     WAZUH = "wazuh"
     SURICATA = "suricata"
@@ -75,8 +62,9 @@ class IntegrationHealth(str, Enum):
     OFFLINE = "offline"
 
 
-class VirtualMachineStatus(str, Enum):
-    RUNNING = "running"
-    STOPPED = "stopped"
-    PAUSED = "paused"
-    PROVISIONING = "provisioning"
+SUPPORTED_INTEGRATION_TOOL_VALUES = {
+    IntegrationTool.WAZUH.value,
+    IntegrationTool.SURICATA.value,
+    IntegrationTool.NMAP.value,
+    IntegrationTool.HYDRA.value,
+}

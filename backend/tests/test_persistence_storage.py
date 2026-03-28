@@ -7,10 +7,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.enums import (
     AlertSeverity,
-    IntegrationHealth,
     IntegrationTool,
     ResponseActionType,
-    VirtualMachineStatus,
 )
 from app.db.base import Base
 from app.services.anomaly import get_anomaly_summary
@@ -21,7 +19,6 @@ from app.services import incidents as incidents_service
 from app.services import logs as logs_service
 from app.services import response_actions as response_actions_service
 from app.services import users as users_service
-from app.services import virtualbox_lab as virtualbox_lab_service
 from app.services.dashboard import get_dashboard_summary
 from app.services.hydra_integration import import_hydra_results
 from app.services.nmap_integration import import_nmap_results
@@ -34,7 +31,6 @@ from app.services.mock_store import (
     DEMO_LOGS,
     DEMO_RESPONSE_ACTIONS,
     DEMO_USERS,
-    DEMO_VIRTUAL_MACHINES,
 )
 
 
@@ -47,7 +43,6 @@ def restore_demo_state() -> None:
     logs_snapshot = deepcopy(DEMO_LOGS)
     response_actions_snapshot = deepcopy(DEMO_RESPONSE_ACTIONS)
     users_snapshot = deepcopy(DEMO_USERS)
-    virtual_machines_snapshot = deepcopy(DEMO_VIRTUAL_MACHINES)
 
     yield
 
@@ -58,7 +53,6 @@ def restore_demo_state() -> None:
     DEMO_LOGS[:] = logs_snapshot
     DEMO_RESPONSE_ACTIONS[:] = response_actions_snapshot
     DEMO_USERS[:] = users_snapshot
-    DEMO_VIRTUAL_MACHINES[:] = virtual_machines_snapshot
 
 
 @pytest.fixture
@@ -83,7 +77,6 @@ def sqlite_storage(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setattr(incidents_service, "run_with_optional_db", run_with_sqlite)
     monkeypatch.setattr(response_actions_service, "run_with_optional_db", run_with_sqlite)
     monkeypatch.setattr(users_service, "run_with_optional_db", run_with_sqlite)
-    monkeypatch.setattr(virtualbox_lab_service, "run_with_optional_db", run_with_sqlite)
 
 
 def test_alert_log_and_incident_survive_memory_reset_via_database(sqlite_storage) -> None:
@@ -200,68 +193,20 @@ def test_response_actions_and_integration_runtime_survive_memory_reset(sqlite_st
     assert hydra_status["last_import_at"] is not None
 
 
-def test_user_auth_and_virtualbox_inventory_survive_memory_reset(sqlite_storage) -> None:
+def test_user_auth_survives_memory_reset(sqlite_storage) -> None:
     admin_user = deepcopy(next(user for user in DEMO_USERS if user["id"] == "user-admin"))
     users_service.persist_user_record(admin_user)
 
     login_result = auth_service.login_user(admin_user["email"], "password")
     assert login_result["id"] == admin_user["id"]
 
-    created_vm = virtualbox_lab_service.create_virtual_machine(
-        {
-            "vm_name": "lab-monitor-05",
-            "role": "Monitoring Relay VM",
-            "os_type": "Ubuntu 24.04",
-            "ip_address": "10.10.0.45",
-            "status": VirtualMachineStatus.PROVISIONING,
-            "notes": "Temporary runtime persistence verification VM.",
-        }
-    )
-
-    updated_vm = virtualbox_lab_service.update_virtual_machine(
-        created_vm["id"],
-        {
-            "status": VirtualMachineStatus.RUNNING,
-            "notes": "Provisioning completed and ready for lab monitoring.",
-        },
-    )
-    assert updated_vm["status"] == VirtualMachineStatus.RUNNING
-
     DEMO_USERS.clear()
-    DEMO_VIRTUAL_MACHINES.clear()
 
     persisted_user = auth_service.get_current_user_from_payload({"sub": admin_user["email"]})
     assert persisted_user["full_name"] == "AegisCore Admin"
 
     listed_users = auth_service.list_demo_users()
     assert any(user["id"] == admin_user["id"] for user in listed_users)
-
-    reloaded_vm = virtualbox_lab_service.get_virtual_machine_by_id(created_vm["id"])
-    assert reloaded_vm["notes"] == "Provisioning completed and ready for lab monitoring."
-
-    listed_vms = virtualbox_lab_service.list_virtual_machines()
-    assert any(vm["id"] == created_vm["id"] for vm in listed_vms)
-
-    next_vm = virtualbox_lab_service.create_virtual_machine(
-        {
-            "vm_name": "lab-monitor-06",
-            "role": "Spare Collector VM",
-            "os_type": "Debian 12",
-            "ip_address": "10.10.0.46",
-            "status": VirtualMachineStatus.STOPPED,
-            "notes": "Used to verify VM IDs continue from persisted runtime records.",
-        }
-    )
-    assert next_vm["id"] != created_vm["id"]
-    assert next_vm["id"] > created_vm["id"]
-
-    virtualbox_status = integrations_service.get_augmented_integration_by_tool(
-        IntegrationTool.VIRTUALBOX
-    )
-    assert virtualbox_status["status"] == IntegrationHealth.DEGRADED
-    assert virtualbox_status["last_import_message"] == (
-        "Inventory updated. 2 VirtualBox VMs are now tracked."
-    )
 
 
 def test_persisted_alerts_drive_anomaly_summary_and_live_ready_payload(sqlite_storage) -> None:

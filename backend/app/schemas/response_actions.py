@@ -12,7 +12,6 @@ class ResponseActionSuggestion(BaseModel):
     description: str
     target_label: str | None = None
     available: bool
-    automated: bool = False
 
 
 class ResponseActionRead(ORMModel):

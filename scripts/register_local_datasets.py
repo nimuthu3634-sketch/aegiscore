@@ -9,6 +9,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "local_datasets.json"
 
 KNOWN_FILES = {
+    "UNSW-NB15_features.csv": {
+        "family": "unsw_nb15",
+        "role": "feature_reference",
+        "display_name": "UNSW-NB15 feature reference",
+    },
     "NUSW-NB15_features.csv": {
         "family": "unsw_nb15",
         "role": "feature_reference",
