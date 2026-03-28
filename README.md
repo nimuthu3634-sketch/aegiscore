@@ -66,13 +66,13 @@ Copy-Item frontend/.env.example frontend/.env
 Copy-Item backend/.env.example backend/.env
 ```
 
-2. Start infrastructure.
+1. Start infrastructure.
 
 ```powershell
 docker compose up -d postgres redis
 ```
 
-3. Start the backend.
+1. Start the backend.
 
 ```powershell
 cd backend
@@ -82,7 +82,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-4. Start the frontend in a second terminal.
+1. Start the frontend in a second terminal.
 
 ```powershell
 cd frontend
@@ -92,9 +92,9 @@ npm run dev
 
 URLs:
 
-- frontend: http://localhost:5173
-- backend: http://localhost:8000
-- backend docs: http://localhost:8000/docs
+- frontend: <http://localhost:5173>
+- backend: <http://localhost:8000>
+- backend docs: <http://localhost:8000/docs>
 
 ### Full Docker startup
 
