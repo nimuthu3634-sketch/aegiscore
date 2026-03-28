@@ -84,6 +84,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
       }
 
       socketRef.current = null;
+      lastAlertIdRef.current = null;
       setConnectionStatus("disconnected");
       setLiveAlertToast(null);
       return;
@@ -145,6 +146,11 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     const connect = () => {
       if (!isActive) {
         return;
+      }
+
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
       }
 
       setConnectionStatus("connecting");

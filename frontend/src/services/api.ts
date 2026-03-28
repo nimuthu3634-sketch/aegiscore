@@ -34,12 +34,53 @@ import type {
   WazuhIntegrationStatus,
 } from "@/types/domain";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/+$/, "");
+
+function isJsonResponse(response: Response) {
+  return response.headers.get("content-type")?.includes("application/json") ?? false;
+}
+
+async function readErrorMessage(response: Response): Promise<string> {
+  if (isJsonResponse(response)) {
+    try {
+      const errorBody = (await response.json()) as {
+        detail?: string | string[] | { message?: string };
+        message?: string;
+      };
+
+      if (typeof errorBody.detail === "string") {
+        return errorBody.detail;
+      }
+
+      if (Array.isArray(errorBody.detail)) {
+        return errorBody.detail.join(", ");
+      }
+
+      if (typeof errorBody.detail === "object" && errorBody.detail?.message) {
+        return errorBody.detail.message;
+      }
+
+      if (typeof errorBody.message === "string") {
+        return errorBody.message;
+      }
+    } catch {
+      // Fall through to text parsing.
+    }
+  }
+
+  try {
+    const errorText = (await response.text()).trim();
+    return errorText || response.statusText || "The request could not be completed.";
+  } catch {
+    return response.statusText || "The request could not be completed.";
+  }
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const bodyIsFormData = typeof FormData !== "undefined" && options?.body instanceof FormData;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
     ...options,
     headers: {
       ...(bodyIsFormData ? {} : { "Content-Type": "application/json" }),
@@ -48,21 +89,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    let errorMessage = "The request could not be completed.";
-
-    try {
-      const errorBody = (await response.json()) as { detail?: string };
-      if (errorBody.detail) {
-        errorMessage = errorBody.detail;
-      }
-    } catch {
-      errorMessage = response.statusText || errorMessage;
-    }
-
-    throw new Error(errorMessage);
+    throw new Error(await readErrorMessage(response));
   }
 
-  return (await response.json()) as T;
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+
+  if (isJsonResponse(response)) {
+    return (await response.json()) as T;
+  }
+
+  return (await response.text()) as T;
 }
 
 export async function fetchHealth() {
