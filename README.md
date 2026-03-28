@@ -151,7 +151,7 @@ URLs:
 - frontend dev server: <http://localhost:5173>
 - backend API: <http://localhost:8000>
 - backend docs: <http://localhost:8000/docs>
-- NGINX entrypoint: <http://localhost:8080>
+- NGINX entrypoint: <http://localhost:8081>
 
 ### Full Docker startup
 
