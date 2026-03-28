@@ -15,6 +15,7 @@ from app.services.logs import load_log_records
 from app.services.mock_store import DEMO_ALERTS
 from app.services.persistence import run_with_optional_db
 from app.services.record_ids import next_prefixed_id
+from app.services.response_automation import apply_automated_response
 from app.services.websocket import broadcast_alert_created
 from app.utils.time import ensure_utc, utc_now
 
@@ -274,8 +275,10 @@ def create_alert(
     alert_record = _enrich_alert_record(alert_record)
     DEMO_ALERTS.append(alert_record)
     _persist_alert_record(alert_record)
-    broadcast_alert_created(alert_record)
-    return alert_record
+    apply_automated_response(alert_record)
+    updated_alert = get_alert_by_id(alert_record["id"])
+    broadcast_alert_created(updated_alert)
+    return updated_alert
 
 
 def update_alert_status(alert_id: str, alert_status: AlertStatus) -> dict:

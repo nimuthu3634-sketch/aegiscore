@@ -26,6 +26,7 @@ from app.services.users import get_user_by_id
 from app.utils.time import ensure_utc, utc_now
 
 ANALYST_ACTOR_NAME = "SOC Analyst"
+AUTOMATION_ACTOR_NAME = "AegisCore Auto Response"
 
 
 def _first_present(*values):
@@ -45,7 +46,7 @@ def _response_action_from_model(action: ResponseAction) -> dict:
         "alert_id": action.alert_id,
         "action_type": action.action_type,
         "status": action.status,
-        "execution_mode": ResponseActionMode.MANUAL,
+        "execution_mode": action.execution_mode,
         "target_label": action.target_label,
         "notes": action.notes,
         "result_summary": action.result_summary,
@@ -88,7 +89,7 @@ def load_response_action_records() -> list[dict]:
         filtered_actions.append(
             {
                 **action,
-                "execution_mode": ResponseActionMode.MANUAL,
+                "execution_mode": action.get("execution_mode", ResponseActionMode.MANUAL),
             }
         )
 
@@ -193,20 +194,28 @@ def _find_user_name(user_id: str | None) -> str | None:
     return user["full_name"] if user else None
 
 
+def _default_actor_name(execution_mode: ResponseActionMode | str | None) -> str:
+    if execution_mode == ResponseActionMode.AUTOMATED or execution_mode == "automated":
+        return AUTOMATION_ACTOR_NAME
+
+    return ANALYST_ACTOR_NAME
+
+
 def _resolve_actor(actor: dict | None, execution_mode: ResponseActionMode) -> tuple[str | None, str]:
     if actor is None:
-        return None, ANALYST_ACTOR_NAME
+        return None, _default_actor_name(execution_mode)
 
     return actor.get("id"), actor.get("full_name") or _find_user_name(actor.get("id")) or ANALYST_ACTOR_NAME
 
 
 def _serialize_action(action_record: dict) -> dict:
+    execution_mode = action_record.get("execution_mode", ResponseActionMode.MANUAL)
     performed_by_user_id = action_record.get("performed_by_user_id")
     performed_by_name = action_record.get("performed_by_name") or _find_user_name(performed_by_user_id)
     return {
         **action_record,
-        "execution_mode": ResponseActionMode.MANUAL,
-        "performed_by_name": performed_by_name or ANALYST_ACTOR_NAME,
+        "execution_mode": execution_mode,
+        "performed_by_name": performed_by_name or _default_actor_name(execution_mode),
     }
 
 
@@ -231,7 +240,7 @@ def _record_action(
         "alert_id": alert_id,
         "action_type": action_type,
         "status": action_status,
-        "execution_mode": ResponseActionMode.MANUAL,
+        "execution_mode": execution_mode,
         "target_label": target_label,
         "notes": notes,
         "result_summary": result_summary,

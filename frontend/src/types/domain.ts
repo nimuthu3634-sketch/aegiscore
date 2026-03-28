@@ -13,7 +13,7 @@ export type ResponseActionType =
 
 export type ResponseActionStatus = "completed" | "skipped";
 
-export type ResponseActionMode = "manual";
+export type ResponseActionMode = "manual" | "automated";
 
 export type AssignmentStatus = "assigned" | "unassigned" | "escalated";
 

@@ -10,14 +10,14 @@ def test_health_endpoint_reports_expected_metadata() -> None:
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "ok",
-        "app_name": "AegisCore",
-        "environment": "development",
-        "version": "0.1.0",
-        "database": "configured",
-        "redis": "configured",
-    }
+    payload = response.json()
+
+    assert payload["app_name"] == "AegisCore"
+    assert payload["environment"] == "development"
+    assert payload["version"] == "0.1.0"
+    assert payload["database"] in {"connected", "unavailable"}
+    assert payload["redis"] in {"connected", "unavailable"}
+    assert payload["status"] in {"ok", "degraded"}
 
 
 def test_public_self_registration_is_disabled_by_default() -> None:

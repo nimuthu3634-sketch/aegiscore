@@ -143,6 +143,10 @@ function getResponseActionTone(action: ResponseActionRecord) {
 }
 
 function getResponseModeTone(mode: ResponseActionRecord["execution_mode"]) {
+  if (mode === "automated") {
+    return "bg-brand-orange/10 text-brand-orange ring-brand-orange/20";
+  }
+
   return "bg-brand-black/5 text-brand-black/70 ring-brand-black/10";
 }
 
@@ -936,8 +940,8 @@ export function AlertsPage() {
 
                     <p className="text-xs text-brand-black/55">
                       {canRunResponseActions
-                        ? "Admins and analysts can run these actions. Containment changes are recorded as lab-safe simulated responses only."
-                        : "Viewer accounts can review the response plan and audit trail but cannot run response actions."}
+                        ? "Admins and analysts can run manual actions. High-risk alerts may also record automated lab-safe response steps in the audit history."
+                        : "Viewer accounts can review the response plan and audit trail, including automated response records, but cannot run manual actions."}
                     </p>
 
                     {responseActionMessage ? (
