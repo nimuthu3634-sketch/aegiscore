@@ -46,15 +46,12 @@ const RECONNECT_DELAY_MS = 2500;
 
 export const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined);
 
-function buildAlertsWebSocketUrl() {
+function buildAlertsWebSocketUrl(token: string) {
   const configuredWebSocketUrl = import.meta.env.VITE_WS_URL;
-  if (configuredWebSocketUrl) {
-    return configuredWebSocketUrl;
-  }
-
-  const sanitizedBaseUrl = API_BASE_URL.replace(/\/$/, "");
-  const websocketBaseUrl = sanitizedBaseUrl.replace(/^http/i, "ws");
-  return `${websocketBaseUrl}/ws/alerts`;
+  const baseUrl = configuredWebSocketUrl || `${API_BASE_URL.replace(/^http/i, "ws")}/ws/alerts`;
+  const websocketUrl = new URL(baseUrl);
+  websocketUrl.searchParams.set("token", token);
+  return websocketUrl.toString();
 }
 
 export function RealtimeProvider({ children }: PropsWithChildren) {
@@ -154,7 +151,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
       }
 
       setConnectionStatus("connecting");
-      const websocket = new WebSocket(buildAlertsWebSocketUrl());
+      const websocket = new WebSocket(buildAlertsWebSocketUrl(token));
       socketRef.current = websocket;
 
       websocket.onopen = () => {
