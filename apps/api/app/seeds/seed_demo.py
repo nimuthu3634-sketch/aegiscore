@@ -4,7 +4,7 @@ from app.core.security import hash_password
 from app.db.init_db import ensure_default_integrations
 from app.db.session import SessionLocal
 from app.ml.scoring import train_model
-from app.models.entities import AlertSeverity, IncidentPriority, User, UserRole
+from app.models.entities import AlertSeverity, IncidentPriority, ModelMetadata, User, UserRole
 from app.services.domain import create_alert, create_incident
 
 
@@ -76,7 +76,8 @@ def run_seed() -> None:
                 ip_address="127.0.0.1",
             )
 
-        train_model(db, "2026.03-seed")
+        if db.query(ModelMetadata).filter(ModelMetadata.version == "2026.03-seed").one_or_none() is None:
+            train_model(db, "2026.03-seed")
     finally:
         db.close()
 

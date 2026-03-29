@@ -33,7 +33,7 @@ def test_alert_to_incident_flow(client, analyst_token):
         headers={"Authorization": f"Bearer {analyst_token}"},
         json={
             "title": "Investigate suspicious RDP exposure",
-            "summary": "Need to confirm whether the open port is authorized.",
+            "description": "Need to confirm whether the open port is authorized.",
             "priority": "P2",
             "linked_alert_ids": [],
             "evidence": [],
@@ -42,3 +42,4 @@ def test_alert_to_incident_flow(client, analyst_token):
 
     assert create_incident.status_code == 201
     assert create_incident.json()["linked_alerts"][0]["id"] == alert_id
+    assert create_incident.json()["timeline_events"][0]["event_type"] == "status-change"
