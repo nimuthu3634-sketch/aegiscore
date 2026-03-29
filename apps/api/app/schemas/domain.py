@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -118,6 +119,15 @@ class AlertCommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
 
 
+class RiskExplanationFactorRead(BaseModel):
+    factor: str
+    label: str | None = None
+    detail: str | None = None
+    impact: float
+    value: float | None = None
+    category: str | None = None
+
+
 class AlertRead(ORMModel):
     id: str
     external_id: str | None
@@ -130,7 +140,7 @@ class AlertRead(ORMModel):
     status: AlertStatus
     risk_score: float
     risk_label: str | None
-    explainability: list
+    explainability: list[RiskExplanationFactorRead] = Field(default_factory=list)
     explanation_summary: str | None
     recommendations: list[str] = Field(default_factory=list)
     occurred_at: datetime
@@ -243,6 +253,47 @@ class IntegrationRunRead(ORMModel):
     records_ingested: int
     summary: dict
     error_message: str | None
+    mode: str | None = None
+    input_format: str | None = None
+    alerts_created: int = 0
+    alerts_updated: int = 0
+    logs_created: int = 0
+    assets_touched: int = 0
+    incident_candidates: int = 0
+    normalized_records: int = 0
+    imported_lab_data: bool = False
+
+
+class IntegrationConfigurationRead(BaseModel):
+    endpoint_url: str | None = None
+    auth_type: str = "none"
+    username: str | None = None
+    verify_tls: bool = True
+    timeout_seconds: int = 15
+    lookback_minutes: int = 60
+    request_headers: dict[str, str] = Field(default_factory=dict)
+    query_params: dict[str, str] = Field(default_factory=dict)
+    has_password: bool = False
+    has_api_token: bool = False
+    configured: bool = False
+    supports_manual_sync: bool = False
+    supports_file_import: bool = True
+    lab_only_import: bool = False
+    supported_formats: list[str] = Field(default_factory=list)
+
+
+class IntegrationConfigUpdate(BaseModel):
+    enabled: bool | None = None
+    endpoint_url: str | None = Field(default=None, max_length=500)
+    auth_type: Literal["none", "bearer", "basic"] | None = None
+    username: str | None = Field(default=None, max_length=255)
+    password: str | None = Field(default=None, max_length=255)
+    api_token: str | None = Field(default=None, max_length=500)
+    verify_tls: bool | None = None
+    timeout_seconds: int | None = Field(default=None, ge=1, le=120)
+    lookback_minutes: int | None = Field(default=None, ge=1, le=1440)
+    request_headers: dict[str, str] | None = None
+    query_params: dict[str, str] | None = None
 
 
 class IntegrationRead(ORMModel):
@@ -255,16 +306,31 @@ class IntegrationRead(ORMModel):
     description: str | None
     last_synced_at: datetime | None
     last_error: str | None
+    connection_status: str
+    status_detail: str | None
+    consecutive_failures: int = 0
+    last_successful_sync_at: datetime | None = None
+    supports_manual_sync: bool = False
+    supports_file_import: bool = True
+    lab_only_import: bool = False
+    supported_formats: list[str] = Field(default_factory=list)
+    configuration: IntegrationConfigurationRead = Field(validation_alias="sanitized_config")
     runs: list[IntegrationRunRead] = Field(default_factory=list)
 
 
 class ImportResult(BaseModel):
     integration: str
     run_id: str
+    mode: str
+    status: str
     alerts_created: int
+    alerts_updated: int = 0
     logs_created: int
     assets_touched: int
     incident_candidates: int
+    normalized_records: int = 0
+    input_format: str | None = None
+    imported_lab_data: bool = False
 
 
 class DashboardKpi(BaseModel):
@@ -310,11 +376,67 @@ class RiskModelMetadataRead(ORMModel):
     feature_names: list
     training_parameters: dict
     notes: str | None
+    feature_version: str | None = None
+    performance_notes: list[str] = Field(default_factory=list)
 
 
 class RetrainResponse(BaseModel):
     job_id: str
     status: JobStatus
+
+
+class RiskOverviewSummary(BaseModel):
+    total_alerts: int
+    average_risk_score: float
+    high_priority_alerts: int
+    anomalous_alerts: int
+    correlated_source_alerts: int
+
+
+class RiskDistributionItem(BaseModel):
+    band: str
+    count: int
+
+
+class RiskSourceComparisonItem(BaseModel):
+    source: str
+    alert_count: int
+    average_risk_score: float
+    anomalous_alerts: int
+
+
+class RiskExplanationAggregate(BaseModel):
+    factor: str
+    label: str
+    total_impact: float
+    alert_count: int
+
+
+class RiskTrendPoint(BaseModel):
+    label: str
+    average_risk_score: float
+    anomalous_alerts: int
+    critical_alerts: int
+
+
+class RiskOverviewRead(BaseModel):
+    active_model: RiskModelMetadataRead | None = None
+    summary: RiskOverviewSummary
+    risk_distribution: list[RiskDistributionItem] = Field(default_factory=list)
+    source_comparison: list[RiskSourceComparisonItem] = Field(default_factory=list)
+    top_explanations: list[RiskExplanationAggregate] = Field(default_factory=list)
+    anomaly_trend: list[RiskTrendPoint] = Field(default_factory=list)
+
+
+class ScoreRecalculationRequest(BaseModel):
+    source: str | None = Field(default=None, max_length=50)
+    open_only: bool = True
+    limit: int | None = Field(default=None, ge=1, le=1000)
+
+
+class ScoreRecalculationResponse(BaseModel):
+    rescored_alerts: int
+    updated_assets: int
 
 
 class JobRead(ORMModel):

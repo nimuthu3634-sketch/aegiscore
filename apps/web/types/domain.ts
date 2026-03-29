@@ -43,6 +43,15 @@ export interface AlertComment {
   author?: User | null;
 }
 
+export interface RiskExplanationFactor {
+  factor: string;
+  label?: string | null;
+  detail?: string | null;
+  impact: number;
+  value?: number | null;
+  category?: string | null;
+}
+
 export interface IntegrationRun {
   id: string;
   status: string;
@@ -50,8 +59,35 @@ export interface IntegrationRun {
   completed_at?: string | null;
   source_filename?: string | null;
   records_ingested: number;
-  summary: Record<string, number>;
+  summary: Record<string, unknown>;
   error_message?: string | null;
+  mode?: string | null;
+  input_format?: string | null;
+  alerts_created?: number;
+  alerts_updated?: number;
+  logs_created?: number;
+  assets_touched?: number;
+  incident_candidates?: number;
+  normalized_records?: number;
+  imported_lab_data?: boolean;
+}
+
+export interface IntegrationConfiguration {
+  endpoint_url?: string | null;
+  auth_type: string;
+  username?: string | null;
+  verify_tls: boolean;
+  timeout_seconds: number;
+  lookback_minutes: number;
+  request_headers: Record<string, string>;
+  query_params: Record<string, string>;
+  has_password: boolean;
+  has_api_token: boolean;
+  configured: boolean;
+  supports_manual_sync: boolean;
+  supports_file_import: boolean;
+  lab_only_import: boolean;
+  supported_formats: string[];
 }
 
 export interface Integration {
@@ -64,6 +100,15 @@ export interface Integration {
   description?: string | null;
   last_synced_at?: string | null;
   last_error?: string | null;
+  connection_status?: string;
+  status_detail?: string | null;
+  consecutive_failures?: number;
+  last_successful_sync_at?: string | null;
+  supports_manual_sync?: boolean;
+  supports_file_import?: boolean;
+  lab_only_import?: boolean;
+  supported_formats?: string[];
+  configuration?: IntegrationConfiguration;
   runs: IntegrationRun[];
 }
 
@@ -79,7 +124,7 @@ export interface Alert {
   status: string;
   risk_score: number;
   risk_label?: string | null;
-  explainability: Array<{ factor: string; impact: number; value?: number }>;
+  explainability: RiskExplanationFactor[];
   explanation_summary?: string | null;
   recommendations: string[];
   occurred_at: string;
@@ -159,6 +204,23 @@ export interface RiskModelMetadata {
   feature_names: string[];
   training_parameters: Record<string, unknown>;
   notes?: string | null;
+  feature_version?: string | null;
+  performance_notes: string[];
+}
+
+export interface RiskOverview {
+  active_model?: RiskModelMetadata | null;
+  summary: {
+    total_alerts: number;
+    average_risk_score: number;
+    high_priority_alerts: number;
+    anomalous_alerts: number;
+    correlated_source_alerts: number;
+  };
+  risk_distribution: Array<{ band: string; count: number }>;
+  source_comparison: Array<{ source: string; alert_count: number; average_risk_score: number; anomalous_alerts: number }>;
+  top_explanations: Array<{ factor: string; label: string; total_impact: number; alert_count: number }>;
+  anomaly_trend: Array<{ label: string; average_risk_score: number; anomalous_alerts: number; critical_alerts: number }>;
 }
 
 export interface JobRecord {
@@ -198,10 +260,16 @@ export interface HealthResponse {
 export interface ImportResult {
   integration: string;
   run_id: string;
+  mode: string;
+  status: string;
   alerts_created: number;
+  alerts_updated?: number;
   logs_created: number;
   assets_touched: number;
   incident_candidates: number;
+  normalized_records?: number;
+  input_format?: string | null;
+  imported_lab_data?: boolean;
 }
 
 export interface PageResult<T> {

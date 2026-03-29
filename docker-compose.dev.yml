@@ -1,0 +1,37 @@
+services:
+  api:
+    environment:
+      APP_ENV: development
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://localhost:3000}
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - ./docs:/workspace/docs:ro
+      - ./data:/workspace/data
+
+  worker:
+    environment:
+      APP_ENV: development
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - ./apps/worker:/workspace/apps/worker
+
+  web:
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+      NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-ws://localhost:8080/api/v1}
+    command: ["npm", "run", "dev"]
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./apps/web:/workspace/apps/web
+      - /workspace/apps/web/.next
+      - web_node_modules:/workspace/apps/web/node_modules
+      - ./packages:/workspace/packages
+      - ./tsconfig.base.json:/workspace/tsconfig.base.json
+
+volumes:
+  web_node_modules:

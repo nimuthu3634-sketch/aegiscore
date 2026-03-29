@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from app.core.security import hash_password
+from app.db.base import Base
 from app.db.init_db import ensure_default_integrations
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, engine
 from app.ml.scoring import train_model
 from app.models.entities import AlertSeverity, IncidentPriority, ModelMetadata, User, UserRole
-from app.services.domain import create_alert, create_incident
+from app.services.domain import create_alert, create_incident, rescore_alerts
 
 
 def run_seed() -> None:
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         ensure_default_integrations(db)
@@ -78,6 +80,7 @@ def run_seed() -> None:
 
         if db.query(ModelMetadata).filter(ModelMetadata.version == "2026.03-seed").one_or_none() is None:
             train_model(db, "2026.03-seed")
+            rescore_alerts(db, open_only=False)
     finally:
         db.close()
 

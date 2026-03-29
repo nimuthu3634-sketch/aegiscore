@@ -13,6 +13,7 @@ from app.schemas.domain import (
     AssetListResponse,
     AssetRead,
     ImportResult,
+    IntegrationConfigUpdate,
     IntegrationListResponse,
     IntegrationRead,
     IntegrationRunListResponse,
@@ -20,9 +21,9 @@ from app.schemas.domain import (
     LogEntryListResponse,
     LogEntryRead,
 )
+from app.services.integrations import import_integration_file, sync_integration, update_integration_configuration
 from app.services.domain import (
     build_dashboard_summary,
-    import_telemetry,
     incident_summary_text,
     render_alerts_csv,
     render_dashboard_csv,
@@ -122,6 +123,14 @@ def list_integrations(
     )
 
 
+@router.get("/integrations/{slug}", response_model=IntegrationRead)
+def get_integration(slug: str, _: User = Depends(get_current_user), db: Session = Depends(get_db)) -> IntegrationRead:
+    integration = db.query(Integration).options(joinedload(Integration.runs)).filter(Integration.slug == slug).one_or_none()
+    if integration is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Integration not found")
+    return IntegrationRead.model_validate(integration)
+
+
 @router.get("/integrations/{slug}/history", response_model=IntegrationRunListResponse)
 def integration_history(
     slug: str,
@@ -144,6 +153,53 @@ def integration_history(
     )
 
 
+@router.patch("/integrations/{slug}", response_model=IntegrationRead)
+def update_integration(
+    slug: str,
+    payload: IntegrationConfigUpdate,
+    ip_address: str | None = Depends(get_optional_ip),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+    db: Session = Depends(get_db),
+) -> IntegrationRead:
+    integration = update_integration_configuration(
+        db,
+        slug=slug,
+        payload=payload,
+        actor=current_user,
+        ip_address=ip_address,
+    )
+    return IntegrationRead.model_validate(integration)
+
+
+@router.post("/integrations/{slug}/sync", response_model=ImportResult, status_code=status.HTTP_202_ACCEPTED)
+async def sync_integration_route(
+    slug: str,
+    ip_address: str | None = Depends(get_optional_ip),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+    db: Session = Depends(get_db),
+) -> ImportResult:
+    summary = await sync_integration(
+        db,
+        slug=slug,
+        actor=current_user,
+        ip_address=ip_address,
+    )
+    return ImportResult(
+        integration=summary.integration,
+        run_id=summary.run_id,
+        mode=summary.mode,
+        status=summary.status,
+        alerts_created=summary.alerts_created,
+        alerts_updated=summary.alerts_updated,
+        logs_created=summary.logs_created,
+        assets_touched=summary.assets_touched,
+        incident_candidates=summary.incident_candidates,
+        normalized_records=summary.normalized_records,
+        input_format=summary.input_format,
+        imported_lab_data=summary.imported_lab_data,
+    )
+
+
 @router.post("/integrations/{slug}/import", response_model=ImportResult, status_code=status.HTTP_202_ACCEPTED)
 async def import_integration(
     slug: str,
@@ -153,9 +209,9 @@ async def import_integration(
     db: Session = Depends(get_db),
 ) -> ImportResult:
     content = await file.read()
-    summary = import_telemetry(
+    summary = await import_integration_file(
         db,
-        source=slug,
+        slug=slug,
         filename=file.filename or f"{slug}-import.json",
         raw_bytes=content,
         actor=current_user,
@@ -164,10 +220,16 @@ async def import_integration(
     return ImportResult(
         integration=summary.integration,
         run_id=summary.run_id,
+        mode=summary.mode,
+        status=summary.status,
         alerts_created=summary.alerts_created,
+        alerts_updated=summary.alerts_updated,
         logs_created=summary.logs_created,
         assets_touched=summary.assets_touched,
         incident_candidates=summary.incident_candidates,
+        normalized_records=summary.normalized_records,
+        input_format=summary.input_format,
+        imported_lab_data=summary.imported_lab_data,
     )
 
 

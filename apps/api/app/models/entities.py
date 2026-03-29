@@ -140,6 +140,94 @@ class Integration(TimestampMixin, Base):
     logs: Mapped[list["LogEntry"]] = relationship(back_populates="integration")
     runs: Mapped[list["IntegrationRun"]] = relationship(back_populates="integration", cascade="all, delete-orphan")
 
+    @property
+    def supports_manual_sync(self) -> bool:
+        return self.slug in {IntegrationType.WAZUH.value, IntegrationType.SURICATA.value}
+
+    @property
+    def supports_file_import(self) -> bool:
+        return True
+
+    @property
+    def lab_only_import(self) -> bool:
+        return self.slug in {IntegrationType.NMAP.value, IntegrationType.HYDRA.value}
+
+    @property
+    def supported_formats(self) -> list[str]:
+        mapping = {
+            IntegrationType.WAZUH.value: ["json", "ndjson"],
+            IntegrationType.SURICATA.value: ["json", "ndjson"],
+            IntegrationType.NMAP.value: ["json", "xml"],
+            IntegrationType.HYDRA.value: ["json", "ndjson", "txt"],
+        }
+        return mapping.get(self.slug, ["json"])
+
+    @property
+    def connection_status(self) -> str:
+        if not self.enabled:
+            return "disabled"
+        if self.lab_only_import:
+            return "import_only"
+        if not (self.config or {}).get("endpoint_url"):
+            return "needs_configuration"
+        if self.health_status == IntegrationHealth.HEALTHY:
+            return "connected"
+        if self.health_status == IntegrationHealth.DEGRADED:
+            return "degraded"
+        if self.last_error:
+            return "error"
+        return "configured"
+
+    @property
+    def status_detail(self) -> str | None:
+        if self.last_error:
+            return self.last_error
+        if self.lab_only_import:
+            return "Import-only lab connector. No execution or remote sync is supported."
+        if not (self.config or {}).get("endpoint_url"):
+            return "Set an endpoint URL and credentials before manual sync."
+        return "Ready for manual sync."
+
+    @property
+    def consecutive_failures(self) -> int:
+        failures = 0
+        for run in sorted(self.runs, key=lambda item: item.started_at, reverse=True):
+            if run.status == "failed":
+                failures += 1
+                continue
+            if run.status == "completed":
+                break
+        return failures
+
+    @property
+    def last_successful_sync_at(self) -> datetime | None:
+        completed_runs = [run.completed_at for run in self.runs if run.status == "completed" and run.completed_at]
+        return max(completed_runs) if completed_runs else None
+
+    @property
+    def sanitized_config(self) -> dict:
+        config = {
+            "endpoint_url": (self.config or {}).get("endpoint_url"),
+            "auth_type": (self.config or {}).get("auth_type", "none"),
+            "username": (self.config or {}).get("username"),
+            "verify_tls": bool((self.config or {}).get("verify_tls", True)),
+            "timeout_seconds": int((self.config or {}).get("timeout_seconds", 15)),
+            "lookback_minutes": int((self.config or {}).get("lookback_minutes", 60)),
+            "request_headers": {},
+            "query_params": dict((self.config or {}).get("query_params", {})),
+            "has_password": bool((self.config or {}).get("password")),
+            "has_api_token": bool((self.config or {}).get("api_token")),
+            "configured": bool((self.config or {}).get("endpoint_url")) if self.supports_manual_sync else True,
+            "supports_manual_sync": self.supports_manual_sync,
+            "supports_file_import": self.supports_file_import,
+            "lab_only_import": self.lab_only_import,
+            "supported_formats": self.supported_formats,
+        }
+        for key, value in dict((self.config or {}).get("request_headers", {})).items():
+            lowered = key.lower()
+            config["request_headers"][key] = "***" if any(token in lowered for token in {"auth", "token", "secret", "key"}) else value
+        return config
+
 
 class IntegrationRun(Base):
     __tablename__ = "integration_runs"
@@ -155,6 +243,42 @@ class IntegrationRun(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     integration: Mapped["Integration"] = relationship(back_populates="runs")
+
+    @property
+    def mode(self) -> str | None:
+        return self.summary.get("mode") if isinstance(self.summary, dict) else None
+
+    @property
+    def input_format(self) -> str | None:
+        return self.summary.get("input_format") if isinstance(self.summary, dict) else None
+
+    @property
+    def alerts_created(self) -> int:
+        return int(self.summary.get("alerts_created", 0)) if isinstance(self.summary, dict) else 0
+
+    @property
+    def alerts_updated(self) -> int:
+        return int(self.summary.get("alerts_updated", 0)) if isinstance(self.summary, dict) else 0
+
+    @property
+    def logs_created(self) -> int:
+        return int(self.summary.get("logs_created", 0)) if isinstance(self.summary, dict) else 0
+
+    @property
+    def assets_touched(self) -> int:
+        return int(self.summary.get("assets_touched", 0)) if isinstance(self.summary, dict) else 0
+
+    @property
+    def incident_candidates(self) -> int:
+        return int(self.summary.get("incident_candidates", 0)) if isinstance(self.summary, dict) else 0
+
+    @property
+    def normalized_records(self) -> int:
+        return int(self.summary.get("normalized_records", self.records_ingested)) if isinstance(self.summary, dict) else self.records_ingested
+
+    @property
+    def imported_lab_data(self) -> bool:
+        return bool(self.summary.get("imported_lab_data", False)) if isinstance(self.summary, dict) else False
 
 
 class Alert(TimestampMixin, Base):
@@ -333,6 +457,21 @@ class RiskModelMetadata(Base):
     training_parameters: Mapped[dict] = mapped_column(JSON, default=dict)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    @property
+    def feature_version(self) -> str | None:
+        if isinstance(self.training_parameters, dict):
+            value = self.training_parameters.get("feature_version")
+            return str(value) if value else None
+        return None
+
+    @property
+    def performance_notes(self) -> list[str]:
+        if isinstance(self.training_parameters, dict):
+            value = self.training_parameters.get("performance_notes", [])
+            if isinstance(value, list):
+                return [str(item) for item in value]
+        return [self.notes] if self.notes else []
 
 
 class JobRecord(Base):

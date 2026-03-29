@@ -1,15 +1,21 @@
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/workspace/apps/api
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace/apps/api
 
 WORKDIR /workspace/apps/worker
 
 COPY apps/api/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY apps/api /workspace/apps/api
 COPY apps/worker /workspace/apps/worker
+
+RUN useradd --create-home --shell /bin/bash aegis \
+    && chown -R aegis:aegis /workspace
+
+USER aegis
 
 CMD ["python", "main.py"]

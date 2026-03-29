@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: aegiscore-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-aegiscore}
       POSTGRES_USER: ${POSTGRES_USER:-aegiscore}
@@ -15,98 +15,143 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aegiscore} -d ${POSTGRES_DB:-aegiscore}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: aegiscore-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "PING"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - apps/api/.env.example
+    environment: &api_environment
+      APP_ENV: ${APP_ENV:-production}
+      API_PREFIX: ${API_PREFIX:-/api/v1}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      MODEL_VERSION: ${MODEL_VERSION:-2026.03}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
 
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: aegiscore-api
+    restart: unless-stopped
     env_file:
-      - .env
       - apps/api/.env.example
-    environment:
-      APP_ENV: development
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
-      REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: http://localhost:${WEB_PORT:-3000},http://localhost:${NGINX_PORT:-8080}
-    ports:
-      - "${API_PORT:-8000}:8000"
+    environment: *api_environment
+    expose:
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./apps/api:/workspace/apps/api
-      - ./docs:/workspace/docs:ro
-      - ./data:/workspace/data
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=5).read()",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   worker:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
-    container_name: aegiscore-worker
+    restart: unless-stopped
     env_file:
-      - .env
       - apps/api/.env.example
-    environment:
-      APP_ENV: development
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
-      REDIS_URL: redis://redis:6379/0
+    environment: *api_environment
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./apps/api:/workspace/apps/api
-      - ./apps/worker:/workspace/apps/worker
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os, redis; redis.from_url(os.environ['REDIS_URL']).ping()",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    container_name: aegiscore-web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-ws://localhost:8080/api/v1}
+    restart: unless-stopped
     env_file:
-      - .env
       - apps/web/.env.example
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:${NGINX_PORT:-8080}/api/v1
-      NEXT_PUBLIC_WS_BASE_URL: ws://localhost:${NGINX_PORT:-8080}
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    expose:
+      - "3000"
     depends_on:
       api:
-        condition: service_started
-    ports:
-      - "${WEB_PORT:-3000}:3000"
-    volumes:
-      - ./apps/web:/workspace/apps/web
-      - ./packages:/workspace/packages
-      - ./tsconfig.base.json:/workspace/tsconfig.base.json
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/login >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   nginx:
     image: nginx:1.27-alpine
-    container_name: aegiscore-nginx
+    restart: unless-stopped
     depends_on:
       web:
-        condition: service_started
+        condition: service_healthy
       api:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${NGINX_PORT:-8080}:80"
     volumes:
       - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:
+  redis_data:

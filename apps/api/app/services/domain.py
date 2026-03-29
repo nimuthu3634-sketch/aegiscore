@@ -6,10 +6,9 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 
 from sqlalchemy import desc, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from app.ingestion.parsers import parse_telemetry
-from app.ml.scoring import score_alert
+from app.ml.scoring import AlertRiskAssessment, score_alert
 from app.models.entities import (
     Alert,
     AlertComment,
@@ -22,8 +21,6 @@ from app.models.entities import (
     IncidentPriority,
     IncidentStatus,
     Integration,
-    IntegrationHealth,
-    IntegrationRun,
     LogEntry,
     ResponseRecommendation,
     User,
@@ -31,25 +28,6 @@ from app.models.entities import (
 from app.schemas.domain import DashboardActivityItem, DashboardKpi, DashboardSummary, DashboardTrendPoint
 from app.services.audit import record_audit
 from app.services.realtime import manager
-
-
-class ImportSummary:
-    def __init__(
-        self,
-        *,
-        integration: str,
-        run_id: str,
-        alerts_created: int,
-        logs_created: int,
-        assets_touched: int,
-        incident_candidates: int,
-    ) -> None:
-        self.integration = integration
-        self.run_id = run_id
-        self.alerts_created = alerts_created
-        self.logs_created = logs_created
-        self.assets_touched = assets_touched
-        self.incident_candidates = incident_candidates
 
 
 def ensure_asset(
@@ -60,11 +38,20 @@ def ensure_asset(
     operating_system: str | None = None,
     criticality: int = 3,
 ) -> Asset:
-    asset = db.query(Asset).filter(Asset.hostname == hostname).one_or_none()
+    asset = db.query(Asset).filter(Asset.hostname == hostname).one_or_none() if hostname else None
+    if asset is None and ip_address:
+        asset = db.query(Asset).filter(Asset.ip_address == ip_address).one_or_none()
     if asset is None:
-        asset = Asset(hostname=hostname, ip_address=ip_address, operating_system=operating_system, criticality=criticality)
+        asset = Asset(
+            hostname=hostname or ip_address or "unknown-asset",
+            ip_address=ip_address,
+            operating_system=operating_system,
+            criticality=criticality,
+        )
         db.add(asset)
     else:
+        if hostname and asset.hostname != hostname:
+            asset.hostname = hostname
         asset.ip_address = ip_address or asset.ip_address
         asset.operating_system = operating_system or asset.operating_system
         asset.criticality = criticality or asset.criticality
@@ -122,6 +109,117 @@ def _build_recommendations(source: str, severity: str, tags: list[str]) -> list[
     return items
 
 
+def _sync_response_recommendations(alert: Alert, items: list[dict[str, str | int | None]]) -> None:
+    alert.response_recommendations.clear()
+    for item in items:
+        alert.response_recommendations.append(
+            ResponseRecommendation(
+                title=str(item["title"]),
+                description=str(item["description"]) if item["description"] else None,
+                priority=int(item["priority"]),
+            )
+        )
+
+
+def _build_scoring_record(
+    *,
+    title: str,
+    description: str | None,
+    source: str,
+    source_type: str,
+    event_type: str | None,
+    severity: str,
+    tags: list[str],
+    raw_payload: dict,
+    parsed_payload: dict,
+    occurred_at: datetime | None,
+    asset: Asset | None,
+) -> dict:
+    return {
+        "title": title,
+        "description": description,
+        "source": source,
+        "source_type": source_type,
+        "event_type": event_type,
+        "severity": severity,
+        "tags": tags,
+        "raw_payload": raw_payload,
+        "parsed_payload": parsed_payload,
+        "occurred_at": occurred_at or datetime.now(timezone.utc),
+        "detected_at": occurred_at or datetime.now(timezone.utc),
+        "asset_id": asset.id if asset else None,
+        "asset_hostname": asset.hostname if asset else None,
+        "asset_ip": asset.ip_address if asset else None,
+        "asset_criticality": asset.criticality if asset else 3,
+    }
+
+
+def _apply_alert_risk_assessment(
+    db: Session,
+    *,
+    alert: Alert,
+    assessment: AlertRiskAssessment,
+    preserve_summary: bool = False,
+) -> None:
+    alert.risk_score = assessment.score
+    alert.risk_label = assessment.band
+    alert.explainability = assessment.explanations
+    if not preserve_summary or not alert.explanation_summary:
+        alert.explanation_summary = assessment.summary
+    recommendation_items = _build_recommendations(alert.source, alert.severity, list(alert.tags or []))
+    alert.recommendations = [str(item["title"]) for item in recommendation_items]
+    _sync_response_recommendations(alert, recommendation_items)
+    db.add(alert)
+
+
+def rescore_alerts(
+    db: Session,
+    *,
+    source: str | None = None,
+    open_only: bool = True,
+    limit: int | None = None,
+) -> dict[str, int | str | None]:
+    query = db.query(Alert).options(joinedload(Alert.asset), joinedload(Alert.response_recommendations))
+    if source:
+        query = query.filter(Alert.source == source)
+    if open_only:
+        query = query.filter(Alert.status.notin_([AlertStatus.RESOLVED, AlertStatus.SUPPRESSED]))
+    query = query.order_by(Alert.detected_at.desc())
+    if limit:
+        query = query.limit(limit)
+
+    alerts = query.all()
+    touched_assets: dict[str, Asset] = {}
+
+    for alert in alerts:
+        scoring_record = _build_scoring_record(
+            title=alert.title,
+            description=alert.description,
+            source=alert.source,
+            source_type=alert.source_type,
+            event_type=alert.event_type,
+            severity=alert.severity,
+            tags=list(alert.tags or []),
+            raw_payload=dict(alert.raw_payload or {}),
+            parsed_payload=dict(alert.parsed_payload or {}),
+            occurred_at=alert.occurred_at,
+            asset=alert.asset,
+        )
+        assessment = score_alert(scoring_record, db=db, asset=alert.asset, existing_alert_id=alert.id)
+        _apply_alert_risk_assessment(db, alert=alert, assessment=assessment, preserve_summary=False)
+        if alert.asset:
+            touched_assets[alert.asset.id] = alert.asset
+
+    for asset in touched_assets.values():
+        _refresh_asset_risk(asset)
+
+    db.commit()
+    return {
+        "rescored_alerts": len(alerts),
+        "updated_assets": len(touched_assets),
+    }
+
+
 async def broadcast_alert_event(alert: Alert, event: str) -> None:
     await manager.broadcast(
         "alerts",
@@ -157,25 +255,21 @@ def create_alert(
     event_type: str | None = None,
     occurred_at: datetime | None = None,
 ) -> Alert:
-    asset = ensure_asset(db, hostname=asset_hostname or "unknown-asset", ip_address=asset_ip) if asset_hostname else None
-    open_asset_alerts = (
-        len([entry for entry in asset.alerts if entry.status not in {AlertStatus.RESOLVED, AlertStatus.SUPPRESSED}]) if asset else 0
+    asset = ensure_asset(db, hostname=asset_hostname or asset_ip or "unknown-asset", ip_address=asset_ip) if (asset_hostname or asset_ip) else None
+    scoring_record = _build_scoring_record(
+        title=title,
+        description=description,
+        source=source,
+        source_type=source_type,
+        event_type=event_type,
+        severity=severity,
+        tags=tags,
+        raw_payload=raw_payload,
+        parsed_payload=parsed_payload,
+        occurred_at=occurred_at,
+        asset=asset,
     )
-    risk_score, explainability, risk_label = score_alert(
-        {
-            "title": title,
-            "description": description,
-            "source": source,
-            "severity": severity,
-            "tags": tags,
-            "asset_criticality": asset.criticality if asset else 3,
-            "open_asset_alerts": open_asset_alerts,
-        }
-    )
-    recommendation_items = _build_recommendations(source, severity, tags)
-    explanation_summary = (
-        f"Prioritized as {risk_label} risk based on severity, asset criticality, alert density, and signal context."
-    )
+    assessment = score_alert(scoring_record, db=db, asset=asset)
 
     alert = Alert(
         title=title,
@@ -189,25 +283,16 @@ def create_alert(
         parsed_payload=parsed_payload,
         asset=asset,
         integration=integration,
-        risk_score=risk_score,
-        explainability=explainability,
-        explanation_summary=explanation_summary,
-        risk_label=risk_label,
-        recommendations=[str(item["title"]) for item in recommendation_items],
+        risk_score=assessment.score,
+        explainability=assessment.explanations,
+        explanation_summary=assessment.summary,
+        risk_label=assessment.band,
+        recommendations=[],
         occurred_at=occurred_at or datetime.now(timezone.utc),
     )
     db.add(alert)
     db.flush()
-
-    for item in recommendation_items:
-        db.add(
-            ResponseRecommendation(
-                alert_id=alert.id,
-                title=str(item["title"]),
-                description=str(item["description"]) if item["description"] else None,
-                priority=int(item["priority"]),
-            )
-        )
+    _apply_alert_risk_assessment(db, alert=alert, assessment=assessment)
 
     _refresh_asset_risk(asset)
     db.commit()
@@ -226,10 +311,28 @@ def create_alert(
 
 
 def update_alert(db: Session, alert: Alert, *, payload: dict, actor: User, ip_address: str | None) -> Alert:
+    manual_summary = payload.get("explanation_summary")
     for field, value in payload.items():
         if value is None and field != "assigned_to_id":
             continue
         setattr(alert, field, value)
+    scoring_record = _build_scoring_record(
+        title=alert.title,
+        description=alert.description,
+        source=alert.source,
+        source_type=alert.source_type,
+        event_type=alert.event_type,
+        severity=alert.severity,
+        tags=list(alert.tags or []),
+        raw_payload=dict(alert.raw_payload or {}),
+        parsed_payload=dict(alert.parsed_payload or {}),
+        occurred_at=alert.occurred_at,
+        asset=alert.asset,
+    )
+    assessment = score_alert(scoring_record, db=db, asset=alert.asset, existing_alert_id=alert.id)
+    _apply_alert_risk_assessment(db, alert=alert, assessment=assessment, preserve_summary=bool(manual_summary))
+    if manual_summary:
+        alert.explanation_summary = manual_summary
     _refresh_asset_risk(alert.asset)
     db.add(alert)
     db.commit()
@@ -387,99 +490,6 @@ def update_incident(db: Session, incident: Incident, payload: dict, actor: User,
         ip_address=ip_address,
     )
     return incident
-
-
-def import_telemetry(
-    db: Session,
-    *,
-    source: str,
-    filename: str,
-    raw_bytes: bytes,
-    actor: User,
-    ip_address: str | None,
-) -> ImportSummary:
-    integration = db.query(Integration).filter(Integration.slug == source).one_or_none()
-    if integration is None:
-        raise ValueError("Unknown integration")
-
-    parsed_records = parse_telemetry(source, raw_bytes)
-    run = IntegrationRun(integration_id=integration.id, status="running", source_filename=filename)
-    db.add(run)
-    db.flush()
-
-    alerts_created = 0
-    logs_created = 0
-    assets: set[str] = set()
-    incident_candidates = 0
-
-    for record in parsed_records:
-        asset = ensure_asset(db, hostname=record["asset_hostname"], ip_address=record.get("asset_ip"))
-        assets.add(asset.id)
-        log = LogEntry(
-            source=source,
-            level=record["level"],
-            category=record["category"],
-            message=record["message"],
-            asset_id=asset.id,
-            integration_id=integration.id,
-            raw_payload=record["raw_payload"],
-            parsed_payload=record["parsed_payload"],
-        )
-        db.add(log)
-        logs_created += 1
-
-        create_alert(
-            db,
-            title=record["title"],
-            description=record["description"],
-            source=source,
-            source_type=record.get("source_type", "telemetry"),
-            event_type=record.get("event_type"),
-            severity=record["severity"],
-            tags=record["tags"],
-            raw_payload=record["raw_payload"],
-            parsed_payload=record["parsed_payload"],
-            asset_hostname=record["asset_hostname"],
-            asset_ip=record.get("asset_ip"),
-            actor=actor,
-            ip_address=ip_address,
-            integration=integration,
-            occurred_at=record.get("occurred_at"),
-        )
-        alerts_created += 1
-        incident_candidates += 1 if record["incident_candidate"] else 0
-
-    integration.last_synced_at = datetime.now(timezone.utc)
-    integration.health_status = IntegrationHealth.HEALTHY
-    run.status = "completed"
-    run.completed_at = datetime.now(timezone.utc)
-    run.records_ingested = len(parsed_records)
-    run.summary = {
-        "alerts_created": alerts_created,
-        "logs_created": logs_created,
-        "assets_touched": len(assets),
-        "incident_candidates": incident_candidates,
-    }
-    db.commit()
-    db.refresh(run)
-
-    record_audit(
-        db,
-        actor=actor,
-        action="integration.imported",
-        entity_type="integration",
-        entity_id=integration.id,
-        details={"source": source, "run_id": run.id, "filename": filename},
-        ip_address=ip_address,
-    )
-    return ImportSummary(
-        integration=source,
-        run_id=run.id,
-        alerts_created=alerts_created,
-        logs_created=logs_created,
-        assets_touched=len(assets),
-        incident_candidates=incident_candidates,
-    )
 
 
 def build_dashboard_summary(db: Session) -> DashboardSummary:
