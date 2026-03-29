@@ -78,17 +78,27 @@ class TimestampMixin:
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class Role(Base):
+    __tablename__ = "roles"
+
+    name: Mapped[UserRole] = mapped_column(String(20), primary_key=True)
+    description: Mapped[str] = mapped_column(String(255))
+
+    users: Mapped[list["User"]] = relationship(back_populates="role_ref")
+
+
 class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255))
-    role: Mapped[UserRole] = mapped_column(String(20), default=UserRole.ANALYST)
+    role: Mapped[UserRole] = mapped_column(ForeignKey("roles.name"), default=UserRole.ANALYST, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    role_ref: Mapped[Role] = relationship(back_populates="users")
     assigned_alerts: Mapped[list["Alert"]] = relationship(back_populates="assignee", foreign_keys="Alert.assigned_to_id")
     assigned_incidents: Mapped[list["Incident"]] = relationship(
         back_populates="assignee", foreign_keys="Incident.assignee_id"
@@ -128,7 +138,7 @@ class Integration(TimestampMixin, Base):
 
     alerts: Mapped[list["Alert"]] = relationship(back_populates="integration")
     logs: Mapped[list["LogEntry"]] = relationship(back_populates="integration")
-    runs: Mapped[list["IntegrationRun"]] = relationship(back_populates="integration")
+    runs: Mapped[list["IntegrationRun"]] = relationship(back_populates="integration", cascade="all, delete-orphan")
 
 
 class IntegrationRun(Base):
@@ -155,18 +165,22 @@ class Alert(TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(50), index=True)
+    source_type: Mapped[str] = mapped_column(String(50), default="telemetry", index=True)
+    event_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     severity: Mapped[AlertSeverity] = mapped_column(String(20), index=True)
     status: Mapped[AlertStatus] = mapped_column(String(20), default=AlertStatus.OPEN, index=True)
     risk_score: Mapped[float] = mapped_column(Float, default=0)
     risk_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
     explainability: Mapped[list] = mapped_column(JSON, default=list)
+    explanation_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommendations: Mapped[list] = mapped_column(JSON, default=list)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     asset_id: Mapped[str | None] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
     integration_id: Mapped[str | None] = mapped_column(
         ForeignKey("integrations.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    assigned_to_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assigned_to_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     tags: Mapped[list] = mapped_column(JSON, default=list)
     raw_payload: Mapped[dict] = mapped_column(JSON, default=dict)
     parsed_payload: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -178,6 +192,26 @@ class Alert(TimestampMixin, Base):
     incident_links: Mapped[list["IncidentAlertLink"]] = relationship(
         back_populates="alert", cascade="all, delete-orphan"
     )
+    response_recommendations: Mapped[list["ResponseRecommendation"]] = relationship(
+        back_populates="alert", cascade="all, delete-orphan"
+    )
+
+    @property
+    def incident_ids(self) -> list[str]:
+        return [link.incident_id for link in self.incident_links]
+
+
+class ResponseRecommendation(Base):
+    __tablename__ = "response_recommendations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
+    alert_id: Mapped[str] = mapped_column(ForeignKey("alerts.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    priority: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    alert: Mapped[Alert] = relationship(back_populates="response_recommendations")
 
 
 class AlertComment(Base):
@@ -199,19 +233,19 @@ class Incident(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
     reference: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(255))
-    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[IncidentStatus] = mapped_column(String(20), default=IncidentStatus.OPEN, index=True)
     priority: Mapped[IncidentPriority] = mapped_column(String(10), default=IncidentPriority.P3, index=True)
     assignee_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    closure_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     evidence: Mapped[list] = mapped_column(JSON, default=list)
 
     assignee: Mapped[User | None] = relationship(back_populates="assigned_incidents", foreign_keys=[assignee_id])
     created_by: Mapped[User | None] = relationship(foreign_keys=[created_by_id])
-    notes: Mapped[list["IncidentNote"]] = relationship(back_populates="incident", cascade="all, delete-orphan")
+    events: Mapped[list["IncidentEvent"]] = relationship(back_populates="incident", cascade="all, delete-orphan")
     alert_links: Mapped[list["IncidentAlertLink"]] = relationship(
         back_populates="incident", cascade="all, delete-orphan"
     )
@@ -221,17 +255,19 @@ class Incident(TimestampMixin, Base):
         return [link.alert for link in self.alert_links]
 
 
-class IncidentNote(Base):
-    __tablename__ = "incident_notes"
+class IncidentEvent(Base):
+    __tablename__ = "incident_events"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
     incident_id: Mapped[str] = mapped_column(ForeignKey("incidents.id", ondelete="CASCADE"), index=True)
     author_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(50), default="note", index=True)
     body: Mapped[str] = mapped_column(Text)
-    is_timeline_event: Mapped[bool] = mapped_column(Boolean, default=False)
+    event_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    is_timeline_event: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
-    incident: Mapped[Incident] = relationship(back_populates="notes")
+    incident: Mapped[Incident] = relationship(back_populates="events")
     author: Mapped[User | None] = relationship()
 
 
@@ -253,7 +289,7 @@ class LogEntry(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
     source: Mapped[str] = mapped_column(String(50), index=True)
     level: Mapped[str] = mapped_column(String(50))
-    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     message: Mapped[str] = mapped_column(Text)
     event_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     asset_id: Mapped[str | None] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -273,9 +309,9 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
-    actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(255), index=True)
-    entity_type: Mapped[str] = mapped_column(String(100))
+    entity_type: Mapped[str] = mapped_column(String(100), index=True)
     entity_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     details: Mapped[dict] = mapped_column(JSON, default=dict)
     ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -284,8 +320,8 @@ class AuditLog(Base):
     actor: Mapped[User | None] = relationship()
 
 
-class ModelMetadata(Base):
-    __tablename__ = "model_metadata"
+class RiskModelMetadata(Base):
+    __tablename__ = "risk_model_metadata"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_id)
     model_name: Mapped[str] = mapped_column(String(100))
@@ -294,6 +330,7 @@ class ModelMetadata(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     metrics: Mapped[dict] = mapped_column(JSON, default=dict)
     feature_names: Mapped[list] = mapped_column(JSON, default=list)
+    training_parameters: Mapped[dict] = mapped_column(JSON, default=dict)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
@@ -312,3 +349,8 @@ class JobRecord(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     requested_by: Mapped[User | None] = relationship()
+
+
+# Compatibility aliases used by the existing service and test code.
+IncidentNote = IncidentEvent
+ModelMetadata = RiskModelMetadata

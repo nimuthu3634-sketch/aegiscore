@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 
 from app.models.entities import AlertSeverity
@@ -43,6 +44,16 @@ def _as_iterable(payload: Any, key: str | None = None) -> Iterable:
     return []
 
 
+def _parse_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    normalized = value.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
 def parse_telemetry(source: str, raw_bytes: bytes) -> list[dict[str, Any]]:
     payload = _load_payload(raw_bytes)
     source = source.lower()
@@ -53,7 +64,10 @@ def parse_telemetry(source: str, raw_bytes: bytes) -> list[dict[str, Any]]:
                 "title": item.get("rule", {}).get("description", "Wazuh alert"),
                 "description": item.get("full_log") or "Imported Wazuh defensive telemetry",
                 "source": "wazuh",
+                "source_type": "endpoint-telemetry",
+                "event_type": "wazuh-rule",
                 "severity": _severity_from_wazuh(item.get("rule", {}).get("level")).value,
+                "occurred_at": _parse_timestamp(item.get("timestamp")),
                 "asset_hostname": item.get("agent", {}).get("name") or "unknown-host",
                 "asset_ip": item.get("data", {}).get("srcip"),
                 "tags": item.get("rule", {}).get("groups", []),
@@ -78,7 +92,10 @@ def parse_telemetry(source: str, raw_bytes: bytes) -> list[dict[str, Any]]:
                 "title": item.get("alert", {}).get("signature", "Suricata alert"),
                 "description": item.get("alert", {}).get("category", "Imported Suricata network alert"),
                 "source": "suricata",
+                "source_type": "network-telemetry",
+                "event_type": item.get("event_type", "suricata-alert"),
                 "severity": _severity_from_suricata(item.get("alert", {}).get("severity")).value,
+                "occurred_at": _parse_timestamp(item.get("timestamp")),
                 "asset_hostname": item.get("dest_ip") or "network-target",
                 "asset_ip": item.get("dest_ip"),
                 "tags": [item.get("event_type", "alert"), item.get("proto", "unknown"), item.get("sensor_name", "sensor")],
@@ -117,7 +134,10 @@ def parse_telemetry(source: str, raw_bytes: bytes) -> list[dict[str, Any]]:
                         "scan_notes", "Imported lab-safe Nmap result. No scan execution performed by AegisCore."
                     ),
                     "source": "nmap",
+                    "source_type": "lab-import",
+                    "event_type": "nmap-import",
                     "severity": severity.value,
+                    "occurred_at": None,
                     "asset_hostname": item.get("host", "unknown-host"),
                     "asset_ip": None,
                     "tags": item.get("service_names", []),
@@ -149,7 +169,10 @@ def parse_telemetry(source: str, raw_bytes: bytes) -> list[dict[str, Any]]:
                         "notes", "Imported lab-safe Hydra output. No execution performed by AegisCore."
                     ),
                     "source": "hydra",
+                    "source_type": "lab-import",
+                    "event_type": "hydra-import",
                     "severity": severity.value,
+                    "occurred_at": None,
                     "asset_hostname": item.get("target_system", "unknown-target"),
                     "asset_ip": None,
                     "tags": [item.get("protocol", "protocol")],

@@ -196,6 +196,7 @@ def train_model(db: Session, version: str) -> ModelMetadata:
         version=version,
         metrics=metrics,
         feature_names=FEATURE_NAMES,
+        training_parameters={"test_size": 0.3, "random_state": 42, "model": "LogisticRegression"},
         notes="Logistic regression prioritizer trained from defensive alert history.",
         is_active=True,
     )

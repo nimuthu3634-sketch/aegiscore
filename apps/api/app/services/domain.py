@@ -18,13 +18,14 @@ from app.models.entities import (
     Asset,
     Incident,
     IncidentAlertLink,
-    IncidentNote,
+    IncidentEvent,
     IncidentPriority,
     IncidentStatus,
     Integration,
     IntegrationHealth,
     IntegrationRun,
     LogEntry,
+    ResponseRecommendation,
     User,
 )
 from app.schemas.domain import DashboardActivityItem, DashboardKpi, DashboardSummary, DashboardTrendPoint
@@ -87,6 +88,40 @@ def _refresh_asset_risk(asset: Asset | None) -> None:
     asset.risk_summary = f"{len(open_alerts)} active alerts across endpoint and telemetry sources."
 
 
+def _build_recommendations(source: str, severity: str, tags: list[str]) -> list[dict[str, str | int | None]]:
+    source_lower = source.lower()
+    tags_text = " ".join(tags).lower()
+    items = [
+        {
+            "title": "Validate telemetry context",
+            "description": "Confirm the source event, asset identity, and surrounding log context before triage.",
+            "priority": 1,
+        },
+        {
+            "title": "Assign analyst ownership",
+            "description": "Capture owner, triage notes, and escalation decision inside the alert record.",
+            "priority": 2,
+        },
+    ]
+    if source_lower in {"wazuh", "suricata"}:
+        items.append(
+            {
+                "title": "Review supporting defensive telemetry",
+                "description": "Correlate the imported signal with other endpoint or network logs from the same period.",
+                "priority": 3,
+            }
+        )
+    if severity in {AlertSeverity.CRITICAL.value, AlertSeverity.HIGH.value} or "credential" in tags_text or "auth" in tags_text:
+        items.append(
+            {
+                "title": "Escalate to incident if confirmed",
+                "description": "Create an incident when the signal indicates repeated control failure or active compromise risk.",
+                "priority": 4,
+            }
+        )
+    return items
+
+
 async def broadcast_alert_event(alert: Alert, event: str) -> None:
     await manager.broadcast(
         "alerts",
@@ -97,6 +132,7 @@ async def broadcast_alert_event(alert: Alert, event: str) -> None:
             "severity": alert.severity,
             "status": alert.status,
             "risk_score": alert.risk_score,
+            "occurred_at": alert.occurred_at.isoformat(),
             "detected_at": alert.detected_at.isoformat(),
         },
     )
@@ -117,6 +153,9 @@ def create_alert(
     actor: User | None,
     ip_address: str | None,
     integration: Integration | None = None,
+    source_type: str = "telemetry",
+    event_type: str | None = None,
+    occurred_at: datetime | None = None,
 ) -> Alert:
     asset = ensure_asset(db, hostname=asset_hostname or "unknown-asset", ip_address=asset_ip) if asset_hostname else None
     open_asset_alerts = (
@@ -133,16 +172,17 @@ def create_alert(
             "open_asset_alerts": open_asset_alerts,
         }
     )
-    recommendations = [
-        "Validate source telemetry and confirm the affected asset context.",
-        "Assign ownership and document triage findings.",
-        "Escalate to an incident when control failure or repeated activity is confirmed.",
-    ]
+    recommendation_items = _build_recommendations(source, severity, tags)
+    explanation_summary = (
+        f"Prioritized as {risk_label} risk based on severity, asset criticality, alert density, and signal context."
+    )
 
     alert = Alert(
         title=title,
         description=description,
         source=source,
+        source_type=source_type,
+        event_type=event_type,
         severity=severity,
         tags=tags,
         raw_payload=raw_payload,
@@ -151,11 +191,24 @@ def create_alert(
         integration=integration,
         risk_score=risk_score,
         explainability=explainability,
+        explanation_summary=explanation_summary,
         risk_label=risk_label,
-        recommendations=recommendations,
+        recommendations=[str(item["title"]) for item in recommendation_items],
+        occurred_at=occurred_at or datetime.now(timezone.utc),
     )
     db.add(alert)
     db.flush()
+
+    for item in recommendation_items:
+        db.add(
+            ResponseRecommendation(
+                alert_id=alert.id,
+                title=str(item["title"]),
+                description=str(item["description"]) if item["description"] else None,
+                priority=int(item["priority"]),
+            )
+        )
+
     _refresh_asset_risk(asset)
     db.commit()
     db.refresh(alert)
@@ -166,7 +219,7 @@ def create_alert(
         action="alert.created",
         entity_type="alert",
         entity_id=alert.id,
-        details={"source": source, "severity": severity, "title": title},
+        details={"source": source, "severity": severity, "source_type": source_type, "event_type": event_type},
         ip_address=ip_address,
     )
     return alert
@@ -215,7 +268,7 @@ def create_incident(
     db: Session,
     *,
     title: str,
-    summary: str | None,
+    description: str | None,
     priority: IncidentPriority,
     assignee_id: str | None,
     linked_alert_ids: list[str],
@@ -227,7 +280,7 @@ def create_incident(
     incident = Incident(
         reference=f"INC-{datetime.now(timezone.utc):%Y%m%d}-{total_incidents + 1:04d}",
         title=title,
-        summary=summary,
+        description=description,
         priority=priority,
         assignee_id=assignee_id,
         created_by_id=actor.id,
@@ -243,13 +296,15 @@ def create_incident(
         db.add(IncidentAlertLink(incident_id=incident.id, alert_id=alert.id))
         alert.status = AlertStatus.INVESTIGATING
 
-    note = IncidentNote(
+    event = IncidentEvent(
         incident_id=incident.id,
         author_id=actor.id,
+        event_type="status-change",
         body="Incident created and triage initiated.",
+        event_metadata={"status": IncidentStatus.OPEN.value},
         is_timeline_event=True,
     )
-    db.add(note)
+    db.add(event)
     db.commit()
     db.refresh(incident)
 
@@ -265,24 +320,42 @@ def create_incident(
     return incident
 
 
-def add_incident_note(db: Session, *, incident: Incident, actor: User, body: str, is_timeline_event: bool, ip_address: str | None) -> IncidentNote:
-    note = IncidentNote(incident_id=incident.id, author_id=actor.id, body=body, is_timeline_event=is_timeline_event)
-    db.add(note)
+def add_incident_note(
+    db: Session,
+    *,
+    incident: Incident,
+    actor: User,
+    body: str,
+    is_timeline_event: bool,
+    ip_address: str | None,
+    event_type: str = "note",
+    event_metadata: dict | None = None,
+) -> IncidentEvent:
+    event = IncidentEvent(
+        incident_id=incident.id,
+        author_id=actor.id,
+        body=body,
+        event_type=event_type,
+        event_metadata=event_metadata or {},
+        is_timeline_event=is_timeline_event,
+    )
+    db.add(event)
     db.commit()
-    db.refresh(note)
+    db.refresh(event)
     record_audit(
         db,
         actor=actor,
-        action="incident.note_added",
+        action="incident.event_added",
         entity_type="incident",
         entity_id=incident.id,
-        details={"timeline": is_timeline_event},
+        details={"timeline": is_timeline_event, "event_type": event_type},
         ip_address=ip_address,
     )
-    return note
+    return event
 
 
 def update_incident(db: Session, incident: Incident, payload: dict, actor: User, ip_address: str | None) -> Incident:
+    previous_status = incident.status
     for field, value in payload.items():
         if value is None:
             continue
@@ -291,6 +364,19 @@ def update_incident(db: Session, incident: Incident, payload: dict, actor: User,
         incident.resolved_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(incident)
+    if previous_status != incident.status:
+        db.add(
+            IncidentEvent(
+                incident_id=incident.id,
+                author_id=actor.id,
+                event_type="status-change",
+                body=f"Incident status changed from {previous_status} to {incident.status}.",
+                event_metadata={"from": previous_status, "to": incident.status},
+                is_timeline_event=True,
+            )
+        )
+        db.commit()
+
     record_audit(
         db,
         actor=actor,
@@ -347,6 +433,8 @@ def import_telemetry(
             title=record["title"],
             description=record["description"],
             source=source,
+            source_type=record.get("source_type", "telemetry"),
+            event_type=record.get("event_type"),
             severity=record["severity"],
             tags=record["tags"],
             raw_payload=record["raw_payload"],
@@ -356,6 +444,7 @@ def import_telemetry(
             actor=actor,
             ip_address=ip_address,
             integration=integration,
+            occurred_at=record.get("occurred_at"),
         )
         alerts_created += 1
         incident_candidates += 1 if record["incident_candidate"] else 0
@@ -467,13 +556,17 @@ def build_dashboard_summary(db: Session) -> DashboardSummary:
 def render_alerts_csv(alerts: list[Alert]) -> str:
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(["id", "title", "source", "severity", "status", "risk_score", "asset", "detected_at"])
+    writer.writerow(
+        ["id", "title", "source", "source_type", "event_type", "severity", "status", "risk_score", "asset", "detected_at"]
+    )
     for alert in alerts:
         writer.writerow(
             [
                 alert.id,
                 alert.title,
                 alert.source,
+                alert.source_type,
+                alert.event_type or "",
                 alert.severity,
                 alert.status,
                 alert.risk_score,
@@ -498,14 +591,15 @@ def render_dashboard_csv(summary: DashboardSummary) -> str:
 
 def incident_summary_text(incident: Incident) -> str:
     linked_alerts = ", ".join(link.alert.title for link in incident.alert_links) or "None"
-    notes = "\n".join(f"- {note.created_at:%Y-%m-%d %H:%M}: {note.body}" for note in incident.notes) or "- No notes"
+    events = "\n".join(f"- {event.created_at:%Y-%m-%d %H:%M}: {event.body}" for event in incident.events) or "- No events"
     return (
         f"{incident.reference}\n"
         f"Title: {incident.title}\n"
         f"Status: {incident.status}\n"
         f"Priority: {incident.priority}\n"
         f"Opened: {incident.opened_at.isoformat()}\n"
-        f"Summary: {incident.summary or 'N/A'}\n"
+        f"Description: {incident.description or 'N/A'}\n"
+        f"Resolution notes: {incident.resolution_notes or 'N/A'}\n"
         f"Linked alerts: {linked_alerts}\n"
-        f"Notes:\n{notes}\n"
+        f"Timeline:\n{events}\n"
     )
