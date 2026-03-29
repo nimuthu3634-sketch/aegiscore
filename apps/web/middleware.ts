@@ -9,6 +9,7 @@ const protectedPaths = [
   "/assets",
   "/integrations",
   "/ai",
+  "/analytics",
   "/reports",
   "/settings",
   "/admin",

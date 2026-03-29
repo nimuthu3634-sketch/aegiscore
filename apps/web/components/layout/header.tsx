@@ -64,7 +64,8 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           <div className="rounded-full border bg-white px-4 py-2 text-sm">
             <p className="font-semibold text-[#111111]">{user?.full_name ?? "Loading user"}</p>
             <p className="text-[#6f6f6f]">
-              {user?.role ?? "Unknown"} {user?.last_login_at ? `· last login ${formatDate(user.last_login_at)}` : ""}
+              {user?.role ?? "Unknown"}
+              {user?.last_login_at ? ` | last login ${formatDate(user.last_login_at)}` : ""}
             </p>
           </div>
 

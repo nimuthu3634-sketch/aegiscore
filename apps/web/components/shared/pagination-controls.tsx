@@ -18,7 +18,7 @@ export function PaginationControls({
   return (
     <div className="flex flex-col gap-3 rounded-2xl border bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-[#6f6f6f]">
-        Page {page} of {totalPages} · {total} records
+        Page {page} of {totalPages} | {total} records
       </p>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>

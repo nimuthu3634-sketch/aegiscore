@@ -1,113 +1,210 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { ShieldCheck } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
-import { AppShell } from "@/components/layout/app-shell";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { ErrorState } from "@/components/feedback/error-state";
+import { LoadingState } from "@/components/feedback/loading-state";
+import { FormField } from "@/components/forms/form-field";
+import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, createQueryString } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import type { Integration, PageResult } from "@/types/domain";
+import { canManageOperations } from "@/lib/permissions";
+import { useAuth } from "@/hooks/use-auth";
+import type { ImportResult, Integration, PageResult } from "@/types/domain";
 
-type ImportResult = {
+type ImportValues = {
   integration: string;
-  run_id: string;
-  alerts_created: number;
-  logs_created: number;
-  assets_touched: number;
-  incident_candidates: number;
+  file?: File;
 };
 
-export default function IntegrationsPage() {
-  const [selectedIntegration, setSelectedIntegration] = useState("wazuh");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const queryClient = useQueryClient();
+const importSchema = z
+  .object({
+    integration: z.string().min(1, "Select an integration."),
+    file: z.instanceof(File, { message: "Choose a file to import." }).optional(),
+  })
+  .refine((values) => values.file instanceof File, {
+    path: ["file"],
+    message: "Choose a file to import.",
+  });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["integrations"],
-    queryFn: () => api.get<PageResult<Integration>>("/integrations"),
+export default function IntegrationsPage() {
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useAuth();
+  const canImport = canManageOperations(currentUser?.role);
+
+  const form = useForm<ImportValues>({
+    resolver: zodResolver(importSchema),
+    defaultValues: { integration: "wazuh", file: undefined },
+  });
+
+  const selectedIntegration = form.watch("integration");
+
+  const query = useQuery({
+    queryKey: ["integrations", "list"],
+    queryFn: () => api.get<PageResult<Integration>>(`/integrations${createQueryString({ page: 1, page_size: 12 })}`),
   });
 
   const importMutation = useMutation({
-    mutationFn: () => {
-      if (!selectedFile) {
-        throw new Error("Select a file to import");
+    mutationFn: async (values: ImportValues) => {
+      if (!values.file) {
+        throw new Error("Choose a file to import.");
       }
-      return api.upload<ImportResult>(`/integrations/${selectedIntegration}/import`, selectedFile);
+      return api.upload<ImportResult>(`/integrations/${values.integration}/import`, values.file);
     },
     onSuccess: () => {
-      setSelectedFile(null);
+      form.reset({ integration: selectedIntegration, file: undefined });
       queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["logs"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });
 
+  if (query.isLoading) {
+    return <LoadingState lines={7} />;
+  }
+
+  if (query.isError || !query.data) {
+    return <ErrorState description={query.error instanceof Error ? query.error.message : "Integrations could not be loaded."} onRetry={() => query.refetch()} />;
+  }
+
   return (
-    <AppShell title="Integrations">
-      <div className="space-y-6">
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Telemetry sources"
+        title="Integrations"
+        description="Monitor connector health, review sync history, and safely import lab-only telemetry files without exposing any scanning or offensive execution workflow."
+        actions={<Badge tone="medium">Defensive telemetry only</Badge>}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Import defensive telemetry</CardTitle>
+            <CardTitle>Import telemetry file</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-[220px_1fr_auto]">
-            <Select value={selectedIntegration} onChange={(event) => setSelectedIntegration(event.target.value)}>
-              <option value="wazuh">Wazuh</option>
-              <option value="suricata">Suricata</option>
-              <option value="nmap">Nmap import</option>
-              <option value="hydra">Hydra import</option>
-            </Select>
-            <input
-              className="rounded-xl border bg-white px-3 py-2 text-sm"
-              type="file"
-              accept=".json"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            />
-            <Button onClick={() => importMutation.mutate()} disabled={!selectedFile || importMutation.isPending}>
-              {importMutation.isPending ? "Importing..." : "Import file"}
-            </Button>
+          <CardContent className="space-y-4">
+            <div className="rounded-[1.25rem] border bg-[#fff7f1] p-4 text-sm leading-6 text-[#8a4e16]">
+              Wazuh and Suricata are treated as defensive telemetry sources. Nmap and Hydra are supported only as lab-safe imported result files and are never executed from the application.
+            </div>
+
+            {canImport ? (
+              <form className="space-y-4" onSubmit={form.handleSubmit((values) => importMutation.mutate(values))}>
+                <FormField label="Integration" error={form.formState.errors.integration?.message}>
+                  <Select {...form.register("integration")}>
+                    <option value="wazuh">Wazuh</option>
+                    <option value="suricata">Suricata</option>
+                    <option value="nmap">Nmap import</option>
+                    <option value="hydra">Hydra import</option>
+                  </Select>
+                </FormField>
+
+                <FormField label="File" error={form.formState.errors.file?.message}>
+                  <input
+                    className="block w-full rounded-xl border bg-white px-3 py-3 text-sm"
+                    type="file"
+                    accept=".json,.log,.ndjson,.txt,.xml"
+                    onChange={(event) => form.setValue("file", event.target.files?.[0] ?? undefined, { shouldValidate: true })}
+                  />
+                </FormField>
+
+                <Button type="submit" disabled={importMutation.isPending}>
+                  {importMutation.isPending ? "Importing telemetry..." : "Import file"}
+                </Button>
+              </form>
+            ) : (
+              <div className="rounded-[1.25rem] border bg-white p-5">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-[#fff4eb] p-3 text-[#FF7A1A]">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[#111111]">Read-only integration access</p>
+                    <p className="mt-1 text-sm text-[#6f6f6f]">
+                      Your current role can review connector health and sync history, but only admins and analysts can import lab files.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {importMutation.data ? (
+              <div className="rounded-[1.25rem] border bg-[#fcfcfc] p-4 text-sm">
+                <p className="font-semibold text-[#111111]">Import complete</p>
+                <p className="mt-2 text-[#5f5f5f]">
+                  {importMutation.data.alerts_created} alerts, {importMutation.data.logs_created} logs, and {importMutation.data.assets_touched} assets updated.
+                </p>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
-        {isLoading || !data ? (
-          <div className="rounded-2xl border bg-white p-8 shadow-panel">Loading integrations...</div>
-        ) : (
-          <div className="grid gap-6 xl:grid-cols-2">
-            {data.items.map((integration) => (
+        <div className="grid gap-6">
+          {query.data.items.length ? (
+            query.data.items.map((integration) => (
               <Card key={integration.id}>
                 <CardHeader>
                   <div>
                     <CardTitle>{integration.name}</CardTitle>
-                    <p className="mt-2 text-sm text-[var(--muted)]">{integration.description}</p>
+                    <p className="mt-2 text-sm leading-6 text-[#6f6f6f]">{integration.description}</p>
                   </div>
                   <Badge tone={integration.health_status}>{integration.health_status}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="rounded-2xl border px-4 py-3 text-sm">
-                    Last synced: {integration.last_synced_at ? formatDate(integration.last_synced_at) : "Never"}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-[1.25rem] border bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[#8f8f8f]">Connector type</p>
+                      <p className="mt-3 font-semibold">{integration.type}</p>
+                    </div>
+                    <div className="rounded-[1.25rem] border bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[#8f8f8f]">Enabled</p>
+                      <p className="mt-3 font-semibold">{integration.enabled ? "Yes" : "No"}</p>
+                    </div>
+                    <div className="rounded-[1.25rem] border bg-white p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[#8f8f8f]">Last sync</p>
+                      <p className="mt-3 font-semibold">{formatDate(integration.last_synced_at)}</p>
+                    </div>
                   </div>
+
                   <div className="space-y-3">
-                    {integration.runs.slice(0, 3).map((run) => (
-                      <div key={run.id} className="rounded-2xl border px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold">{run.source_filename ?? "Manual import"}</p>
-                          <Badge tone={run.status === "completed" ? "healthy" : run.status === "running" ? "medium" : "critical"}>
-                            {run.status}
-                          </Badge>
+                    <p className="text-sm font-semibold text-[#111111]">Recent sync history</p>
+                    {integration.runs.length ? (
+                      integration.runs.slice(0, 4).map((run) => (
+                        <div key={run.id} className="rounded-[1.25rem] border bg-white p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-[#111111]">{run.source_filename ?? "Manual import"}</p>
+                              <p className="mt-1 text-sm text-[#6f6f6f]">
+                                {run.records_ingested} records | started {formatDate(run.started_at)}
+                              </p>
+                            </div>
+                            <Badge tone={run.status === "completed" ? "healthy" : run.status === "running" ? "medium" : "critical"}>{run.status}</Badge>
+                          </div>
                         </div>
-                        <p className="mt-2 text-sm text-[var(--muted)]">
-                          {run.records_ingested} records • {formatDate(run.started_at)}
-                        </p>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-sm text-[#6f6f6f]">No sync history recorded yet.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            ))
+          ) : (
+            <EmptyState
+              title="No integrations found"
+              description="Connector health cards will appear here once telemetry sources have been initialized in the backend."
+            />
+          )}
+        </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

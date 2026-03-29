@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
 
 import { getToken } from "@/lib/auth";
 import { appConfig } from "@/lib/config";
@@ -19,6 +20,7 @@ const RealtimeContext = createContext<RealtimeContextValue>({
 });
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<RealtimeContextValue["status"]>("idle");
   const [lastEvent, setLastEvent] = useState<RealtimePayload>(null);
@@ -27,18 +29,35 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     const token = getToken();
     if (!token) {
       setStatus("idle");
+      setLastEvent(null);
       return;
     }
 
+    let isActive = true;
     setStatus("connecting");
     const socket = new WebSocket(`${appConfig.wsBaseUrl.replace(/^http/, "ws")}/ws/alerts?token=${token}`);
 
-    socket.onopen = () => setStatus("connected");
-    socket.onclose = () => setStatus("disconnected");
-    socket.onerror = () => setStatus("error");
+    socket.onopen = () => {
+      if (isActive) {
+        setStatus("connected");
+      }
+    };
+    socket.onclose = () => {
+      if (isActive) {
+        setStatus("disconnected");
+      }
+    };
+    socket.onerror = () => {
+      if (isActive) {
+        setStatus("error");
+      }
+    };
     socket.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data) as Record<string, unknown>;
+        if (!isActive) {
+          return;
+        }
         setLastEvent(payload);
         queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
         queryClient.invalidateQueries({ queryKey: ["alerts"] });
@@ -52,9 +71,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     };
 
     return () => {
+      isActive = false;
       socket.close();
     };
-  }, [queryClient]);
+  }, [pathname, queryClient]);
 
   const value = useMemo(() => ({ status, lastEvent }), [lastEvent, status]);
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;

@@ -48,7 +48,10 @@ export function truncate(value: string, maxLength = 140) {
   if (value.length <= maxLength) {
     return value;
   }
-  return `${value.slice(0, maxLength - 1)}…`;
+  if (maxLength <= 3) {
+    return value.slice(0, maxLength);
+  }
+  return `${value.slice(0, maxLength - 3)}...`;
 }
 
 export function describeLatency(value?: number | null) {

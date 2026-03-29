@@ -1,89 +1,166 @@
 "use client";
 
+import { type ColumnDef } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useDeferredValue, useState } from "react";
 
-import { AppShell } from "@/components/layout/app-shell";
+import { ErrorState } from "@/components/feedback/error-state";
+import { LoadingState } from "@/components/feedback/loading-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { PaginationControls } from "@/components/shared/pagination-controls";
 import { DataTable } from "@/components/tables/data-table";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, createQueryString } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import type { PageResult } from "@/types/domain";
+import type { LogEntry, PageResult } from "@/types/domain";
 
-type LogEntry = {
-  id: string;
-  source: string;
-  level: string;
-  category?: string | null;
-  message: string;
-  event_timestamp: string;
-  raw_payload: Record<string, unknown>;
-  parsed_payload: Record<string, unknown>;
-  asset?: { hostname: string } | null;
-};
+const columns: ColumnDef<LogEntry>[] = [
+  {
+    accessorKey: "event_timestamp",
+    header: "Timestamp",
+    cell: ({ row }) => formatDate(row.original.event_timestamp),
+  },
+  {
+    accessorKey: "source",
+    header: "Source",
+    cell: ({ row }) => (
+      <div className="space-y-1">
+        <Badge tone="medium">{row.original.source}</Badge>
+        <p className="text-xs text-[#8f8f8f]">{row.original.level}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "asset",
+    header: "Asset",
+    cell: ({ row }) => row.original.asset?.hostname ?? "Unmapped asset",
+  },
+  {
+    accessorKey: "category",
+    header: "Category",
+    cell: ({ row }) => row.original.category ?? "Uncategorized",
+  },
+  {
+    accessorKey: "message",
+    header: "Message",
+    cell: ({ row }) => <span className="max-w-[420px] text-sm text-[#111111]">{row.original.message}</span>,
+  },
+];
 
 export default function LogsPage() {
-  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [source, setSource] = useState("");
-  const { data, isLoading } = useQuery({
-    queryKey: ["logs", query, source],
-    queryFn: () => api.get<PageResult<LogEntry>>(`/logs?q=${encodeURIComponent(query)}&source=${source}`),
+  const [category, setCategory] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [selectedLogId, setSelectedLogId] = useState<string>("");
+  const [payloadTab, setPayloadTab] = useState<"parsed" | "raw">("parsed");
+  const deferredSearch = useDeferredValue(search);
+
+  const query = useQuery({
+    queryKey: ["logs", page, deferredSearch, source, category, start, end],
+    queryFn: () =>
+      api.get<PageResult<LogEntry>>(
+        `/logs${createQueryString({
+          page,
+          page_size: 12,
+          q: deferredSearch,
+          source,
+          category,
+          start: start || undefined,
+          end: end || undefined,
+        })}`,
+      ),
   });
 
+  const selectedLog = query.data?.items.find((entry) => entry.id === selectedLogId) ?? query.data?.items[0] ?? null;
+
   return (
-    <AppShell title="Log Explorer">
-      <div className="space-y-5">
-        <div className="grid gap-4 rounded-2xl border bg-white p-4 shadow-panel md:grid-cols-[1fr_220px]">
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search raw or parsed log content" />
-          <Select value={source} onChange={(event) => setSource(event.target.value)}>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Structured search"
+        title="Logs explorer"
+        description="Search imported telemetry by source, category, date range, and payload representation without losing the raw event context."
+      />
+
+      <Card>
+        <CardContent className="grid gap-3 lg:grid-cols-[1.3fr_repeat(4,minmax(0,1fr))]">
+          <Input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search message or category" />
+          <Select value={source} onChange={(event) => { setPage(1); setSource(event.target.value); }}>
             <option value="">All sources</option>
             <option value="wazuh">Wazuh</option>
             <option value="suricata">Suricata</option>
             <option value="nmap">Nmap import</option>
             <option value="hydra">Hydra import</option>
           </Select>
-        </div>
-        {isLoading || !data ? (
-          <div className="rounded-2xl border bg-white p-8 shadow-panel">Loading logs...</div>
-        ) : (
-          <div className="space-y-4">
-            <DataTable
-              rows={data.items}
-              emptyMessage="No logs matched the current filters."
-              columns={[
-                { key: "time", header: "Time", render: (entry) => formatDate(entry.event_timestamp) },
-                { key: "source", header: "Source", render: (entry) => entry.source },
-                { key: "asset", header: "Asset", render: (entry) => entry.asset?.hostname ?? "Unmapped" },
-                { key: "message", header: "Message", render: (entry) => entry.message },
-              ]}
-            />
-            {data.items.slice(0, 3).map((entry) => (
-              <Card key={entry.id}>
-                <CardContent className="space-y-3 py-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{entry.message}</p>
-                      <p className="text-sm text-[var(--muted)]">
-                        {entry.source} • {entry.category}
+          <Input value={category} onChange={(event) => { setPage(1); setCategory(event.target.value); }} placeholder="Category" />
+          <Input type="datetime-local" value={start} onChange={(event) => { setPage(1); setStart(event.target.value); }} />
+          <Input type="datetime-local" value={end} onChange={(event) => { setPage(1); setEnd(event.target.value); }} />
+        </CardContent>
+      </Card>
+
+      {query.isLoading ? (
+        <LoadingState lines={7} compact />
+      ) : query.isError || !query.data ? (
+        <ErrorState description={query.error instanceof Error ? query.error.message : "Logs could not be loaded."} onRetry={() => query.refetch()} />
+      ) : (
+        <div className="space-y-4">
+          <DataTable
+            columns={columns}
+            rows={query.data.items}
+            emptyTitle="No log entries found"
+            emptyMessage="Try widening the search or import additional telemetry data."
+          />
+
+          {query.data.items.length ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Selected log entry</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {query.data.items.map((entry) => (
+                    <Button key={entry.id} variant={selectedLog?.id === entry.id ? "default" : "outline"} size="sm" onClick={() => setSelectedLogId(entry.id)}>
+                      {formatDate(entry.event_timestamp)}
+                    </Button>
+                  ))}
+                </div>
+
+                {selectedLog ? (
+                  <>
+                    <div className="rounded-[1.25rem] border bg-[#fcfcfc] p-4">
+                      <p className="font-semibold text-[#111111]">{selectedLog.message}</p>
+                      <p className="mt-2 text-sm text-[#6f6f6f]">
+                        {selectedLog.source} / {selectedLog.category ?? "uncategorized"} / {selectedLog.asset?.hostname ?? "unmapped"}
                       </p>
                     </div>
-                  </div>
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <pre className="overflow-x-auto rounded-2xl border bg-[#111111] p-4 text-xs text-white">
-                      {JSON.stringify(entry.parsed_payload, null, 2)}
+
+                    <div className="flex items-center gap-2">
+                      <Button variant={payloadTab === "parsed" ? "default" : "outline"} size="sm" onClick={() => setPayloadTab("parsed")}>
+                        Parsed view
+                      </Button>
+                      <Button variant={payloadTab === "raw" ? "default" : "outline"} size="sm" onClick={() => setPayloadTab("raw")}>
+                        Raw view
+                      </Button>
+                    </div>
+
+                    <pre className="overflow-x-auto rounded-[1.5rem] border bg-[#111111] p-5 text-xs leading-6 text-white">
+                      {JSON.stringify(payloadTab === "parsed" ? selectedLog.parsed_payload : selectedLog.raw_payload, null, 2)}
                     </pre>
-                    <pre className="overflow-x-auto rounded-2xl border bg-[#f8fafc] p-4 text-xs">
-                      {JSON.stringify(entry.raw_payload, null, 2)}
-                    </pre>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </AppShell>
+                  </>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <PaginationControls page={query.data.page} pageSize={query.data.page_size} total={query.data.total} onPageChange={setPage} />
+        </div>
+      )}
+    </div>
   );
 }

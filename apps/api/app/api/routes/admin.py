@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_optional_ip, require_roles
+from app.api.deps import get_current_user, get_optional_ip, require_roles
 from app.core.security import hash_password
 from app.db.session import get_db
 from app.models.entities import AuditLog, JobRecord, User, UserRole
@@ -21,7 +21,7 @@ def list_users(
     is_active: bool | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    _: User = Depends(require_roles(UserRole.ADMIN)),
+    _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> UserListResponse:
     query = db.query(User).options(joinedload(User.role_ref))

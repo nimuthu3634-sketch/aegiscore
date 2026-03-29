@@ -27,3 +27,12 @@ def test_admin_can_create_user(client, admin_token):
 
     assert response.status_code == 201
     assert response.json()["email"] == "new-analyst@example.com"
+
+
+def test_authenticated_user_can_list_users(client, analyst_token):
+    response = client.get("/api/v1/users", headers={"Authorization": f"Bearer {analyst_token}"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] >= 3
+    assert any(user["email"] == "admin@example.com" for user in payload["items"])
