@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
-API_BASE = "http://localhost:8000/api/v1"
+API_BASE = os.getenv("AEGISCORE_API_BASE_URL", "http://localhost:8080/api/v1")
 
 FILES = {
     "wazuh": DOCS / "sample-wazuh-alerts.json",

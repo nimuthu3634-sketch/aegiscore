@@ -6,6 +6,13 @@ on:
       - main
       - "codex/**"
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_smoke:
+        description: "Run the Docker Compose smoke test"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   backend:
@@ -25,7 +32,7 @@ jobs:
 
       - name: Run backend tests
         working-directory: apps/api
-        run: pytest
+        run: pytest tests
 
   frontend:
     runs-on: ubuntu-latest
@@ -41,7 +48,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: apps/web
-        run: npm install
+        run: npm ci
 
       - name: Run frontend lint
         working-directory: apps/web
@@ -54,3 +61,29 @@ jobs:
       - name: Build frontend
         working-directory: apps/web
         run: npm run build
+
+  smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Start stack
+        run: docker compose up --build -d
+
+      - name: Run smoke checks
+        run: python scripts/smoke_test.py http://localhost:8080
+
+      - name: Show compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v --remove-orphans
