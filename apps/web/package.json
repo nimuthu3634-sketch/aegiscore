@@ -14,16 +14,20 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-slot": "^1.1.2",
     "@tanstack/react-query": "^5.68.0",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.487.0",
     "next": "^15.2.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-hook-form": "^7.56.4",
     "recharts": "^2.15.1",
-    "tailwind-merge": "^3.2.0"
+    "tailwind-merge": "^3.2.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",

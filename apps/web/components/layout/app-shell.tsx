@@ -1,18 +1,19 @@
 "use client";
 
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
-import { useAlertStream } from "@/hooks/use-alert-stream";
+import { useState } from "react";
 
-export function AppShell({ title, children }: { title: string; children: React.ReactNode }) {
-  const lastEvent = useAlertStream();
+import { Header } from "@/components/layout/header";
+import { Sidebar } from "@/components/layout/sidebar";
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen lg:flex">
-      <Sidebar />
-      <div className="flex min-h-screen flex-1 flex-col">
-        <Header title={title} lastRealtimeEvent={lastEvent} />
-        <main className="flex-1 px-4 py-6 lg:px-6">{children}</main>
+    <div className="min-h-screen bg-[var(--background)] lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
+      <Sidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
+      <div className="min-h-screen">
+        <Header onToggleSidebar={() => setMobileOpen((value) => !value)} />
+        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

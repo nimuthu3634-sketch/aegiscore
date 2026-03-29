@@ -23,6 +23,10 @@ export function getToken() {
   return cookie?.split("=")[1] ?? "";
 }
 
+export function hasToken() {
+  return Boolean(getToken());
+}
+
 export function getStoredUser(): User | null {
   if (typeof window === "undefined") {
     return null;

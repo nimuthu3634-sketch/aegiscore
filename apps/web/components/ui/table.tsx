@@ -5,7 +5,7 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
 }
 
 export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("bg-[#fff4eb]", className)} {...props} />;
+  return <thead className={cn("bg-[#fff7f1]", className)} {...props} />;
 }
 
 export function TBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
