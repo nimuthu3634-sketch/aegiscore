@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["dom", "dom.iterable", "es2022"],
@@ -15,7 +16,9 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@aegiscore/config": ["../../packages/config/src/index.ts"],
+      "@aegiscore/ui": ["../../packages/ui/src/index.tsx"]
     },
     "plugins": [{ "name": "next" }]
   },

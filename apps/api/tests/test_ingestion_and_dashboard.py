@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_wazuh_import_updates_dashboard(client, admin_token):
-    sample = Path(__file__).resolve().parents[2] / "docs" / "sample-wazuh-alerts.json"
+    sample = Path(__file__).resolve().parents[3] / "docs" / "sample-wazuh-alerts.json"
     with sample.open("rb") as handle:
         response = client.post(
             "/api/v1/integrations/wazuh/import",

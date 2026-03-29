@@ -1,0 +1,12 @@
+{
+  "name": "aegiscore-monorepo",
+  "private": true,
+  "scripts": {
+    "web:dev": "npm --prefix apps/web run dev",
+    "web:build": "npm --prefix apps/web run build",
+    "web:test": "npm --prefix apps/web run test",
+    "web:lint": "npm --prefix apps/web run lint",
+    "web:format": "npm --prefix apps/web run format",
+    "api:test": ".\\.venv\\Scripts\\python.exe -m pytest apps/api/tests"
+  }
+}

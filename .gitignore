@@ -11,18 +11,21 @@ htmlcov
 __pycache__/
 *.py[cod]
 *.log
+node_modules/
 
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/playwright-report/
-frontend/test-results/
-frontend/coverage/
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/coverage/
 
-backend/.venv/
-backend/.pytest_cache/
-backend/.mypy_cache/
-backend/htmlcov/
+apps/api/.venv/
+apps/api/.pytest_cache/
+apps/api/.mypy_cache/
+apps/api/htmlcov/
+apps/api/__pycache__/
+apps/api/test_aegiscore.db
 
 data/runtime/
 data/imports/**/*.json

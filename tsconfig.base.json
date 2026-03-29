@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@aegiscore/config": ["packages/config/src/index.ts"],
+      "@aegiscore/config/*": ["packages/config/src/*"],
+      "@aegiscore/ui": ["packages/ui/src/index.ts"],
+      "@aegiscore/ui/*": ["packages/ui/src/*"]
+    }
+  }
+}

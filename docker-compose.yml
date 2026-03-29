@@ -10,7 +10,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./infra/docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aegiscore} -d ${POSTGRES_DB:-aegiscore}"]
       interval: 10s
@@ -28,40 +28,39 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: aegiscore-backend
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: aegiscore-api
     env_file:
       - .env
-      - backend/.env.example
+      - apps/api/.env.example
     environment:
       APP_ENV: development
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
       REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://localhost:${NGINX_PORT:-8080}
+      CORS_ORIGINS: http://localhost:${WEB_PORT:-3000},http://localhost:${NGINX_PORT:-8080}
+    ports:
+      - "${API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ./backend:/app
+      - ./apps/api:/workspace/apps/api
       - ./docs:/workspace/docs:ro
       - ./data:/workspace/data
 
   worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/worker/Dockerfile
     container_name: aegiscore-worker
-    command: ["python", "-m", "app.workers.tasks"]
     env_file:
       - .env
-      - backend/.env.example
+      - apps/api/.env.example
     environment:
       APP_ENV: development
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
@@ -72,41 +71,42 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - ./docs:/workspace/docs:ro
-      - ./data:/workspace/data
+      - ./apps/api:/workspace/apps/api
+      - ./apps/worker:/workspace/apps/worker
 
-  frontend:
+  web:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: aegiscore-frontend
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: aegiscore-web
     env_file:
       - .env
-      - frontend/.env.example
+      - apps/web/.env.example
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://backend:8000/api/v1
-      NEXT_PUBLIC_WS_BASE_URL: ws://backend:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:${NGINX_PORT:-8080}/api/v1
+      NEXT_PUBLIC_WS_BASE_URL: ws://localhost:${NGINX_PORT:-8080}
     depends_on:
-      backend:
+      api:
         condition: service_started
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "${WEB_PORT:-3000}:3000"
     volumes:
-      - ./frontend:/app
+      - ./apps/web:/workspace/apps/web
+      - ./packages:/workspace/packages
+      - ./tsconfig.base.json:/workspace/tsconfig.base.json
 
   nginx:
     image: nginx:1.27-alpine
     container_name: aegiscore-nginx
     depends_on:
-      frontend:
+      web:
         condition: service_started
-      backend:
+      api:
         condition: service_started
     ports:
       - "${NGINX_PORT:-8080}:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   postgres_data:
