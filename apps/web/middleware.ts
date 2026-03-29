@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { AUTH_ROLE_COOKIE, AUTH_TOKEN_COOKIE } from "@/lib/session";
+
 const protectedPaths = [
   "/dashboard",
   "/alerts",
@@ -17,14 +19,20 @@ const protectedPaths = [
 ];
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("auth_token")?.value;
-  const isProtected = protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path));
+  const pathname = request.nextUrl.pathname;
+  const token = request.cookies.get(AUTH_TOKEN_COOKIE)?.value;
+  const role = request.cookies.get(AUTH_ROLE_COOKIE)?.value;
+  const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
 
   if (isProtected && !token) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (request.nextUrl.pathname.startsWith("/login") && token) {
+  if (pathname.startsWith("/admin") && token && role !== "Admin") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (pathname.startsWith("/login") && token) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

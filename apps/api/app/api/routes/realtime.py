@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.core.config import get_settings
+from app.core.rate_limit import rate_limiter
 from app.core.security import decode_access_token
 from app.db.session import SessionLocal
 from app.models.entities import User
@@ -12,7 +14,24 @@ router = APIRouter()
 
 @router.websocket("/ws/alerts")
 async def alerts_socket(websocket: WebSocket) -> None:
-    token = websocket.query_params.get("token")
+    settings = get_settings()
+    ip_address = (
+        websocket.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or websocket.headers.get("x-real-ip")
+        or (websocket.client.host if websocket.client else None)
+        or "unknown"
+    )
+    retry_after = rate_limiter.hit(
+        "websocket-alerts",
+        ip_address,
+        limit=settings.websocket_rate_limit_attempts,
+        window_seconds=settings.websocket_rate_limit_window_seconds,
+    )
+    if retry_after is not None:
+        await websocket.close(code=4408, reason="Rate limit exceeded")
+        return
+
+    token = websocket.cookies.get(settings.auth_cookie_name) or websocket.query_params.get("token")
     if not token:
         await websocket.close(code=4401)
         return

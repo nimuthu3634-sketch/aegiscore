@@ -21,7 +21,7 @@ def list_users(
     is_active: bool | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
     db: Session = Depends(get_db),
 ) -> UserListResponse:
     query = db.query(User).options(joinedload(User.role_ref))

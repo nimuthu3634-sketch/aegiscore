@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select";
 import { api, createQueryString } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { canManageOperations } from "@/lib/permissions";
+import { maxUploadBytes, validateImportFile } from "@/lib/validation";
 import { useAuth } from "@/hooks/use-auth";
 import type { ImportResult, Integration, PageResult } from "@/types/domain";
 
@@ -58,6 +59,8 @@ export default function IntegrationsPage() {
       if (!values.file) {
         throw new Error("Choose a file to import.");
       }
+      const selectedConfig = query.data?.items.find((integration) => integration.slug === values.integration);
+      validateImportFile(values.file, selectedConfig);
       return api.upload<ImportResult>(`/integrations/${values.integration}/import`, values.file);
     },
     onSuccess: () => {
@@ -76,6 +79,10 @@ export default function IntegrationsPage() {
   if (query.isError || !query.data) {
     return <ErrorState description={query.error instanceof Error ? query.error.message : "Integrations could not be loaded."} onRetry={() => query.refetch()} />;
   }
+
+  const selectedIntegrationConfig = query.data.items.find((integration) => integration.slug === selectedIntegration);
+  const acceptedFormats = selectedIntegrationConfig?.supported_formats ?? ["json"];
+  const acceptValue = acceptedFormats.map((format) => `.${format}`).join(",");
 
   return (
     <div className="space-y-6">
@@ -111,10 +118,14 @@ export default function IntegrationsPage() {
                   <input
                     className="block w-full rounded-xl border bg-white px-3 py-3 text-sm"
                     type="file"
-                    accept=".json,.log,.ndjson,.txt,.xml"
+                    accept={acceptValue}
                     onChange={(event) => form.setValue("file", event.target.files?.[0] ?? undefined, { shouldValidate: true })}
                   />
                 </FormField>
+
+                <p className="text-xs leading-5 text-[#7a7a7a]">
+                  Accepted formats: {acceptedFormats.map((format) => `.${format}`).join(", ")}. Maximum size: {maxUploadBytes / (1024 * 1024)} MB.
+                </p>
 
                 <Button type="submit" disabled={importMutation.isPending}>
                   {importMutation.isPending ? "Importing telemetry..." : "Import file"}
@@ -143,6 +154,10 @@ export default function IntegrationsPage() {
                   {importMutation.data.alerts_created} alerts, {importMutation.data.logs_created} logs, and {importMutation.data.assets_touched} assets updated.
                 </p>
               </div>
+            ) : null}
+
+            {importMutation.error instanceof Error ? (
+              <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700">{importMutation.error.message}</div>
             ) : null}
           </CardContent>
         </Card>

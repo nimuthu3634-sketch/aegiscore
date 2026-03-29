@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import { clearAuthSession, getStoredUser, setStoredUser } from "@/lib/auth";
+import { appConfig } from "@/lib/config";
 import type { User } from "@/types/domain";
 
 export function useAuth() {
@@ -20,9 +21,16 @@ export function useAuth() {
   });
 }
 
-export function signOut() {
-  clearAuthSession();
-  if (typeof window !== "undefined") {
-    window.location.href = "/login";
+export async function signOut() {
+  try {
+    await fetch(`${appConfig.apiBaseUrl}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } finally {
+    clearAuthSession();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
   }
 }

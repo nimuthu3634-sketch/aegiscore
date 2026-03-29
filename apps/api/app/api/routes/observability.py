@@ -7,6 +7,9 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, get_optional_ip, require_roles
+from app.core.config import get_settings
+from app.core.rate_limit import enforce_http_rate_limit, normalize_rate_limit_key
+from app.core.uploads import validate_upload_payload
 from app.db.session import get_db
 from app.models.entities import Alert, Asset, Incident, IncidentAlertLink, IncidentEvent, Integration, IntegrationRun, LogEntry, User, UserRole
 from app.schemas.domain import (
@@ -178,6 +181,13 @@ async def sync_integration_route(
     current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
     db: Session = Depends(get_db),
 ) -> ImportResult:
+    settings = get_settings()
+    enforce_http_rate_limit(
+        "integration-write",
+        normalize_rate_limit_key(ip_address, current_user.id, slug, "sync"),
+        limit=settings.write_rate_limit_attempts,
+        window_seconds=settings.write_rate_limit_window_seconds,
+    )
     summary = await sync_integration(
         db,
         slug=slug,
@@ -208,11 +218,19 @@ async def import_integration(
     current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
     db: Session = Depends(get_db),
 ) -> ImportResult:
+    settings = get_settings()
+    enforce_http_rate_limit(
+        "integration-write",
+        normalize_rate_limit_key(ip_address, current_user.id, slug, "import"),
+        limit=settings.write_rate_limit_attempts,
+        window_seconds=settings.write_rate_limit_window_seconds,
+    )
     content = await file.read()
+    safe_filename, _ = validate_upload_payload(slug, filename=file.filename or f"{slug}-import.json", raw_bytes=content)
     summary = await import_integration_file(
         db,
         slug=slug,
-        filename=file.filename or f"{slug}-import.json",
+        filename=safe_filename,
         raw_bytes=content,
         actor=current_user,
         ip_address=ip_address,

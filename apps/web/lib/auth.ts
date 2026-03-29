@@ -1,30 +1,12 @@
 import type { User } from "@/types/domain";
+import { USER_STORAGE_KEY } from "@/lib/session";
 
-const TOKEN_COOKIE = "auth_token";
-const USER_STORAGE_KEY = "aegiscore_user";
-
-export function setAuthSession(token: string, user: User) {
-  document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=86400; SameSite=Lax`;
+export function setAuthSession(user: User) {
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
 }
 
 export function clearAuthSession() {
-  document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
   localStorage.removeItem(USER_STORAGE_KEY);
-}
-
-export function getToken() {
-  if (typeof document === "undefined") {
-    return "";
-  }
-  const cookie = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${TOKEN_COOKIE}=`));
-  return cookie?.split("=")[1] ?? "";
-}
-
-export function hasToken() {
-  return Boolean(getToken());
 }
 
 export function getStoredUser(): User | null {

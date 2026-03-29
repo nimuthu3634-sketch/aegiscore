@@ -23,14 +23,15 @@ import { Select } from "@/components/ui/select";
 import { api, createQueryString } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { isAdmin } from "@/lib/permissions";
+import { passwordPolicyHint, strongPasswordSchema } from "@/lib/validation";
 import { useAuth } from "@/hooks/use-auth";
 import type { AuditLog, PageResult, Role, User } from "@/types/domain";
 
 const userSchema = z.object({
-  full_name: z.string().min(2, "Full name is required."),
+  full_name: z.string().trim().min(2, "Full name is required."),
   email: z.string().email("Enter a valid email address."),
   role: z.enum(["Admin", "Analyst", "Viewer"]),
-  password: z.string().min(8, "Temporary password must be at least 8 characters."),
+  password: strongPasswordSchema("Temporary password"),
 });
 
 function roleTone(role: Role) {
@@ -253,7 +254,7 @@ export default function AdminPage() {
                     <option value="Viewer">Viewer</option>
                   </Select>
                 </FormField>
-                <FormField label="Temporary password" error={form.formState.errors.password?.message}>
+                <FormField label="Temporary password" hint={passwordPolicyHint} error={form.formState.errors.password?.message}>
                   <Input {...form.register("password")} type="password" placeholder="Password123!" />
                 </FormField>
               </div>

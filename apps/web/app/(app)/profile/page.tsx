@@ -16,15 +16,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { passwordPolicyHint, strongPasswordSchema } from "@/lib/validation";
 import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@/types/domain";
 
 const profileSchema = z.object({
-  full_name: z.string().min(2, "Full name is required."),
-  password: z
-    .string()
-    .optional()
-    .refine((value) => !value || value.length >= 8, "Password must be at least 8 characters."),
+  full_name: z.string().trim().min(2, "Full name is required."),
+  password: strongPasswordSchema("Password").optional().or(z.literal("")),
 });
 
 export default function ProfilePage() {
@@ -122,7 +120,11 @@ export default function ProfilePage() {
               <FormField label="Email address" hint="Read only">
                 <Input value={user.email} disabled />
               </FormField>
-              <FormField label="New password" hint="Leave blank to keep the current password" error={form.formState.errors.password?.message}>
+              <FormField
+                label="New password"
+                hint={`Leave blank to keep the current password. ${passwordPolicyHint}`}
+                error={form.formState.errors.password?.message}
+              >
                 <Input {...form.register("password")} type="password" placeholder="Enter a new password" />
               </FormField>
               <Button type="submit" disabled={mutation.isPending}>

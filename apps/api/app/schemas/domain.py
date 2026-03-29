@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.entities import (
     AlertSeverity,
@@ -18,6 +18,47 @@ from app.models.entities import (
 )
 
 T = TypeVar("T")
+PASSWORD_POLICY_MESSAGE = "Password must include uppercase, lowercase, number, and symbol characters."
+
+
+def validate_password_strength(value: str) -> str:
+    if len(value) < 8:
+        raise ValueError("Password must be at least 8 characters.")
+    if len(value) > 128:
+        raise ValueError("Password must be 128 characters or fewer.")
+    checks = (
+        any(character.islower() for character in value),
+        any(character.isupper() for character in value),
+        any(character.isdigit() for character in value),
+        any(not character.isalnum() for character in value),
+    )
+    if not all(checks):
+        raise ValueError(PASSWORD_POLICY_MESSAGE)
+    return value
+
+
+def normalize_text(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("This field cannot be blank.")
+    return normalized
+
+
+def validate_string_map(values: dict[str, str] | None) -> dict[str, str] | None:
+    if values is None:
+        return None
+    cleaned: dict[str, str] = {}
+    for key, value in values.items():
+        normalized_key = normalize_text(str(key))
+        normalized_value = str(value).strip()
+        if "\n" in normalized_key or "\r" in normalized_key or "\n" in normalized_value or "\r" in normalized_value:
+            raise ValueError("Header and query parameter values must be single-line strings.")
+        if len(normalized_key) > 100:
+            raise ValueError("Configuration keys must be 100 characters or fewer.")
+        if len(normalized_value) > 500:
+            raise ValueError("Configuration values must be 500 characters or fewer.")
+        cleaned[normalized_key] = normalized_value
+    return cleaned
 
 
 class ORMModel(BaseModel):
@@ -39,7 +80,12 @@ class TokenResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: EmailStr) -> str:
+        return str(value).strip().lower()
 
 
 class RoleRead(ORMModel):
@@ -60,21 +106,64 @@ class UserRead(ORMModel):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    full_name: str
+    full_name: str = Field(min_length=2, max_length=255)
     role: UserRole
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: EmailStr) -> str:
+        return str(value).strip().lower()
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str) -> str:
+        return normalize_text(value)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
 
 
 class UserUpdate(BaseModel):
-    full_name: str | None = None
+    full_name: str | None = Field(default=None, min_length=2, max_length=255)
     role: UserRole | None = None
-    password: str | None = Field(default=None, min_length=8)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
     is_active: bool | None = None
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return normalize_text(value)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return validate_password_strength(value)
 
 
 class ProfileUpdate(BaseModel):
-    full_name: str | None = None
-    password: str | None = Field(default=None, min_length=8)
+    full_name: str | None = Field(default=None, min_length=2, max_length=255)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return normalize_text(value)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return validate_password_strength(value)
 
 
 class AuditLogRead(ORMModel):
@@ -294,6 +383,29 @@ class IntegrationConfigUpdate(BaseModel):
     lookback_minutes: int | None = Field(default=None, ge=1, le=1440)
     request_headers: dict[str, str] | None = None
     query_params: dict[str, str] | None = None
+
+    @field_validator("endpoint_url")
+    @classmethod
+    def validate_endpoint_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized.startswith(("http://", "https://")):
+            raise ValueError("Endpoint URL must start with http:// or https://")
+        return normalized.rstrip("/")
+
+    @field_validator("username", "password", "api_token")
+    @classmethod
+    def strip_credentials(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+    @field_validator("request_headers", "query_params")
+    @classmethod
+    def validate_maps(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        return validate_string_map(value)
 
 
 class IntegrationRead(ORMModel):

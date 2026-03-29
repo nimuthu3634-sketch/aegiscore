@@ -1,5 +1,5 @@
 import { appConfig } from "@/lib/config";
-import { clearAuthSession, getToken } from "@/lib/auth";
+import { clearAuthSession } from "@/lib/auth";
 
 export class ApiError extends Error {
   status: number;
@@ -32,15 +32,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("Content-Type", headers.get("Content-Type") ?? "application/json");
   }
 
-  const token = typeof window !== "undefined" ? getToken() : "";
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
   const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
     ...init,
     headers,
     cache: "no-store",
+    credentials: "include",
   });
 
   const contentType = response.headers.get("content-type") ?? "";

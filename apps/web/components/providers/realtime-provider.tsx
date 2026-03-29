@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 
-import { getToken } from "@/lib/auth";
 import { appConfig } from "@/lib/config";
 
 type RealtimePayload = Record<string, unknown> | null;
@@ -26,16 +25,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [lastEvent, setLastEvent] = useState<RealtimePayload>(null);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setStatus("idle");
-      setLastEvent(null);
-      return;
-    }
-
     let isActive = true;
     setStatus("connecting");
-    const socket = new WebSocket(`${appConfig.wsBaseUrl.replace(/^http/, "ws")}/ws/alerts?token=${token}`);
+    const socket = new WebSocket(`${appConfig.wsBaseUrl.replace(/^http/, "ws")}/ws/alerts`);
 
     socket.onopen = () => {
       if (isActive) {

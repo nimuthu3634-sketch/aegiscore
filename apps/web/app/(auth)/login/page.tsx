@@ -22,7 +22,7 @@ import { authDemoUsers } from "@aegiscore/config";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  password: z.string().min(8, "Password must be at least 8 characters.").max(128, "Password is too long."),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -49,7 +49,7 @@ export default function LoginPage() {
   const mutation = useMutation({
     mutationFn: (payload: LoginValues) => api.post<LoginResponse>("/auth/login", payload),
     onSuccess: (data) => {
-      setAuthSession(data.access_token, data.user);
+      setAuthSession(data.user);
       startTransition(() => {
         router.push("/dashboard");
       });
