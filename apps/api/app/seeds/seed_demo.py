@@ -67,7 +67,7 @@ def run_seed() -> None:
             create_incident(
                 db,
                 title="Active credential abuse investigation",
-                summary="Investigating repeated auth failures and SMB follow-on behavior.",
+                description="Investigating repeated auth failures and SMB follow-on behavior.",
                 priority=IncidentPriority.P2,
                 assignee_id=analyst.id,
                 linked_alert_ids=[alert_one.id, alert_two.id],

@@ -199,7 +199,7 @@ class IncidentRead(ORMModel):
     evidence: list[dict] = Field(default_factory=list)
     assignee: UserRead | None = None
     created_by: UserRead | None = None
-    timeline_events: list[IncidentEventRead] = Field(default_factory=list, alias="events")
+    timeline_events: list[IncidentEventRead] = Field(default_factory=list, validation_alias="events")
     linked_alerts: list[AlertRead] = Field(default_factory=list)
 
 

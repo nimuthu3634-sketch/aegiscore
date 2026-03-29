@@ -1,25 +1,40 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_optional_ip, require_roles
 from app.core.security import hash_password
 from app.db.session import get_db
 from app.models.entities import AuditLog, JobRecord, User, UserRole
-from app.schemas.domain import AuditLogRead, JobRead, UserCreate, UserRead, UserUpdate
+from app.schemas.domain import AuditLogListResponse, AuditLogRead, JobRead, UserCreate, UserListResponse, UserRead, UserUpdate
 from app.services.audit import record_audit
 
 router = APIRouter()
 
 
-@router.get("/users")
+@router.get("/users", response_model=UserListResponse)
 def list_users(
+    q: str | None = Query(default=None),
+    role: str | None = Query(default=None),
+    is_active: bool | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(require_roles(UserRole.ADMIN)),
     db: Session = Depends(get_db),
-) -> dict:
-    items = db.query(User).order_by(User.created_at.desc()).all()
-    return {"items": [UserRead.model_validate(item).model_dump() for item in items], "total": len(items)}
+) -> UserListResponse:
+    query = db.query(User).options(joinedload(User.role_ref))
+    if q:
+        query = query.filter(or_(User.email.ilike(f"%{q}%"), User.full_name.ilike(f"%{q}%")))
+    if role:
+        query = query.filter(User.role == role)
+    if is_active is not None:
+        query = query.filter(User.is_active.is_(is_active))
+
+    total = query.count()
+    items = query.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return UserListResponse(items=[UserRead.model_validate(item) for item in items], total=total, page=page, page_size=page_size)
 
 
 @router.post("/users", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -87,14 +102,31 @@ def update_user(
     return UserRead.model_validate(user)
 
 
-@router.get("/audit-logs")
+@router.get("/audit-logs", response_model=AuditLogListResponse)
 def list_audit_logs(
-    limit: int = Query(default=100, ge=1, le=500),
+    action: str | None = Query(default=None),
+    entity_type: str | None = Query(default=None),
+    actor_user_id: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
     _: User = Depends(require_roles(UserRole.ADMIN)),
     db: Session = Depends(get_db),
-) -> dict:
-    items = db.query(AuditLog).options(joinedload(AuditLog.actor)).order_by(AuditLog.created_at.desc()).limit(limit).all()
-    return {"items": [AuditLogRead.model_validate(item).model_dump() for item in items], "total": len(items)}
+) -> AuditLogListResponse:
+    query = db.query(AuditLog).options(joinedload(AuditLog.actor))
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if entity_type:
+        query = query.filter(AuditLog.entity_type == entity_type)
+    if actor_user_id:
+        query = query.filter(AuditLog.actor_user_id == actor_user_id)
+    total = query.count()
+    items = query.order_by(AuditLog.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return AuditLogListResponse(
+        items=[AuditLogRead.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/jobs/{job_id}", response_model=JobRead)
