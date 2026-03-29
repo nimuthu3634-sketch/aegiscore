@@ -1,0 +1,154 @@
+{
+  "generated_at": "2026-03-28T00:00:00+00:00",
+  "dataset_count": 16,
+  "family_counts": {
+    "unsw_nb15": 8,
+    "cicids2017": 8
+  },
+  "datasets": [
+    {
+      "display_name": "UNSW-NB15 feature reference",
+      "family": "unsw_nb15",
+      "role": "feature_reference",
+      "path": "data/unsw_nb15/raw/UNSW-NB15_features.csv",
+      "filename": "UNSW-NB15_features.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 testing split",
+      "family": "unsw_nb15",
+      "role": "testing_split",
+      "path": "data/unsw_nb15/raw/UNSW_NB15_testing-set.csv",
+      "filename": "UNSW_NB15_testing-set.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 training split",
+      "family": "unsw_nb15",
+      "role": "training_split",
+      "path": "data/unsw_nb15/raw/UNSW_NB15_training-set.csv",
+      "filename": "UNSW_NB15_training-set.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 raw split 1",
+      "family": "unsw_nb15",
+      "role": "raw_part_1",
+      "path": "data/unsw_nb15/raw/UNSW-NB15_1.csv",
+      "filename": "UNSW-NB15_1.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 raw split 2",
+      "family": "unsw_nb15",
+      "role": "raw_part_2",
+      "path": "data/unsw_nb15/raw/UNSW-NB15_2.csv",
+      "filename": "UNSW-NB15_2.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 raw split 3",
+      "family": "unsw_nb15",
+      "role": "raw_part_3",
+      "path": "data/unsw_nb15/raw/UNSW-NB15_3.csv",
+      "filename": "UNSW-NB15_3.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 raw split 4",
+      "family": "unsw_nb15",
+      "role": "raw_part_4",
+      "path": "data/unsw_nb15/raw/UNSW-NB15_4.csv",
+      "filename": "UNSW-NB15_4.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "UNSW-NB15 event list",
+      "family": "unsw_nb15",
+      "role": "event_reference",
+      "path": "data/unsw_nb15/raw/UNSW-NB15_LIST_EVENTS.csv",
+      "filename": "UNSW-NB15_LIST_EVENTS.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Friday afternoon DDoS",
+      "family": "cicids2017",
+      "role": "friday_ddos",
+      "path": "data/cicids2017/raw/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+      "filename": "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Friday afternoon PortScan",
+      "family": "cicids2017",
+      "role": "friday_portscan",
+      "path": "data/cicids2017/raw/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+      "filename": "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Friday morning",
+      "family": "cicids2017",
+      "role": "friday_morning",
+      "path": "data/cicids2017/raw/Friday-WorkingHours-Morning.pcap_ISCX.csv",
+      "filename": "Friday-WorkingHours-Morning.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Monday working hours",
+      "family": "cicids2017",
+      "role": "monday_working_hours",
+      "path": "data/cicids2017/raw/Monday-WorkingHours.pcap_ISCX.csv",
+      "filename": "Monday-WorkingHours.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Thursday infiltration",
+      "family": "cicids2017",
+      "role": "thursday_infiltration",
+      "path": "data/cicids2017/raw/Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+      "filename": "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Thursday web attacks",
+      "family": "cicids2017",
+      "role": "thursday_web_attacks",
+      "path": "data/cicids2017/raw/Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+      "filename": "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Tuesday working hours",
+      "family": "cicids2017",
+      "role": "tuesday_working_hours",
+      "path": "data/cicids2017/raw/Tuesday-WorkingHours.pcap_ISCX.csv",
+      "filename": "Tuesday-WorkingHours.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    },
+    {
+      "display_name": "CICIDS2017 Wednesday working hours",
+      "family": "cicids2017",
+      "role": "wednesday_working_hours",
+      "path": "data/cicids2017/raw/Wednesday-workingHours.pcap_ISCX.csv",
+      "filename": "Wednesday-workingHours.pcap_ISCX.csv",
+      "extension": ".csv",
+      "exists": false
+    }
+  ]
+}

@@ -1,2 +1,0 @@
--- Placeholder init script for local AegisCore PostgreSQL development.
--- Add extensions or seed-safe database setup here if needed later.

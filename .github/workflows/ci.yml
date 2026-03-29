@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - "chatgpt/**"
+      - "codex/**"
   pull_request:
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
 
       - name: Run backend tests
         working-directory: backend
-        run: pytest -q
+        run: pytest
 
   frontend:
     runs-on: ubuntu-latest
@@ -41,7 +41,11 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: npm run test
 
       - name: Build frontend
         working-directory: frontend

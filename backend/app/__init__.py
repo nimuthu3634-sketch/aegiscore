@@ -1,1 +1,0 @@
-"""AegisCore backend application package."""

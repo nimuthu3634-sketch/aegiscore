@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-aegiscore}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aegiscore}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -16,105 +16,97 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
   redis:
     image: redis:7-alpine
     container_name: aegiscore-redis
     ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "PING"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: aegiscore-backend
+    env_file:
+      - .env
+      - backend/.env.example
     environment:
-      APP_NAME: AegisCore
       APP_ENV: development
-      API_PREFIX: ""
-      SECRET_KEY: ${SECRET_KEY:-change-me-for-local-dev}
-      ACCESS_TOKEN_EXPIRE_MINUTES: 60
-      POSTGRES_DB: ${POSTGRES_DB:-aegiscore}
-      POSTGRES_USER: ${POSTGRES_USER:-aegiscore}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aegiscore}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
       REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: http://localhost:5173,http://localhost:8081
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/workspace
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://localhost:${NGINX_PORT:-8080}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "from urllib.request import urlopen; import sys; sys.exit(0 if urlopen('http://127.0.0.1:8000/health').status == 200 else 1)",
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+      - ./docs:/workspace/docs:ro
+      - ./data:/workspace/data
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aegiscore-worker
+    command: ["python", "-m", "app.workers.tasks"]
+    env_file:
+      - .env
+      - backend/.env.example
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./docs:/workspace/docs:ro
+      - ./data:/workspace/data
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: aegiscore-frontend
+    env_file:
+      - .env
+      - frontend/.env.example
     environment:
-      VITE_APP_NAME: AegisCore
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
-      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8000/ws/alerts}
-    ports:
-      - "5173:5173"
-    volumes:
-      - .:/workspace
-      - frontend_node_modules:/workspace/frontend/node_modules
+      NEXT_PUBLIC_API_BASE_URL: http://backend:8000/api/v1
+      NEXT_PUBLIC_WS_BASE_URL: ws://backend:8000
     depends_on:
       backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173 || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 25s
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
 
   nginx:
     image: nginx:1.27-alpine
     container_name: aegiscore-nginx
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
     ports:
-      - "8081:80"
+      - "${NGINX_PORT:-8080}:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1 || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
 volumes:
   postgres_data:
-  redis_data:
-  frontend_node_modules:
