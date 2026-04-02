@@ -25,7 +25,13 @@ from app.models.entities import (
     ResponseRecommendation,
     User,
 )
-from app.schemas.domain import DashboardActivityItem, DashboardKpi, DashboardSummary, DashboardTrendPoint
+from app.schemas.domain import (
+    DashboardActivityItem,
+    DashboardKpi,
+    DashboardSummary,
+    DashboardTrendPoint,
+    ResponseActionResult,
+)
 from app.services.audit import record_audit
 from app.services.realtime import manager
 
@@ -220,19 +226,175 @@ def rescore_alerts(
     }
 
 
-async def broadcast_alert_event(alert: Alert, event: str) -> None:
-    await manager.broadcast(
-        "alerts",
-        {
-            "event": event,
-            "alert_id": alert.id,
-            "title": alert.title,
+async def broadcast_alert_event(alert: Alert, event: str, metadata: dict | None = None) -> None:
+    payload = {
+        "event": event,
+        "alert_id": alert.id,
+        "title": alert.title,
+        "severity": alert.severity,
+        "status": alert.status,
+        "risk_score": alert.risk_score,
+        "occurred_at": alert.occurred_at.isoformat(),
+        "detected_at": alert.detected_at.isoformat(),
+    }
+    if metadata:
+        payload.update(metadata)
+    await manager.broadcast("alerts", payload)
+
+
+def _extract_response_ip(alert: Alert) -> str | None:
+    parsed_payload = dict(alert.parsed_payload or {})
+    raw_payload = dict(alert.raw_payload or {})
+    candidates = [
+        parsed_payload.get("src_ip"),
+        parsed_payload.get("source_ip"),
+        parsed_payload.get("indicator_ip"),
+        raw_payload.get("src_ip"),
+        raw_payload.get("srcip"),
+        raw_payload.get("source_ip"),
+        raw_payload.get("ip"),
+        alert.asset.ip_address if alert.asset else None,
+    ]
+    for candidate in candidates:
+        if candidate:
+            return str(candidate).strip()
+    return None
+
+
+def _extract_response_user(alert: Alert) -> str | None:
+    parsed_payload = dict(alert.parsed_payload or {})
+    raw_payload = dict(alert.raw_payload or {})
+    for container in (parsed_payload, raw_payload):
+        for key in ("username", "user", "account", "principal", "target_user", "target_account"):
+            value = container.get(key)
+            if value:
+                return str(value).strip()
+    return None
+
+
+def execute_alert_response(
+    db: Session,
+    *,
+    alert: Alert,
+    action: str,
+    actor: User,
+    ip_address: str | None,
+    reason: str | None = None,
+) -> tuple[Alert, ResponseActionResult]:
+    action_labels = {
+        "block_ip": "Block source IP",
+        "isolate_asset": "Isolate asset",
+        "disable_user": "Disable user",
+        "contain_alert": "Contain alert",
+    }
+    if action not in action_labels:
+        raise ValueError("Unsupported response action.")
+
+    target: dict[str, str | None]
+    follow_up: list[str]
+
+    if action == "block_ip":
+        ip_target = _extract_response_ip(alert)
+        if not ip_target:
+            raise ValueError("No source IP was found on this alert, so a block action cannot be recorded.")
+        target = {
+            "ip_address": ip_target,
+            "asset_hostname": alert.asset.hostname if alert.asset else None,
+        }
+        message = (
+            f"Recorded a defensive block request for source IP {ip_target}. "
+            "This is tracked inside AegisCore for analyst follow-through or future SOAR integration."
+        )
+        follow_up = [
+            "Apply the block in your firewall, Wazuh active response, or upstream gateway.",
+            "Validate that new events from this indicator stop after containment.",
+        ]
+    elif action == "isolate_asset":
+        if alert.asset is None:
+            raise ValueError("This alert is not mapped to an asset, so host isolation cannot be recorded.")
+        target = {
+            "hostname": alert.asset.hostname,
+            "ip_address": alert.asset.ip_address,
+        }
+        message = (
+            f"Recorded host isolation for {alert.asset.hostname}. "
+            "Use your endpoint tooling or lab workflow to disconnect the host from the network."
+        )
+        follow_up = [
+            "Confirm the endpoint is quarantined or otherwise segmented.",
+            "Capture volatile evidence before rebooting or reimaging the host.",
+        ]
+    elif action == "disable_user":
+        username = _extract_response_user(alert)
+        if not username:
+            raise ValueError("No username was found on this alert, so an account disable action cannot be recorded.")
+        target = {
+            "username": username,
+            "asset_hostname": alert.asset.hostname if alert.asset else None,
+        }
+        message = (
+            f"Recorded an account disable request for {username}. "
+            "Coordinate with your identity provider or operating system account controls to complete the step."
+        )
+        follow_up = [
+            "Force a credential reset if compromise is suspected.",
+            "Review recent authentication events tied to this identity.",
+        ]
+    else:
+        target = {
+            "alert_title": alert.title,
             "severity": alert.severity,
-            "status": alert.status,
-            "risk_score": alert.risk_score,
-            "occurred_at": alert.occurred_at.isoformat(),
-            "detected_at": alert.detected_at.isoformat(),
+        }
+        message = "Recorded containment handling for this alert and moved it into the active investigation workflow."
+        follow_up = [
+            "Assign an analyst owner and document the next investigative step.",
+            "Escalate into an incident if the alert remains confirmed or recurring.",
+        ]
+
+    if alert.status not in {AlertStatus.RESOLVED, AlertStatus.SUPPRESSED}:
+        alert.status = AlertStatus.INVESTIGATING
+
+    alert.recommendations = sorted({*list(alert.recommendations or []), "Review containment outcome"})
+    db.add(alert)
+
+    reason_suffix = f" Reason: {reason}" if reason else ""
+    db.add(
+        AlertComment(
+            alert_id=alert.id,
+            author_id=actor.id,
+            body=f"{action_labels[action]} recorded. {message}{reason_suffix}",
+        )
+    )
+    db.commit()
+    db.refresh(alert)
+
+    executed_at = datetime.now(timezone.utc)
+    record_audit(
+        db,
+        actor=actor,
+        action="alert.response_executed",
+        entity_type="alert",
+        entity_id=alert.id,
+        details={
+            "response_action": action,
+            "status": "simulated",
+            "target": target,
+            "reason": reason,
         },
+        ip_address=ip_address,
+    )
+
+    return (
+        alert,
+        ResponseActionResult(
+            alert_id=alert.id,
+            action=action,
+            status="simulated",
+            message=message,
+            executed_at=executed_at,
+            target=target,
+            follow_up=follow_up,
+        ),
     )
 
 

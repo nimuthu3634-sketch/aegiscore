@@ -140,6 +140,18 @@ export interface Alert {
   response_recommendations: ResponseRecommendation[];
 }
 
+export type ResponseActionType = "block_ip" | "isolate_asset" | "disable_user" | "contain_alert";
+
+export interface ResponseActionResult {
+  alert_id: string;
+  action: ResponseActionType | string;
+  status: "recorded" | "simulated" | string;
+  message: string;
+  executed_at: string;
+  target: Record<string, string | null>;
+  follow_up: string[];
+}
+
 export interface IncidentEvent {
   id: string;
   event_type: string;

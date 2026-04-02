@@ -21,7 +21,7 @@ import { api, createQueryString } from "@/lib/api";
 import { formatDate, scoreTone } from "@/lib/format";
 import { canManageOperations } from "@/lib/permissions";
 import { useAuth } from "@/hooks/use-auth";
-import type { Alert, Incident, PageResult, User } from "@/types/domain";
+import type { Alert, Incident, PageResult, ResponseActionResult, ResponseActionType, User } from "@/types/domain";
 
 const commentSchema = z.object({
   body: z.string().min(2, "Add at least a short triage note."),
@@ -32,6 +32,29 @@ const incidentSchema = z.object({
   description: z.string().optional(),
   assignee_id: z.string().optional(),
 });
+
+const containmentActions: Array<{ action: ResponseActionType; label: string; description: string }> = [
+  {
+    action: "block_ip",
+    label: "Block source IP",
+    description: "Record a perimeter or host firewall block for the source indicator tied to this alert.",
+  },
+  {
+    action: "isolate_asset",
+    label: "Isolate asset",
+    description: "Record host isolation for the linked endpoint so the analyst can quarantine it in tooling.",
+  },
+  {
+    action: "disable_user",
+    label: "Disable user",
+    description: "Record an account disable action when the alert includes affected username context.",
+  },
+  {
+    action: "contain_alert",
+    label: "Mark contained",
+    description: "Move the alert into active containment handling and document the action trail.",
+  },
+];
 
 export default function AlertDetailPage() {
   const params = useParams<{ id: string }>();
@@ -59,6 +82,16 @@ export default function AlertDetailPage() {
       title: alertQuery.data ? `Investigate ${alertQuery.data.title}` : "",
       description: alertQuery.data?.description ?? "",
       assignee_id: currentUser?.id ?? "",
+    },
+  });
+
+  const responseMutation = useMutation({
+    mutationFn: (action: ResponseActionType) =>
+      api.post<ResponseActionResult>(`/alerts/${params.id}/respond`, { action }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alert", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
     },
   });
 
@@ -251,6 +284,79 @@ export default function AlertDetailPage() {
                   <Button variant="outline" onClick={() => updateMutation.mutate({ assigned_to_id: currentUser?.id ?? null })} disabled={!currentUser}>
                     Assign to me
                   </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Containment actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-[1.25rem] border bg-[#fff7f1] p-4 text-sm leading-6 text-[#8a4e16]">
+                    These actions are recorded and audited inside AegisCore. They do not directly push firewall or host controls yet,
+                    but they create a real containment trail and prepare the app for SOAR-style execution.
+                  </div>
+
+                  <div className="grid gap-3">
+                    {containmentActions.map((item) => (
+                      <div key={item.action} className="rounded-[1.25rem] border bg-[#fcfcfc] p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="font-semibold text-[#111111]">{item.label}</p>
+                            <p className="mt-1 text-sm leading-6 text-[#5f5f5f]">{item.description}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => responseMutation.mutate(item.action)}
+                            disabled={responseMutation.isPending}
+                          >
+                            {responseMutation.isPending && responseMutation.variables === item.action ? "Recording..." : item.label}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {responseMutation.data ? (
+                    <div className="rounded-[1.25rem] border bg-white p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone="high">{responseMutation.data.action}</Badge>
+                        <Badge tone="medium">{responseMutation.data.status}</Badge>
+                        <span className="text-xs uppercase tracking-[0.24em] text-[#8f8f8f]">
+                          {formatDate(responseMutation.data.executed_at)}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-sm leading-6 text-[#5f5f5f]">{responseMutation.data.message}</p>
+
+                      {Object.keys(responseMutation.data.target).length ? (
+                        <div className="mt-4 grid gap-2">
+                          {Object.entries(responseMutation.data.target).map(([key, value]) => (
+                            <div key={key} className="flex items-center justify-between rounded-xl border px-3 py-2 text-sm">
+                              <span className="capitalize text-[#6f6f6f]">{key.replaceAll("_", " ")}</span>
+                              <span className="font-medium text-[#111111]">{value ?? "Unavailable"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {responseMutation.data.follow_up.length ? (
+                        <div className="mt-4 space-y-2">
+                          {responseMutation.data.follow_up.map((item) => (
+                            <div key={item} className="rounded-xl border bg-[#fcfcfc] px-3 py-2 text-sm leading-6 text-[#5f5f5f]">
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {responseMutation.error instanceof Error ? (
+                    <div className="rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      {responseMutation.error.message}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
 
