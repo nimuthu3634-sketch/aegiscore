@@ -22,7 +22,12 @@ def build_health_response(db: Session) -> HealthResponse:
 
     redis_started = perf_counter()
     try:
-        redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
+        redis_client = Redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+        )
         redis_client.ping()
         redis_status = ServiceStatus(status="ok", latency_ms=round((perf_counter() - redis_started) * 1000, 2))
     except Exception as error:  # pragma: no cover - exercised in runtime only

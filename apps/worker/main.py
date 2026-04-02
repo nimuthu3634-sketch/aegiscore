@@ -7,14 +7,13 @@ API_ROOT = Path(__file__).resolve().parents[1] / "api"
 if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
-from rq import Connection, Worker  # noqa: E402
+from rq import Worker  # noqa: E402
 from app.workers.queue import get_redis_connection  # type: ignore  # noqa: E402
 
 
 def main() -> None:
     redis_connection = get_redis_connection()
-    with Connection(redis_connection):
-        Worker(["ml"]).work()
+    Worker(["ml"], connection=redis_connection).work()
 
 
 if __name__ == "__main__":

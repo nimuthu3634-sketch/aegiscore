@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from rq import Connection, Worker
+from rq import Worker
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
@@ -40,5 +40,4 @@ def run_retrain_job(job_id: str) -> None:
 
 if __name__ == "__main__":
     redis_connection = get_redis_connection()
-    with Connection(redis_connection):
-        Worker(["ml"]).work()
+    Worker(["ml"], connection=redis_connection).work()

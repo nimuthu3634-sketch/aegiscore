@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ["DATABASE_URL"] = "sqlite:///./test_aegiscore.db"
 os.environ["REDIS_URL"] = "redis://localhost:6379/15"
 os.environ["JWT_SECRET_KEY"] = "test-secret"
+
+API_ROOT = Path(__file__).resolve().parents[1]
+TEST_DB_PATH = Path(__file__).resolve().parents[3] / "test_aegiscore.db"
+os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH.as_posix()}"
+if str(API_ROOT) not in sys.path:
+    sys.path.insert(0, str(API_ROOT))
 
 from app.core.config import get_settings
 
@@ -25,7 +32,9 @@ from app.ml.scoring import train_model
 
 
 def reset_database() -> None:
-    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+    if TEST_DB_PATH.exists():
+        TEST_DB_PATH.unlink()
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         ensure_default_integrations(db)
@@ -58,6 +67,7 @@ def bootstrap_database() -> Generator[None, None, None]:
     reset_rate_limits()
     reset_database()
     yield
+    engine.dispose()
 
 
 @pytest.fixture
