@@ -139,30 +139,35 @@ Test files:
 
 Full list in `apps/api/.env.example`.
 
-# AegisCore Fix Instructions
+## Fix instructions
 
 This repository is already a partially working AI-assisted SOC platform. Improve it in-place.
 
-## Core rule
+### Core rule
+
 Do not rebuild the app from scratch. Do not replace working architecture with a generic template. Refactor and fix the existing implementation.
 
-## Priority
+### Priority
+
 Make the product behave like a working SOC platform, not a classroom demo or presentation shell.
 
-## Must-fix goals
+### Must-fix goals
+
 1. Remove demo/classroom/presentation wording from the UI and product copy.
 2. Fix frontend/backend mismatches.
 3. Complete missing backend routes used by the frontend.
 4. Improve operational correctness before visual polish.
 5. Keep Docker Compose, NGINX, auth, alerts, incidents, integrations, ML, and reports working.
 
-## Known issues to investigate first
+### Known issues to investigate first
+
 - The integrations UI appears to call /integrations/{slug}/test, so verify whether the backend route exists and implement it if missing.
 - Several pages still use demo/classroom/presentation wording and should be rewritten as a working product.
 - Asset detail behavior should be reviewed for inefficient client-side filtering and replaced with proper backend-supported queries if needed.
 - Response actions should be clearly categorized as recorded workflow actions unless real enforcement is implemented.
 
-## Working style
+### Working style
+
 - Audit first
 - Fix highest-impact mismatches first
 - Keep the app runnable
