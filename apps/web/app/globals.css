@@ -10,6 +10,8 @@
   --border: #e8e8e8;
   --accent: #ff7a1a;
   --accent-foreground: #ffffff;
+  --font-sans: "Manrope", "Aptos", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
 }
 
 html,
