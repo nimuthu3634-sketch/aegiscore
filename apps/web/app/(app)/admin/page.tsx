@@ -141,7 +141,7 @@ export default function AdminPage() {
           onChange={(event) => updateMutation.mutate({ userId: row.original.id, payload: { role: event.target.value as Role } })}
           disabled={updateMutation.isPending || row.original.id === currentUser?.id}
           className="min-w-[132px]"
-          title={`Role for ${row.original.full_name}`}
+          aria-label={`Role for ${row.original.full_name || row.original.email}`}
         >
           <option value="Admin">Admin</option>
           <option value="Analyst">Analyst</option>
@@ -249,7 +249,7 @@ export default function AdminPage() {
               </FormField>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField label="Role" error={form.formState.errors.role?.message}>
-                  <Select {...form.register("role")} title="User role">
+                  <Select {...form.register("role")} aria-label="User role">
                     <option value="Admin">Admin</option>
                     <option value="Analyst">Analyst</option>
                     <option value="Viewer">Viewer</option>
@@ -283,7 +283,7 @@ export default function AdminPage() {
                   setPage(1);
                   setRoleFilter(event.target.value);
                 }}
-                title="Filter by role"
+                aria-label="Filter by role"
               >
                 <option value="">All roles</option>
                 <option value="Admin">Admin</option>
@@ -296,7 +296,7 @@ export default function AdminPage() {
                   setPage(1);
                   setActiveFilter(event.target.value);
                 }}
-                title="Filter by status"
+                aria-label="Filter by status"
               >
                 <option value="">All statuses</option>
                 <option value="true">Active</option>
