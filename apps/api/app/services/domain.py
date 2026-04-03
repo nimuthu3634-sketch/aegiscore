@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, text as sa_text
 from sqlalchemy.orm import Session, joinedload
 
 from app.ml.scoring import AlertRiskAssessment, score_alert
@@ -67,19 +67,33 @@ def ensure_asset(
     return asset
 
 
-def _refresh_asset_risk(asset: Asset | None) -> None:
+def _refresh_asset_risk(asset: Asset | None, db: Session | None = None) -> None:
     if asset is None:
         return
-    open_alerts = [alert for alert in asset.alerts if alert.status not in {AlertStatus.RESOLVED, AlertStatus.SUPPRESSED}]
-    if not open_alerts:
+    if db is not None:
+        # Efficient SQL aggregation — avoids loading all alert rows into memory
+        active_statuses_exclusion = [AlertStatus.RESOLVED, AlertStatus.SUPPRESSED]
+        row = (
+            db.query(func.count(Alert.id), func.avg(Alert.risk_score))
+            .filter(Alert.asset_id == asset.id, Alert.status.notin_(active_statuses_exclusion))
+            .one()
+        )
+        open_count = int(row[0] or 0)
+        avg_score = float(row[1] or 0.0)
+    else:
+        # Fallback: use already-loaded relationship (no extra query, but O(n) Python)
+        open_alerts = [a for a in asset.alerts if a.status not in {AlertStatus.RESOLVED, AlertStatus.SUPPRESSED}]
+        open_count = len(open_alerts)
+        avg_score = sum(a.risk_score for a in open_alerts) / open_count if open_count else 0.0
+
+    if open_count == 0:
         asset.risk_score = 0
         asset.risk_summary = "No active alert pressure."
         return
 
-    average_score = sum(alert.risk_score for alert in open_alerts) / len(open_alerts)
-    alert_count_bonus = min(20, len(open_alerts) * 0.5)
-    asset.risk_score = round(min(100, average_score + alert_count_bonus), 2)
-    asset.risk_summary = f"{len(open_alerts)} active alerts across endpoint and telemetry sources."
+    alert_count_bonus = min(20, open_count * 0.5)
+    asset.risk_score = round(min(100, avg_score + alert_count_bonus), 2)
+    asset.risk_summary = f"{open_count} active alert{'s' if open_count != 1 else ''} across endpoint and telemetry sources."
 
 
 def _build_recommendations(source: str, severity: str, tags: list[str]) -> list[dict[str, str | int | None]]:
@@ -218,7 +232,7 @@ def rescore_alerts(
             touched_assets[alert.asset.id] = alert.asset
 
     for asset in touched_assets.values():
-        _refresh_asset_risk(asset)
+        _refresh_asset_risk(asset, db)
 
     db.commit()
     return {
@@ -378,7 +392,7 @@ def execute_alert_response(
         entity_id=alert.id,
         details={
             "response_action": action,
-            "status": "simulated",
+            "status": "recorded",
             "target": target,
             "reason": reason,
         },
@@ -390,7 +404,7 @@ def execute_alert_response(
         ResponseActionResult(
             alert_id=alert.id,
             action=action,
-            status="simulated",
+            status="recorded",
             message=message,
             executed_at=executed_at,
             target=target,
@@ -457,7 +471,7 @@ def create_alert(
     db.flush()
     _apply_alert_risk_assessment(db, alert=alert, assessment=assessment)
 
-    _refresh_asset_risk(asset)
+    _refresh_asset_risk(asset, db)
     db.commit()
     db.refresh(alert)
 
@@ -501,7 +515,7 @@ def update_alert(db: Session, alert: Alert, *, payload: dict, actor: User, ip_ad
     _apply_alert_risk_assessment(db, alert=alert, assessment=assessment, preserve_summary=bool(manual_summary))
     if manual_summary:
         alert.explanation_summary = manual_summary
-    _refresh_asset_risk(alert.asset)
+    _refresh_asset_risk(alert.asset, db)
     db.add(alert)
     db.commit()
     db.refresh(alert)
@@ -535,6 +549,24 @@ def add_alert_comment(db: Session, *, alert: Alert, actor: User, body: str, ip_a
     return comment
 
 
+def _next_incident_sequence(db: Session) -> int:
+    """Atomically advance the incident_reference_seq PostgreSQL sequence.
+
+    Falls back to a COUNT-based approach on non-PostgreSQL databases (e.g. SQLite
+    in tests) where sequences are not supported.
+    """
+    try:
+        result = db.execute(func.next_value(func.text("incident_reference_seq")))
+        return int(result.scalar())
+    except Exception:
+        pass
+    try:
+        row = db.execute(sa_text("SELECT nextval('incident_reference_seq')"))
+        return int(row.scalar())
+    except Exception:
+        return (db.query(func.count(Incident.id)).scalar() or 0) + 1
+
+
 def create_incident(
     db: Session,
     *,
@@ -547,9 +579,9 @@ def create_incident(
     actor: User,
     ip_address: str | None,
 ) -> Incident:
-    total_incidents = db.query(func.count(Incident.id)).scalar() or 0
+    seq_num = _next_incident_sequence(db)
     incident = Incident(
-        reference=f"INC-{datetime.now(timezone.utc):%Y%m%d}-{total_incidents + 1:04d}",
+        reference=f"INC-{datetime.now(timezone.utc):%Y%m%d}-{seq_num:04d}",
         title=title,
         description=description,
         priority=priority,
@@ -663,25 +695,55 @@ def update_incident(db: Session, incident: Incident, payload: dict, actor: User,
 def build_dashboard_summary(db: Session) -> DashboardSummary:
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    open_alerts = db.query(Alert).filter(Alert.status.notin_([AlertStatus.RESOLVED, AlertStatus.SUPPRESSED])).all()
-    assets = db.query(Asset).order_by(desc(Asset.risk_score)).limit(5).all()
-    incidents = db.query(Incident).filter(Incident.status != IncidentStatus.RESOLVED).all()
+    window_start = today_start - timedelta(days=6)
+
+    # SQL aggregations — avoid loading all alerts into memory
+    open_status_exclusion = [AlertStatus.RESOLVED, AlertStatus.SUPPRESSED]
+
+    severity_rows = (
+        db.query(Alert.severity, func.count(Alert.id))
+        .filter(Alert.status.notin_(open_status_exclusion))
+        .group_by(Alert.severity)
+        .all()
+    )
+    severity_breakdown = {str(sev): int(cnt) for sev, cnt in severity_rows}
+    open_alert_count = sum(severity_breakdown.values())
+
+    avg_risk_row = (
+        db.query(func.avg(Alert.risk_score))
+        .filter(Alert.status.notin_(open_status_exclusion))
+        .scalar()
+    )
+    average_risk = round(float(avg_risk_row), 2) if avg_risk_row is not None else 0.0
+
+    open_incident_count = (
+        db.query(func.count(Incident.id))
+        .filter(Incident.status != IncidentStatus.RESOLVED)
+        .scalar() or 0
+    )
     logs_today = db.query(func.count(LogEntry.id)).filter(LogEntry.created_at >= today_start).scalar() or 0
 
-    severity_breakdown = defaultdict(int)
-    for alert in open_alerts:
-        severity_breakdown[alert.severity] += 1
-
+    # Trend: one GROUP BY query for the 7-day window
+    trend_rows = (
+        db.query(
+            func.date_trunc("day", Alert.detected_at).label("day"),
+            Alert.severity,
+            func.count(Alert.id).label("cnt"),
+        )
+        .filter(Alert.detected_at >= window_start)
+        .group_by(func.date_trunc("day", Alert.detected_at), Alert.severity)
+        .all()
+    )
     trend_by_day: dict[str, dict[str, int]] = {}
     for offset in range(6, -1, -1):
         day = (today_start - timedelta(days=offset)).date()
         trend_by_day[day.isoformat()] = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    recent_alerts = db.query(Alert).filter(Alert.detected_at >= today_start - timedelta(days=6)).all()
-    for alert in recent_alerts:
-        day_key = alert.detected_at.date().isoformat()
-        if day_key in trend_by_day:
-            trend_by_day[day_key][alert.severity] += 1
+    for day_dt, sev, cnt in trend_rows:
+        day_key = (day_dt.date() if hasattr(day_dt, "date") else day_dt).isoformat()
+        if day_key in trend_by_day and str(sev) in trend_by_day[day_key]:
+            trend_by_day[day_key][str(sev)] += int(cnt)
 
+    assets = db.query(Asset).order_by(desc(Asset.risk_score)).limit(5).all()
     integrations = db.query(Integration).all()
     health = {integration.name: integration.health_status for integration in integrations}
 
@@ -710,20 +772,18 @@ def build_dashboard_summary(db: Session) -> DashboardSummary:
         )
     activity.sort(key=lambda item: item.timestamp, reverse=True)
 
-    average_risk = round(sum(alert.risk_score for alert in open_alerts) / len(open_alerts), 2) if open_alerts else 0
     kpis = DashboardKpi(
         total_assets=db.query(func.count(Asset.id)).scalar() or 0,
-        open_alerts=len(open_alerts),
-        open_incidents=len(incidents),
+        open_alerts=open_alert_count,
+        open_incidents=int(open_incident_count),
         ingestion_today=int(logs_today),
         average_risk_score=average_risk,
     )
-
     trend = [DashboardTrendPoint(label=label, **values) for label, values in trend_by_day.items()]
 
     return DashboardSummary(
         kpis=kpis,
-        severity_breakdown=dict(severity_breakdown),
+        severity_breakdown=severity_breakdown,
         integration_health=health,
         alert_trend=trend,
         risky_assets=assets,

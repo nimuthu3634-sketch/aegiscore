@@ -145,7 +145,7 @@ export type ResponseActionType = "block_ip" | "isolate_asset" | "disable_user" |
 export interface ResponseActionResult {
   alert_id: string;
   action: ResponseActionType | string;
-  status: "recorded" | "simulated" | string;
+  status: "recorded" | string;
   message: string;
   executed_at: string;
   target: Record<string, string | null>;

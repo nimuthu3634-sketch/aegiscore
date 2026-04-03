@@ -74,7 +74,7 @@ def test_alert_response_action_flow(client, analyst_token):
     assert response.status_code == 200
     payload = response.json()
     assert payload["action"] == "block_ip"
-    assert payload["status"] == "simulated"
+    assert payload["status"] == "recorded"
     assert payload["target"]["ip_address"] == "198.51.100.7"
     assert payload["follow_up"]
 

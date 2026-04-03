@@ -75,21 +75,58 @@ export default function AnalyticsPage() {
 
   const retrainJobQuery = useQuery({
     queryKey: ["jobs", retrainMutation.data?.job_id],
-    queryFn: () => api.get<JobRecord>(`/jobs/${retrainMutation.data?.job_id}`),
+    queryFn: () => api.get<JobRecord>(`/admin/jobs/${retrainMutation.data?.job_id}`),
     enabled: Boolean(retrainMutation.data?.job_id),
-    refetchInterval: 5000,
+    refetchInterval: (query) => (query.state.data?.status === "running" || query.state.data?.status === "queued" ? 3000 : false),
   });
+
+  const noModelYet = modelQuery.isError && (modelQuery.error as { status?: number } | null)?.status === 404;
 
   if (summaryQuery.isLoading || modelQuery.isLoading || alertsQuery.isLoading) {
     return <LoadingState lines={8} />;
   }
 
-  if (summaryQuery.isError || modelQuery.isError || alertsQuery.isError || !summaryQuery.data || !modelQuery.data || !alertsQuery.data) {
+  if (summaryQuery.isError || alertsQuery.isError || !summaryQuery.data || !alertsQuery.data) {
     return <ErrorState description="Analytics data could not be loaded from the connected APIs." onRetry={() => { summaryQuery.refetch(); modelQuery.refetch(); alertsQuery.refetch(); }} />;
   }
 
+  if (noModelYet) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Analytics and AI"
+          title="Explainable risk analytics"
+          description="No trained model found. Import telemetry data and queue a retrain job to activate AI risk scoring."
+          actions={
+            currentUser?.role === "Admin" ? (
+              <Button onClick={() => retrainMutation.mutate()} disabled={retrainMutation.isPending}>
+                {retrainMutation.isPending ? "Queueing retrain..." : "Queue retrain job"}
+              </Button>
+            ) : null
+          }
+        />
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-[#6f6f6f]">
+            No risk model has been trained yet. An Admin can queue the first training run above.
+            {retrainJobQuery.data ? (
+              <div className="mt-4">
+                <Badge tone={retrainJobQuery.data.status === "succeeded" ? "healthy" : retrainJobQuery.data.status === "failed" ? "critical" : "medium"}>
+                  Job {retrainJobQuery.data.status}
+                </Badge>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (modelQuery.isError) {
+    return <ErrorState description="Risk model metadata could not be loaded." onRetry={() => modelQuery.refetch()} />;
+  }
+
   const summary = summaryQuery.data;
-  const model = modelQuery.data;
+  const model = modelQuery.data!;
   const alerts = alertsQuery.data.items;
   const riskDistribution = buildRiskDistribution(alerts);
   const sourceComparison = buildSourceComparison(alerts);

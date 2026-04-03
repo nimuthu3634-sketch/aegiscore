@@ -1,4 +1,25 @@
 services:
+  seed:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - apps/api/.env.example
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegiscore}:${POSTGRES_PASSWORD:-aegiscore}@postgres:5432/${POSTGRES_DB:-aegiscore}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["python", "-m", "app.seeds.seed_demo"]
+    restart: "no"
+    profiles:
+      - seed
+
   api:
     environment:
       APP_ENV: development

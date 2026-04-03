@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.init_db import ensure_default_integrations
 from app.db.session import SessionLocal
+from app.models.entities import ModelMetadata
 
 settings = get_settings()
 configure_logging()
@@ -19,9 +20,20 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    import logging
+    _log = logging.getLogger(__name__)
     db = SessionLocal()
     try:
         ensure_default_integrations(db)
+        active_model = db.query(ModelMetadata).filter(ModelMetadata.is_active.is_(True)).first()
+        if active_model is None:
+            _log.info("No active risk model found — enqueuing baseline training job.")
+            try:
+                from app.services.jobs import enqueue_model_retrain
+                enqueue_model_retrain(db, requested_by=None)
+                _log.info("Baseline model training job queued successfully.")
+            except Exception as exc:
+                _log.warning("Could not enqueue baseline model training (non-fatal): %s", exc)
     finally:
         db.close()
     yield
@@ -33,7 +45,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )

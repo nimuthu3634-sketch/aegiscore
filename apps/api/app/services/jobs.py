@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.models.entities import JobRecord, JobStatus, User
+from app.services.audit import record_audit
 from app.workers.queue import get_queue
 
 
@@ -14,4 +15,13 @@ def enqueue_model_retrain(db: Session, requested_by: User | None) -> JobRecord:
 
     queue = get_queue()
     queue.enqueue("app.workers.tasks.run_retrain_job", record.id, job_id=record.id)
+
+    record_audit(
+        db,
+        actor=requested_by,
+        action="ml.retrain_queued",
+        entity_type="job",
+        entity_id=record.id,
+        details={"job_id": record.id, "job_type": "model_retrain"},
+    )
     return record

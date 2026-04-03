@@ -24,7 +24,7 @@ from app.schemas.domain import (
     LogEntryListResponse,
     LogEntryRead,
 )
-from app.services.integrations import import_integration_file, sync_integration, update_integration_configuration
+from app.services.integrations import import_integration_file, sync_integration, test_integration_connection, update_integration_configuration
 from app.services.domain import (
     build_dashboard_summary,
     incident_summary_text,
@@ -248,6 +248,26 @@ async def import_integration(
         normalized_records=summary.normalized_records,
         input_format=summary.input_format,
         imported_lab_data=summary.imported_lab_data,
+    )
+
+
+@router.post("/integrations/{slug}/test")
+def test_integration(
+    slug: str,
+    ip_address: str | None = Depends(get_optional_ip),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Test connectivity to the configured integration endpoint.
+
+    Returns a status dict with reachable, http_status, latency_ms, and detail.
+    Does NOT trigger ingestion.
+    """
+    return test_integration_connection(
+        db,
+        slug=slug,
+        actor=current_user,
+        ip_address=ip_address,
     )
 
 

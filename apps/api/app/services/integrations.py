@@ -260,6 +260,89 @@ def fetch_remote_payload(integration: Integration) -> tuple[bytes, str | None]:
         return response.content, response.headers.get("content-type")
 
 
+def test_integration_connection(
+    db: Session,
+    *,
+    slug: str,
+    actor: "User",
+    ip_address: str | None,
+) -> dict[str, Any]:
+    """Attempt an HTTP HEAD/GET to the configured endpoint and return a status dict."""
+    from app.services.audit import record_audit
+
+    integration = _integration_or_404(db, slug)
+
+    if integration.slug in LAB_ONLY_IMPORT_SOURCES:
+        return {
+            "reachable": None,
+            "status": "import_only",
+            "detail": "This integration is import-only. Remote connectivity does not apply.",
+            "http_status": None,
+            "latency_ms": None,
+        }
+
+    config = _merge_config(integration.slug, integration.config)
+    endpoint_url = config.get("endpoint_url")
+    if not endpoint_url:
+        return {
+            "reachable": False,
+            "status": "not_configured",
+            "detail": "No endpoint URL configured.",
+            "http_status": None,
+            "latency_ms": None,
+        }
+
+    _, headers, auth, _, verify_tls, timeout_seconds = _build_http_request(integration)
+
+    import time as _time
+    start = _time.monotonic()
+    try:
+        with httpx.Client(timeout=min(timeout_seconds, 10), verify=verify_tls) as client:
+            # Use HEAD to avoid pulling a full payload; fall back to GET on 405
+            try:
+                response = client.head(endpoint_url, headers=headers, auth=auth)
+                if response.status_code == 405:
+                    response = client.get(endpoint_url, headers=headers, auth=auth)
+            except Exception:
+                response = client.get(endpoint_url, headers=headers, auth=auth)
+        elapsed_ms = round((_time.monotonic() - start) * 1000, 1)
+        reachable = response.status_code < 500
+        record_audit(
+            db,
+            actor=actor,
+            action="integration.connection_tested",
+            entity_type="integration",
+            entity_id=integration.id,
+            details={"slug": slug, "http_status": response.status_code, "reachable": reachable},
+            ip_address=ip_address,
+        )
+        return {
+            "reachable": reachable,
+            "status": "ok" if reachable else "error",
+            "detail": f"HTTP {response.status_code}",
+            "http_status": response.status_code,
+            "latency_ms": elapsed_ms,
+        }
+    except Exception as exc:
+        elapsed_ms = round((_time.monotonic() - start) * 1000, 1)
+        record_audit(
+            db,
+            actor=actor,
+            action="integration.connection_tested",
+            entity_type="integration",
+            entity_id=integration.id,
+            details={"slug": slug, "reachable": False, "error": str(exc)},
+            ip_address=ip_address,
+        )
+        return {
+            "reachable": False,
+            "status": "error",
+            "detail": str(exc),
+            "http_status": None,
+            "latency_ms": elapsed_ms,
+        }
+
+
 def _ingest_payload(
     db: Session,
     *,
