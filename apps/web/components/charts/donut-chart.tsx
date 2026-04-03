@@ -2,7 +2,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
-const COLORS = ["#FF7A1A", "#111111", "#FFB067", "#CBD5E1", "#DCFCE7"];
+const COLORS = ["#FF7A1A", "#111111", "#FFB067", "#D2C4B4", "#DDEBDC"];
 
 export function DonutChart({
   data,
@@ -13,13 +13,19 @@ export function DonutChart({
     <div className="h-[240px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="name" innerRadius={62} outerRadius={96} paddingAngle={3}>
+          <Pie data={data} dataKey="value" nameKey="name" innerRadius={62} outerRadius={96} paddingAngle={3} stroke="none">
             {data.map((entry, index) => (
               <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{ borderRadius: 16, border: "1px solid #E8E8E8", boxShadow: "0 16px 30px rgba(17,17,17,0.08)" }}
+            contentStyle={{
+              borderRadius: 18,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#171311",
+              color: "#fff",
+              boxShadow: "0 18px 40px rgba(17,17,17,0.22)",
+            }}
           />
         </PieChart>
       </ResponsiveContainer>

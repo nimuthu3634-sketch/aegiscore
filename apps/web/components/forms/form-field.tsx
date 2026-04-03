@@ -16,8 +16,8 @@ export function FormField({
   return (
     <label className={cn("grid gap-2", className)}>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-[#111111]">{label}</span>
-        {hint ? <span className="text-xs text-[#8a8a8a]">{hint}</span> : null}
+        <span className="text-sm font-medium tracking-[0.01em] text-[#171513]">{label}</span>
+        {hint ? <span className="text-xs text-[#8a7d72]">{hint}</span> : null}
       </div>
       {children}
       {error ? <span className="text-sm text-red-600">{error}</span> : null}

@@ -13,13 +13,25 @@ export function ComparisonBarChart({
     <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
-          <CartesianGrid stroke="#efefef" strokeDasharray="4 4" vertical={false} />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "#7d7d7d", fontSize: 12 }} />
-          <YAxis tickLine={false} axisLine={false} tick={{ fill: "#7d7d7d", fontSize: 12 }} />
+          <defs>
+            <linearGradient id="comparisonBarGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FF8A36" />
+              <stop offset="100%" stopColor="#FF7A1A" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="rgba(17,17,17,0.08)" strokeDasharray="4 4" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "#7d746d", fontSize: 12 }} />
+          <YAxis tickLine={false} axisLine={false} tick={{ fill: "#7d746d", fontSize: 12 }} />
           <Tooltip
-            contentStyle={{ borderRadius: 16, border: "1px solid #E8E8E8", boxShadow: "0 16px 30px rgba(17,17,17,0.08)" }}
+            contentStyle={{
+              borderRadius: 18,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#171311",
+              color: "#fff",
+              boxShadow: "0 18px 40px rgba(17,17,17,0.22)",
+            }}
           />
-          <Bar dataKey={dataKey} fill="#FF7A1A" radius={[10, 10, 0, 0]} />
+          <Bar dataKey={dataKey} fill="url(#comparisonBarGradient)" radius={[10, 10, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
