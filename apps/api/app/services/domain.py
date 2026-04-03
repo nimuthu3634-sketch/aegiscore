@@ -77,7 +77,8 @@ def _refresh_asset_risk(asset: Asset | None) -> None:
         return
 
     average_score = sum(alert.risk_score for alert in open_alerts) / len(open_alerts)
-    asset.risk_score = round(min(100, average_score + len(open_alerts) * 2), 2)
+    alert_count_bonus = min(20, len(open_alerts) * 0.5)
+    asset.risk_score = round(min(100, average_score + alert_count_bonus), 2)
     asset.risk_summary = f"{len(open_alerts)} active alerts across endpoint and telemetry sources."
 
 
@@ -472,9 +473,14 @@ def create_alert(
     return alert
 
 
+_ALERT_UPDATE_FIELDS = {"status", "severity", "assigned_to_id", "tags", "explanation_summary"}
+
+
 def update_alert(db: Session, alert: Alert, *, payload: dict, actor: User, ip_address: str | None) -> Alert:
     manual_summary = payload.get("explanation_summary")
     for field, value in payload.items():
+        if field not in _ALERT_UPDATE_FIELDS:
+            continue
         if value is None and field != "assigned_to_id":
             continue
         setattr(alert, field, value)

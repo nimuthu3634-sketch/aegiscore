@@ -144,7 +144,7 @@ async def patch_alert(
     if alert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
 
-    updated = update_alert(db, alert, payload=payload.model_dump(exclude_none=False), actor=current_user, ip_address=ip_address)
+    updated = update_alert(db, alert, payload=payload.model_dump(exclude_unset=True), actor=current_user, ip_address=ip_address)
     await broadcast_alert_event(updated, "updated")
     return AlertRead.model_validate(updated)
 

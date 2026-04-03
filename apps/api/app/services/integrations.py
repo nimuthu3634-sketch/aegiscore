@@ -380,7 +380,10 @@ def _ingest_payload(
             raise
         if isinstance(error, ValueError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ingestion failed. Check integration run history for details.",
+        ) from error
 
 
 async def import_integration_file(

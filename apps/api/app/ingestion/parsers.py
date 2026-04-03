@@ -51,7 +51,7 @@ def _severity_from_suricata(level: int | float | None) -> AlertSeverity:
 
 def _severity_from_nmap(open_ports: list[dict[str, Any]]) -> AlertSeverity:
     risky_ports = {21, 22, 23, 445, 3389, 5985, 5986}
-    exposed_ports = {int(entry.get("port", 0)) for entry in open_ports if str(entry.get("state", "open")).lower() == "open"}
+    exposed_ports = {int(entry["port"]) for entry in open_ports if entry.get("port") and str(entry.get("state", "open")).lower() == "open"}
     if risky_ports.intersection(exposed_ports):
         return AlertSeverity.HIGH
     if len(exposed_ports) >= 5:
