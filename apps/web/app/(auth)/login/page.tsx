@@ -83,7 +83,7 @@ export default function LoginPage() {
           <div className="absolute right-[-60px] top-[120px] h-[240px] w-[240px] rounded-full bg-[rgba(255,122,26,0.18)] blur-3xl" />
           <div className="relative flex h-full w-full flex-col">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <Logo tone="light" />
+              <Logo tone="light" size="large" />
               <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/70">
                 Defensive SOC platform
               </span>

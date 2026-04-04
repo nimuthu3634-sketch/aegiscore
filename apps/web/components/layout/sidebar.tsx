@@ -65,7 +65,7 @@ export function Sidebar({
         <div className="relative flex h-full flex-col">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <Logo href="/dashboard" tone="light" />
+              <Logo href="/dashboard" tone="light" size="large" />
               <p className="mt-4 text-[11px] uppercase tracking-[0.32em] text-white/42">Defensive operations</p>
             </div>
             <Button variant="ghost" size="icon" className="text-white lg:hidden" onClick={onNavigate}>
