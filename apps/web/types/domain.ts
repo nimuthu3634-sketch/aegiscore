@@ -112,6 +112,14 @@ export interface Integration {
   runs: IntegrationRun[];
 }
 
+export interface ConnectionTestResult {
+  reachable: boolean | null;
+  status: string;
+  detail?: string | null;
+  http_status?: number | null;
+  latency_ms?: number | null;
+}
+
 export interface Alert {
   id: string;
   external_id?: string | null;
@@ -145,7 +153,7 @@ export type ResponseActionType = "block_ip" | "isolate_asset" | "disable_user" |
 export interface ResponseActionResult {
   alert_id: string;
   action: ResponseActionType | string;
-  status: "recorded" | string;
+  status: "recorded";
   message: string;
   executed_at: string;
   target: Record<string, string | null>;

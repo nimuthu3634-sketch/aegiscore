@@ -29,6 +29,11 @@ DEFAULT_SYNC_CONFIG = {
     "query_params": {},
 }
 
+CONNECTION_TEST_FALLBACK_HEADERS = {
+    "Range": "bytes=0-0",
+    "X-AegisCore-Connection-Test": "true",
+}
+
 
 @dataclass(slots=True)
 class IngestionSummary:
@@ -267,80 +272,101 @@ def test_integration_connection(
     actor: "User",
     ip_address: str | None,
 ) -> dict[str, Any]:
-    """Attempt an HTTP HEAD/GET to the configured endpoint and return a status dict."""
+    """Attempt a lightweight connectivity probe without ingesting telemetry."""
     from app.services.audit import record_audit
 
     integration = _integration_or_404(db, slug)
+    configuration = integration.sanitized_config
 
-    if integration.slug in LAB_ONLY_IMPORT_SOURCES:
-        return {
-            "reachable": None,
-            "status": "import_only",
-            "detail": "This integration is import-only. Remote connectivity does not apply.",
-            "http_status": None,
-            "latency_ms": None,
+    def build_result(
+        *,
+        reachable: bool | None,
+        status: str,
+        detail: str,
+        http_status: int | None = None,
+        latency_ms: float | None = None,
+    ) -> dict[str, Any]:
+        result = {
+            "reachable": reachable,
+            "status": status,
+            "detail": detail,
+            "http_status": http_status,
+            "latency_ms": latency_ms,
         }
+        record_audit(
+            db,
+            actor=actor,
+            action="integration.connection_tested",
+            entity_type="integration",
+            entity_id=integration.id,
+            details={
+                "slug": slug,
+                "status": status,
+                "reachable": reachable,
+                "http_status": http_status,
+                "detail": detail,
+            },
+            ip_address=ip_address,
+        )
+        return result
 
-    config = _merge_config(integration.slug, integration.config)
-    endpoint_url = config.get("endpoint_url")
-    if not endpoint_url:
-        return {
-            "reachable": False,
-            "status": "not_configured",
-            "detail": "No endpoint URL configured.",
-            "http_status": None,
-            "latency_ms": None,
-        }
+    if not configuration.get("supports_manual_sync"):
+        if configuration.get("lab_only_import"):
+            return build_result(
+                reachable=None,
+                status="import_only",
+                detail="Nmap and Hydra are import-only lab connectors. Remote connection tests are not supported.",
+            )
+        return build_result(
+            reachable=None,
+            status="unsupported",
+            detail="Connection tests are only available for sync-capable defensive integrations.",
+        )
 
-    _, headers, auth, _, verify_tls, timeout_seconds = _build_http_request(integration)
+    if not configuration.get("configured"):
+        return build_result(
+            reachable=False,
+            status="not_configured",
+            detail="No endpoint URL configured.",
+        )
+
+    endpoint_url, headers, auth, query_params, verify_tls, timeout_seconds = _build_http_request(integration)
+    probe_headers = {**headers, "X-AegisCore-Connection-Test": "true"}
 
     import time as _time
     start = _time.monotonic()
     try:
-        with httpx.Client(timeout=min(timeout_seconds, 10), verify=verify_tls) as client:
-            # Use HEAD to avoid pulling a full payload; fall back to GET on 405
-            try:
-                response = client.head(endpoint_url, headers=headers, auth=auth)
-                if response.status_code == 405:
-                    response = client.get(endpoint_url, headers=headers, auth=auth)
-            except Exception:
-                response = client.get(endpoint_url, headers=headers, auth=auth)
+        with httpx.Client(timeout=min(timeout_seconds, 10), verify=verify_tls, follow_redirects=True) as client:
+            response = client.head(endpoint_url, headers=probe_headers, auth=auth, params=query_params)
+            status_code = response.status_code
+            if status_code in {405, 501}:
+                with client.stream(
+                    "GET",
+                    endpoint_url,
+                    headers={**probe_headers, **CONNECTION_TEST_FALLBACK_HEADERS},
+                    auth=auth,
+                    params=query_params,
+                ) as stream_response:
+                    status_code = stream_response.status_code
         elapsed_ms = round((_time.monotonic() - start) * 1000, 1)
-        reachable = response.status_code < 500
-        record_audit(
-            db,
-            actor=actor,
-            action="integration.connection_tested",
-            entity_type="integration",
-            entity_id=integration.id,
-            details={"slug": slug, "http_status": response.status_code, "reachable": reachable},
-            ip_address=ip_address,
+        reachable = status_code < 500
+        return build_result(
+            reachable=reachable,
+            status="ok" if reachable else "error",
+            detail=f"HTTP {status_code}",
+            http_status=status_code,
+            latency_ms=elapsed_ms,
         )
-        return {
-            "reachable": reachable,
-            "status": "ok" if reachable else "error",
-            "detail": f"HTTP {response.status_code}",
-            "http_status": response.status_code,
-            "latency_ms": elapsed_ms,
-        }
     except Exception as exc:
         elapsed_ms = round((_time.monotonic() - start) * 1000, 1)
-        record_audit(
-            db,
-            actor=actor,
-            action="integration.connection_tested",
-            entity_type="integration",
-            entity_id=integration.id,
-            details={"slug": slug, "reachable": False, "error": str(exc)},
-            ip_address=ip_address,
+        http_status = getattr(getattr(exc, "response", None), "status_code", None)
+        return build_result(
+            reachable=False,
+            status="error",
+            detail=str(exc) or "Connection test failed.",
+            http_status=http_status,
+            latency_ms=elapsed_ms,
         )
-        return {
-            "reachable": False,
-            "status": "error",
-            "detail": str(exc),
-            "http_status": None,
-            "latency_ms": elapsed_ms,
-        }
 
 
 def _ingest_payload(

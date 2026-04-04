@@ -603,6 +603,18 @@ class HealthResponse(BaseModel):
     redis: ServiceStatus
 
 
+class ConnectionTestResult(BaseModel):
+    reachable: bool | None = None
+    status: str
+    detail: str | None = None
+    http_status: int | None = None
+    latency_ms: float | None = None
+
+
+class RiskModelMetadataListResponse(PaginatedResponse[RiskModelMetadataRead]):
+    pass
+
+
 class AlertListResponse(PaginatedResponse[AlertRead]):
     pass
 

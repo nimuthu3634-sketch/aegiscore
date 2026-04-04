@@ -15,6 +15,7 @@ from app.models.entities import Alert, Asset, Incident, IncidentAlertLink, Incid
 from app.schemas.domain import (
     AssetListResponse,
     AssetRead,
+    ConnectionTestResult,
     ImportResult,
     IntegrationConfigUpdate,
     IntegrationListResponse,
@@ -251,13 +252,13 @@ async def import_integration(
     )
 
 
-@router.post("/integrations/{slug}/test")
+@router.post("/integrations/{slug}/test", response_model=ConnectionTestResult)
 def test_integration(
     slug: str,
     ip_address: str | None = Depends(get_optional_ip),
     current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.ANALYST)),
     db: Session = Depends(get_db),
-) -> dict:
+) -> ConnectionTestResult:
     """Test connectivity to the configured integration endpoint.
 
     Returns a status dict with reachable, http_status, latency_ms, and detail.

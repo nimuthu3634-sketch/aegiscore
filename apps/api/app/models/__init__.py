@@ -8,7 +8,7 @@ from app.models.entities import (
     Incident,
     IncidentAlertLink,
     IncidentEvent,
-    IncidentNote,
+
     IncidentPriority,
     IncidentStatus,
     Integration,
@@ -36,7 +36,7 @@ __all__ = [
     "Incident",
     "IncidentAlertLink",
     "IncidentEvent",
-    "IncidentNote",
+
     "IncidentPriority",
     "IncidentStatus",
     "Integration",

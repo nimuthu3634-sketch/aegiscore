@@ -55,9 +55,9 @@ cp apps/web/.env.example apps/web/.env.local
 
 Provided examples:
 
-- [`.env.example`](C:/Users/nimuthusil99460/Documents/GitHub/aegiscore/.env.example)
-- [`apps/api/.env.example`](C:/Users/nimuthusil99460/Documents/GitHub/aegiscore/apps/api/.env.example)
-- [`apps/web/.env.example`](C:/Users/nimuthusil99460/Documents/GitHub/aegiscore/apps/web/.env.example)
+- [`.env.example`](.env.example)
+- [`apps/api/.env.example`](apps/api/.env.example)
+- [`apps/web/.env.example`](apps/web/.env.example)
 
 ## Services
 
@@ -127,7 +127,13 @@ docker compose exec api alembic upgrade head
 
 ### Seed commands
 
-Seed the base demo dataset:
+Boot the full stack with seed data in one step:
+
+```bash
+docker compose --profile seed up --build
+```
+
+Or seed against an already-running stack:
 
 ```bash
 docker compose run --rm api python -m app.seeds.seed_demo
@@ -167,6 +173,8 @@ npm run stack:test
 
 ## Non-Docker Local Commands
 
+These commands assume PostgreSQL and Redis are already running and reachable at the URLs defined in `apps/api/.env` (defaults: `localhost:5432` and `localhost:6379`).
+
 ### API
 
 ```bash
@@ -193,7 +201,7 @@ npm run dev
 
 ## CI
 
-The workflow at [`.github/workflows/ci.yml`](C:/Users/nimuthusil99460/Documents/GitHub/aegiscore/.github/workflows/ci.yml) runs:
+The workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs:
 
 - backend tests
 - frontend lint
@@ -210,7 +218,7 @@ The smoke job boots the stack and checks:
 
 ## Deployment Notes
 
-- The base [docker-compose.yml](C:/Users/nimuthusil99460/Documents/GitHub/aegiscore/docker-compose.yml) is the prod-like local path.
-- The dev override in [docker-compose.dev.yml](C:/Users/nimuthusil99460/Documents/GitHub/aegiscore/docker-compose.dev.yml) adds bind mounts, direct ports, and live-reload commands.
+- The base [docker-compose.yml](docker-compose.yml) is the prod-like local path.
+- The dev override in [docker-compose.dev.yml](docker-compose.dev.yml) adds bind mounts, direct ports, and live-reload commands.
 - NGINX routes `/`, `/api/`, `/docs`, `/redoc`, `/openapi.json`, `/api/v1/ws/`, and `/ws/`.
 - Public websocket URLs now use the API prefix, matching the actual FastAPI websocket route shape.

@@ -12,12 +12,14 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from app.core.rate_limit import _InMemoryRateLimiter
 from app.db.session import SessionLocal
 from app.models.entities import Alert, AlertSeverity, AlertStatus, Asset, Incident, IncidentStatus
 from app.services.domain import _refresh_asset_risk, create_incident
+from app.services import integrations as integration_service
 from app.models.entities import IncidentPriority, User, UserRole
 from app.core.security import hash_password
 
@@ -163,8 +165,14 @@ def test_response_action_status_is_recorded(client, analyst_token):
 # Integration test endpoint
 # ──────────────────────────────────────────────────────────────────────────────
 
-def test_integration_test_returns_structure_for_lab_integrations(client, analyst_token):
-    """Lab-only integrations (nmap, hydra) should get import_only status, not a network call."""
+def test_integration_test_returns_structure_for_lab_integrations(client, analyst_token, monkeypatch):
+    """Lab-only integrations should remain import-only and skip remote probes entirely."""
+    class UnexpectedClient:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("Import-only integrations should not open an HTTP client for connection tests")
+
+    monkeypatch.setattr(integration_service.httpx, "Client", UnexpectedClient)
+
     r = client.post(
         "/api/v1/integrations/nmap/test",
         headers={"Authorization": f"Bearer {analyst_token}"},
@@ -175,14 +183,11 @@ def test_integration_test_returns_structure_for_lab_integrations(client, analyst
     assert body["reachable"] is None
 
 
-def test_integration_test_returns_not_configured_when_no_url(client, analyst_token):
+def test_integration_test_returns_not_configured_when_no_url(client, analyst_token, admin_token):
     """Wazuh without a configured URL should return not_configured."""
-    # First ensure wazuh has no endpoint set (reset config)
-    admin_r = client.post("/api/v1/auth/login", json={"email": "admin@example.com", "password": "Admin123!"})
-    token = admin_r.json()["access_token"]
     client.patch(
         "/api/v1/integrations/wazuh",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
         json={"endpoint_url": None},
     )
 
@@ -192,17 +197,113 @@ def test_integration_test_returns_not_configured_when_no_url(client, analyst_tok
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["status"] in ("not_configured", "error")
+    assert body["status"] == "not_configured"
     assert body["reachable"] is False
 
 
-def test_integration_test_unreachable_returns_error_not_500(client, analyst_token):
+def test_integration_test_returns_probe_metadata_for_sync_integrations(client, admin_token, analyst_token, monkeypatch):
+    """Sync-capable defensive integrations should use the saved config for a lightweight probe."""
+    calls: dict[str, dict] = {}
+
+    class FakeResponse:
+        def __init__(self, status_code: int):
+            self.status_code = status_code
+
+    class FakeStreamResponse(FakeResponse):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            calls["client"] = kwargs
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def head(self, url, headers=None, auth=None, params=None):
+            calls["head"] = {
+                "url": url,
+                "headers": headers or {},
+                "auth": auth,
+                "params": params or {},
+            }
+            return FakeResponse(405)
+
+        def stream(self, method, url, headers=None, auth=None, params=None):
+            calls["stream"] = {
+                "method": method,
+                "url": url,
+                "headers": headers or {},
+                "auth": auth,
+                "params": params or {},
+            }
+            return FakeStreamResponse(204)
+
+    monkeypatch.setattr(integration_service.httpx, "Client", FakeClient)
+
+    update = client.patch(
+        "/api/v1/integrations/suricata",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "endpoint_url": "https://suricata.lab.local/eve/export",
+            "auth_type": "bearer",
+            "api_token": "demo-token",
+            "verify_tls": False,
+            "timeout_seconds": 9,
+            "lookback_minutes": 30,
+            "request_headers": {"X-Cluster": "alpha"},
+            "query_params": {"tenant": "blue"},
+        },
+    )
+    assert update.status_code == 200
+
+    r = client.post(
+        "/api/v1/integrations/suricata/test",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["reachable"] is True
+    assert body["status"] == "ok"
+    assert body["http_status"] == 204
+    assert body["latency_ms"] is not None
+    assert calls["client"]["timeout"] == 9
+    assert calls["client"]["verify"] is False
+    assert calls["head"]["headers"]["Authorization"] == "Bearer demo-token"
+    assert calls["head"]["headers"]["X-Cluster"] == "alpha"
+    assert calls["head"]["headers"]["X-AegisCore-Connection-Test"] == "true"
+    assert calls["head"]["params"]["tenant"] == "blue"
+    assert "since" in calls["head"]["params"]
+    assert calls["stream"]["method"] == "GET"
+    assert calls["stream"]["headers"]["Range"] == "bytes=0-0"
+
+
+def test_integration_test_unreachable_returns_error_not_500(client, admin_token, analyst_token, monkeypatch):
     """A configured but unreachable URL should return 200 with reachable=False, not a 500."""
-    admin_r = client.post("/api/v1/auth/login", json={"email": "admin@example.com", "password": "Admin123!"})
-    token = admin_r.json()["access_token"]
+    class FailingClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def head(self, url, headers=None, auth=None, params=None):
+            raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(integration_service.httpx, "Client", FailingClient)
+
     client.patch(
         "/api/v1/integrations/wazuh",
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": f"Bearer {admin_token}"},
         json={"endpoint_url": "http://192.0.2.1:9200", "timeout_seconds": 2},
     )
 

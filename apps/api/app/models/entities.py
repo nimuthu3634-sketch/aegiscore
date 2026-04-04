@@ -490,6 +490,5 @@ class JobRecord(Base):
     requested_by: Mapped[User | None] = relationship()
 
 
-# Compatibility aliases used by the existing service and test code.
-IncidentNote = IncidentEvent
+# Short alias used throughout service, route, and test code.
 ModelMetadata = RiskModelMetadata

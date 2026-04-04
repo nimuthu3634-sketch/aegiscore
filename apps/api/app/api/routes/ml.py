@@ -9,6 +9,7 @@ from app.models.entities import ModelMetadata, User, UserRole
 from app.ml.scoring import build_risk_overview
 from app.schemas.domain import (
     RetrainResponse,
+    RiskModelMetadataListResponse,
     RiskModelMetadataRead,
     RiskOverviewRead,
     ScoreRecalculationRequest,
@@ -30,22 +31,22 @@ def get_model(current_user: User = Depends(get_current_user), db: Session = Depe
     return RiskModelMetadataRead.model_validate(model)
 
 
-@router.get("/models")
+@router.get("/models", response_model=RiskModelMetadataListResponse)
 def list_models(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> RiskModelMetadataListResponse:
     query = db.query(ModelMetadata)
     total = query.count()
     items = query.order_by(ModelMetadata.trained_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    return {
-        "items": [RiskModelMetadataRead.model_validate(item).model_dump() for item in items],
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-    }
+    return RiskModelMetadataListResponse(
+        items=[RiskModelMetadataRead.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/overview", response_model=RiskOverviewRead)

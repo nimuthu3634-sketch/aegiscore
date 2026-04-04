@@ -21,7 +21,7 @@ import { formatDate } from "@/lib/format";
 import { canManageOperations, isAdmin } from "@/lib/permissions";
 import { maxUploadBytes, validateImportFile } from "@/lib/validation";
 import { useAuth } from "@/hooks/use-auth";
-import type { ImportResult, Integration, PageResult } from "@/types/domain";
+import type { ConnectionTestResult, ImportResult, Integration, PageResult } from "@/types/domain";
 
 // ─── schemas ────────────────────────────────────────────────────────────────
 
@@ -45,6 +45,22 @@ const configSchema = z.object({
   lookback_minutes: z.coerce.number().int().min(1).max(10080),
 });
 type ConfigValues = z.infer<typeof configSchema>;
+
+function describeConnectionTest(result: ConnectionTestResult) {
+  if (result.reachable === true) {
+    return { label: "Reachable", tone: "text-green-700" };
+  }
+  if (result.status === "import_only") {
+    return { label: "Import-only", tone: "text-amber-700" };
+  }
+  if (result.status === "unsupported") {
+    return { label: "Unsupported", tone: "text-amber-700" };
+  }
+  if (result.status === "not_configured") {
+    return { label: "Not configured", tone: "text-amber-700" };
+  }
+  return { label: "Unreachable", tone: "text-red-600" };
+}
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -198,10 +214,7 @@ function IntegrationCard({
   });
 
   const testMutation = useMutation({
-    mutationFn: () =>
-      api.post<{ reachable: boolean | null; status: string; detail: string; http_status: number | null; latency_ms: number | null }>(
-        `/integrations/${integration.slug}/test`,
-      ),
+    mutationFn: () => api.post<ConnectionTestResult>(`/integrations/${integration.slug}/test`),
   });
 
   const isSyncCapable = integration.supports_manual_sync ?? false;
@@ -291,8 +304,8 @@ function IntegrationCard({
               </span>
             )}
             {testMutation.data && (
-              <span className={`text-sm font-medium ${testMutation.data.reachable ? "text-green-700" : "text-red-600"}`}>
-                {testMutation.data.reachable ? `Reachable` : `Unreachable`}
+              <span className={`text-sm font-medium ${describeConnectionTest(testMutation.data).tone}`}>
+                {describeConnectionTest(testMutation.data).label}
                 {testMutation.data.http_status ? ` · HTTP ${testMutation.data.http_status}` : ""}
                 {testMutation.data.latency_ms != null ? ` · ${testMutation.data.latency_ms}ms` : ""}
                 {testMutation.data.detail ? ` — ${testMutation.data.detail}` : ""}
