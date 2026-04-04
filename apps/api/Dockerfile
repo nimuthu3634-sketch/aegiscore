@@ -6,11 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /workspace/apps/api
 
-COPY apps/api/requirements.txt /tmp/requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements.txt
 
-COPY apps/api /workspace/apps/api
+COPY . /workspace/apps/api
 
 RUN useradd --create-home --shell /bin/bash aegis \
     && chown -R aegis:aegis /workspace

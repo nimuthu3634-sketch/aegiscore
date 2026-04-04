@@ -1,0 +1,7 @@
+api/__pycache__
+api/.mypy_cache
+api/.pytest_cache
+api/tests
+api/*.pyc
+api/*.pyo
+web

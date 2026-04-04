@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { Providers } from "@/app/providers";
-import { brandName } from "@aegiscore/config";
+import { brandName } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {

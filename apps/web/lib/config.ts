@@ -1,4 +1,4 @@
-import { brandName, brandPalette } from "@aegiscore/config";
+import { brandName, brandPalette } from "@/lib/brand";
 
 export const appConfig = {
   appName: brandName,

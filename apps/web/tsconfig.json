@@ -1,7 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
+    "moduleResolution": "bundler",
+    "forceConsistentCasingInFileNames": true,
     "lib": ["dom", "dom.iterable", "es2022"],
     "allowJs": false,
     "skipLibCheck": true,
@@ -17,9 +18,7 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@aegiscore/config": ["../../packages/config/src/index.ts"],
-      "@aegiscore/ui": ["../../packages/ui/src/index.tsx"]
+      "@/*": ["./*"]
     },
     "plugins": [{ "name": "next" }]
   },

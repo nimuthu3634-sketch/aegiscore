@@ -16,9 +16,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { setAuthSession } from "@/lib/auth";
+import { authWorkspaceUsers } from "@/lib/brand";
 import { appConfig } from "@/lib/config";
 import type { User } from "@/types/domain";
-import { authWorkspaceUsers } from "@aegiscore/config";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address."),

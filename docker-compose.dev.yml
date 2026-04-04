@@ -1,8 +1,8 @@
 services:
   seed:
     build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+      context: ./apps/api
+      dockerfile: Dockerfile
     env_file:
       - apps/api/.env.example
     environment:
@@ -51,8 +51,6 @@ services:
       - ./apps/web:/workspace/apps/web
       - /workspace/apps/web/.next
       - web_node_modules:/workspace/apps/web/node_modules
-      - ./packages:/workspace/packages
-      - ./tsconfig.base.json:/workspace/tsconfig.base.json
 
 volumes:
   web_node_modules:
