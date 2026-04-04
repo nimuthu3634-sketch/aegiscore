@@ -8,7 +8,7 @@ export const brandPalette = {
 
 export const brandName = "AegisCore";
 
-export const authDemoUsers = [
+export const authWorkspaceUsers = [
   "admin@example.com",
   "analyst@example.com",
   "viewer@example.com",

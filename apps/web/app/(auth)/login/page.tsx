@@ -18,7 +18,7 @@ import { api } from "@/lib/api";
 import { setAuthSession } from "@/lib/auth";
 import { appConfig } from "@/lib/config";
 import type { User } from "@/types/domain";
-import { authDemoUsers } from "@aegiscore/config";
+import { authWorkspaceUsers } from "@aegiscore/config";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -48,7 +48,7 @@ const capabilities = [
   {
     icon: Radar,
     title: "Clear operational signal",
-    text: "A dashboard-first experience that helps analysts explain alert pressure and incident posture at a glance.",
+    text: "A dashboard-first experience that helps analysts interpret alert pressure and incident posture with clear operational context.",
   },
   {
     icon: Workflow,
@@ -115,10 +115,10 @@ export default function LoginPage() {
             <div className="mt-auto grid gap-4 pt-8 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-[28px] border border-white/10 bg-white/[0.05] p-5">
                 <p className="text-[11px] uppercase tracking-[0.3em] text-[#ffb37f]">Operational readiness</p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">From sign-in to triage in under a minute.</h2>
+                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">Operational visibility from the moment you sign in.</h2>
                 <p className="mt-3 text-sm leading-6 text-white/68">
-                  Pre-configured telemetry sources, explainable risk scoring, real-time alert feeds, and incident workflows
-                  give analysts a complete operational surface immediately.
+                  Telemetry integrations, explainable risk scoring, real-time alert feeds, and incident workflows
+                  give analysts a unified surface for monitoring, triage, and response coordination.
                 </p>
               </div>
 
@@ -146,14 +146,14 @@ export default function LoginPage() {
                 <Badge tone="medium">Secure access</Badge>
                 <h2 className="text-3xl font-semibold tracking-[-0.05em] text-[#111111]">Enter the operations workspace</h2>
                 <p className="text-sm leading-7 text-[#6d635a]">
-                  Sign in with your credentials or select a pre-configured account to begin working.
+                  Sign in with your credentials or choose a workspace account to enter the platform.
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
                   { label: "Operator roles", value: "3" },
-                  { label: "Live dashboard", value: "Ready" },
+                  { label: "Live dashboard", value: "Active" },
                   { label: "Policy mode", value: "Defensive" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-[22px] border border-black/8 bg-white/70 p-4">
@@ -168,7 +168,7 @@ export default function LoginPage() {
                   <Input {...form.register("email")} autoComplete="email" placeholder="analyst@example.com" />
                 </FormField>
 
-                <FormField label="Password" hint="Select a quick-access account or enter your own" error={form.formState.errors.password?.message}>
+                <FormField label="Password" hint="Choose a workspace account or enter your own credentials" error={form.formState.errors.password?.message}>
                   <Input
                     {...form.register("password")}
                     autoComplete="current-password"
@@ -192,11 +192,11 @@ export default function LoginPage() {
 
               <div className="rounded-[24px] border border-black/8 bg-white/65 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#8a7d72]">Quick access</p>
-                  <span className="text-xs text-[#8a7d72]">Pre-configured accounts</span>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#8a7d72]">Workspace access</p>
+                  <span className="text-xs text-[#8a7d72]">Role-based accounts</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {authDemoUsers.map((email) => (
+                  {authWorkspaceUsers.map((email) => (
                     <button
                       key={email}
                       type="button"
