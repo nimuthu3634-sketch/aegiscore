@@ -145,7 +145,7 @@ export default function IncidentsPage() {
       <PageHeader
         eyebrow="Case management"
         title="Incidents"
-        description="Create, track, and resolve incidents with structured priorities, timeline notes, linked alerts, and export-ready summaries."
+        description="Create, track, and resolve incidents with structured priorities, timeline notes, linked alerts, and downloadable case summaries."
         actions={!canManageCases ? <Badge tone="medium">Read-only access</Badge> : undefined}
       />
 

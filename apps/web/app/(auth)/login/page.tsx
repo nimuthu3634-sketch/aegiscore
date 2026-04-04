@@ -92,7 +92,7 @@ export default function LoginPage() {
             <div className="mt-10 max-w-3xl space-y-5">
               <Badge tone="high">AI-assisted defensive operations</Badge>
               <h1 className="text-4xl font-semibold leading-[0.98] tracking-[-0.06em] text-white md:text-5xl xl:text-[4.1rem]">
-                Build calm from noisy telemetry and make every analyst decision easier to explain.
+                Build calm from noisy telemetry and keep every analyst decision grounded in evidence.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-white/70">
                 {appConfig.appName} brings SOC overview, live alert context, safe lab imports, explainable prioritization,

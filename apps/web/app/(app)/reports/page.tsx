@@ -81,17 +81,17 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Export center"
+        eyebrow="Reporting center"
         title="Reports"
-        description="Generate CSV exports and printable incident summaries for analyst handoff, shift reports, and operational review."
-        actions={<Badge tone="medium">CSV and printable text exports</Badge>}
+        description="Generate CSV exports and incident summaries for analyst handoff, shift reporting, and operational review."
+        actions={<Badge tone="medium">CSV and text report exports</Badge>}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open alerts" value={formatNumber(summaryQuery.data.kpis.open_alerts)} detail="Included in alert export coverage" tone="high" />
-        <StatCard label="Open incidents" value={formatNumber(summaryQuery.data.kpis.open_incidents)} detail="Available for printable case summaries" tone="medium" />
+        <StatCard label="Open incidents" value={formatNumber(summaryQuery.data.kpis.open_incidents)} detail="Available for incident summary exports" tone="medium" />
         <StatCard label="Tracked assets" value={formatNumber(summaryQuery.data.kpis.total_assets)} detail="Reflected in dashboard summary exports" />
-        <StatCard label="Exports ready" value="3" detail="Alerts CSV, dashboard CSV, incident summary" tone="healthy" />
+        <StatCard label="Reports available" value="3" detail="Alerts CSV, dashboard CSV, incident summary" tone="healthy" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -160,7 +160,7 @@ export default function ReportsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Printable incident summary</CardTitle>
+            <CardTitle>Incident summary export</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <form
@@ -186,7 +186,7 @@ export default function ReportsPage() {
               </FormField>
 
               <div className="rounded-[1.25rem] border bg-[#fcfcfc] p-4 text-sm leading-6 text-[#5f5f5f]">
-                Exported summaries include the incident title, status, priority, opened timestamp, linked alerts, and timeline history in a clean printable text format.
+                Exported summaries include the incident title, status, priority, opened timestamp, linked alerts, and timeline history in a clean text format.
               </div>
 
               <Button type="submit" disabled={!selectedIncidentId || downloading !== null}>
@@ -196,7 +196,7 @@ export default function ReportsPage() {
             </form>
 
             <div className="space-y-3">
-              <p className="text-sm font-semibold text-[#111111]">Recent export-ready cases</p>
+              <p className="text-sm font-semibold text-[#111111]">Recent case reports</p>
               {incidents.length ? (
                 incidents.slice(0, 5).map((incident) => (
                   <div key={incident.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border bg-white px-4 py-4">
@@ -227,7 +227,7 @@ export default function ReportsPage() {
               ) : (
                 <EmptyState
                   title="No incidents available"
-                  description="Once incidents are created, export-ready case summaries will appear here for quick download."
+                  description="Once incidents are created, incident summary exports will appear here for quick download."
                 />
               )}
             </div>
@@ -247,7 +247,7 @@ export default function ReportsPage() {
               </div>
               <p className="font-semibold text-[#111111]">Analyst handoff</p>
             </div>
-            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Use incident summaries when handing a case between analysts or sharing current containment progress.</p>
+            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Use incident summaries when handing a case between analysts or communicating current containment status.</p>
           </div>
           <div className="rounded-[1.25rem] border bg-white p-4">
             <div className="flex items-center gap-3">
