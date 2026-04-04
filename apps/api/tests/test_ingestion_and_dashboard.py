@@ -4,9 +4,11 @@ from pathlib import Path
 
 from app.services import integrations as integration_service
 
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
+
 
 def test_wazuh_import_updates_dashboard(client, admin_token):
-    sample = Path(__file__).resolve().parents[3] / "docs" / "sample-wazuh-alerts.json"
+    sample = FIXTURE_DIR / "sample-wazuh-alerts.json"
     with sample.open("rb") as handle:
         response = client.post(
             "/api/v1/integrations/wazuh/import",
@@ -26,7 +28,7 @@ def test_wazuh_import_updates_dashboard(client, admin_token):
 
 
 def test_suricata_sync_uses_config_and_records_run(client, admin_token, monkeypatch):
-    sample = Path(__file__).resolve().parents[3] / "docs" / "sample-suricata-events.json"
+    sample = FIXTURE_DIR / "sample-suricata-events.json"
 
     def fake_fetch_remote_payload(_integration):
         return sample.read_bytes(), "application/json"

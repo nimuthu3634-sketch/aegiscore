@@ -3,7 +3,7 @@ FROM node:20-alpine AS deps
 WORKDIR /workspace/apps/web
 
 COPY package.json package-lock.json* ./
-RUN npm ci --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+RUN npm ci --include=optional --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 
 FROM node:20-alpine AS builder
@@ -27,10 +27,8 @@ FROM node:20-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /workspace/apps/web
 
-COPY --from=builder /workspace/apps/web ./
-
-RUN addgroup -S aegis && adduser -S aegis -G aegis \
-    && chown -R aegis:aegis /workspace
+RUN addgroup -S aegis && adduser -S aegis -G aegis
+COPY --from=builder --chown=aegis:aegis /workspace/apps/web ./
 
 USER aegis
 
