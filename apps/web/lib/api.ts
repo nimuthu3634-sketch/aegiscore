@@ -25,6 +25,61 @@ export function createQueryString(values: Record<string, string | number | boole
   return rendered ? `?${rendered}` : "";
 }
 
+function extractApiErrorMessage(payload: unknown): string {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload;
+  }
+
+  if (typeof payload !== "object" || !payload) {
+    return "Request failed";
+  }
+
+  const candidate = payload as {
+    detail?: unknown;
+    message?: unknown;
+    errors?: Array<{ msg?: string }>;
+  };
+
+  if (typeof candidate.detail === "string" && candidate.detail.trim()) {
+    return candidate.detail;
+  }
+
+  if (typeof candidate.message === "string" && candidate.message.trim()) {
+    return candidate.message;
+  }
+
+  if (candidate.detail && typeof candidate.detail === "object") {
+    const nestedDetail = candidate.detail as {
+      detail?: unknown;
+      message?: unknown;
+      app?: unknown;
+      database?: unknown;
+      redis?: unknown;
+    };
+
+    if (typeof nestedDetail.detail === "string" && nestedDetail.detail.trim()) {
+      return nestedDetail.detail;
+    }
+
+    if (typeof nestedDetail.message === "string" && nestedDetail.message.trim()) {
+      return nestedDetail.message;
+    }
+
+    if ("app" in nestedDetail || "database" in nestedDetail || "redis" in nestedDetail) {
+      return "One or more platform services are currently unavailable.";
+    }
+  }
+
+  if (Array.isArray(candidate.errors) && candidate.errors.length > 0) {
+    const firstMessage = candidate.errors.find((error) => typeof error?.msg === "string")?.msg;
+    if (firstMessage) {
+      return firstMessage;
+    }
+  }
+
+  return "Request failed";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   const bodyIsFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
@@ -56,12 +111,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const message =
-      typeof payload === "object" && payload && "detail" in payload
-        ? String((payload as { detail?: string }).detail ?? "Request failed")
-        : typeof payload === "string" && payload
-          ? payload
-          : "Request failed";
+    const message = extractApiErrorMessage(payload);
     throw new ApiError(message, response.status, payload);
   }
 

@@ -363,7 +363,7 @@ function IntegrationCard({
 export default function IntegrationsPage() {
   const queryClient = useQueryClient();
   const { data: currentUser } = useAuth();
-  const canImport = canManageOperations(currentUser?.role);
+  const canOperateIntegrations = canManageOperations(currentUser?.role);
   const canConfigure = isAdmin(currentUser?.role);
 
   const form = useForm<ImportValues>({
@@ -431,7 +431,7 @@ export default function IntegrationsPage() {
               imported result files — they are never executed by AegisCore.
             </div>
 
-            {canImport ? (
+            {canOperateIntegrations ? (
               <form
                 className="space-y-4"
                 onSubmit={form.handleSubmit((values) => importMutation.mutate(values))}
@@ -477,8 +477,7 @@ export default function IntegrationsPage() {
                   <div>
                     <p className="font-semibold text-[#111111]">Read-only integration access</p>
                     <p className="mt-1 text-sm text-[#6f6f6f]">
-                      Your role can review connector health, but only Admins and Analysts can import lab
-                      files.
+                      Your role can review connector health, but only Admins and Analysts can run sync and import actions.
                     </p>
                   </div>
                 </div>
@@ -511,7 +510,7 @@ export default function IntegrationsPage() {
                 key={integration.id}
                 integration={integration}
                 canConfigure={canConfigure}
-                canSync={canImport}
+                canSync={canOperateIntegrations}
               />
             ))
           ) : (

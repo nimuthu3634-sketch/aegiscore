@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/feedback/error-state";
 import { LoadingState } from "@/components/feedback/loading-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, createQueryString } from "@/lib/api";
 import { formatDate, scoreTone } from "@/lib/format";
@@ -79,7 +80,16 @@ export default function AssetDetailPage() {
             <CardTitle>Related alerts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {linkedAlerts.length ? (
+            {alertsQuery.isLoading ? (
+              <p className="text-sm text-[#6f6f6f]">Loading alerts linked to this asset...</p>
+            ) : alertsQuery.isError ? (
+              <div className="space-y-3 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p>{alertsQuery.error instanceof Error ? alertsQuery.error.message : "Related alerts could not be loaded."}</p>
+                <Button type="button" variant="outline" size="sm" onClick={() => alertsQuery.refetch()}>
+                  Retry alerts
+                </Button>
+              </div>
+            ) : linkedAlerts.length ? (
               linkedAlerts.map((alert) => (
                 <Link key={alert.id} href={`/alerts/${alert.id}`} className="block rounded-[1.25rem] border bg-[#fcfcfc] p-4 transition hover:border-[#FF7A1A]">
                   <div className="flex items-center justify-between gap-3">
@@ -102,7 +112,16 @@ export default function AssetDetailPage() {
             <CardTitle>Related incidents</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
-            {linkedIncidents.length ? (
+            {incidentsQuery.isLoading ? (
+              <p className="text-sm text-[#6f6f6f] md:col-span-2">Loading incidents linked to this asset...</p>
+            ) : incidentsQuery.isError ? (
+              <div className="space-y-3 rounded-[1.25rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700 md:col-span-2">
+                <p>{incidentsQuery.error instanceof Error ? incidentsQuery.error.message : "Related incidents could not be loaded."}</p>
+                <Button type="button" variant="outline" size="sm" onClick={() => incidentsQuery.refetch()}>
+                  Retry incidents
+                </Button>
+              </div>
+            ) : linkedIncidents.length ? (
               linkedIncidents.map((incident) => (
                 <Link key={incident.id} href={`/incidents/${incident.id}`} className="block rounded-[1.25rem] border bg-[#fcfcfc] p-4 transition hover:border-[#FF7A1A]">
                   <div className="flex items-center justify-between gap-3">

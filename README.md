@@ -89,6 +89,16 @@ When the stack is up:
 - Direct API in dev mode: [http://localhost:8000/docs](http://localhost:8000/docs)
 - Direct web in dev mode: [http://localhost:3000](http://localhost:3000)
 
+## Operational Notes
+
+- Seeded local accounts from `app.seeds.seed_demo`:
+  - `admin@example.com` / `Admin123!`
+  - `analyst@example.com` / `Analyst123!`
+  - `viewer@example.com` / `Viewer123!`
+- Wazuh and Suricata are the sync-capable defensive integrations. Their frontend cards support configuration updates, connection tests, and manual sync.
+- Nmap and Hydra are import-only by design. AegisCore does not execute scans or brute-force activity.
+- ML retraining depends on the API, Redis, and the worker being available together. If the queue is unavailable, `/api/v1/ml/retrain` returns `503` and the analytics page explains that the worker path is offline.
+
 ## Exact Commands
 
 ### Startup commands
