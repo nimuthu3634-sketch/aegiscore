@@ -291,6 +291,8 @@ class ResponseActionResult(BaseModel):
     alert_id: str
     action: str
     status: Literal["recorded"]
+    execution_mode: Literal["recorded", "enforced"] = "recorded"
+    execution_provider: str | None = None
     message: str
     executed_at: datetime
     target: dict[str, str | None] = Field(default_factory=dict)

@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePathname } from "next/navigation";
 
 import { appConfig } from "@/lib/config";
 
@@ -19,7 +18,6 @@ const RealtimeContext = createContext<RealtimeContextValue>({
 });
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<RealtimeContextValue["status"]>("idle");
   const [lastEvent, setLastEvent] = useState<RealtimePayload>(null);
@@ -66,7 +64,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       isActive = false;
       socket.close();
     };
-  }, [pathname, queryClient]);
+  }, [queryClient]);
 
   const value = useMemo(() => ({ status, lastEvent }), [lastEvent, status]);
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;

@@ -159,6 +159,8 @@ def test_response_action_status_is_recorded(client, analyst_token):
     )
     assert r.status_code == 200
     assert r.json()["status"] == "recorded", f"Expected 'recorded', got '{r.json()['status']}'"
+    assert r.json()["execution_mode"] == "recorded"
+    assert r.json()["execution_provider"] is None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -318,6 +320,45 @@ def test_integration_test_unreachable_returns_error_not_500(client, admin_token,
     assert "latency_ms" in body
 
 
+def test_integrations_list_detail_and_history_routes_work_after_import(client, admin_token):
+    """Integrations should expose list, detail, and history views after a recorded import run."""
+    xml_payload = """
+    <nmaprun startstr="2026-03-29T10:00:00Z">
+      <host>
+        <status state="up" />
+        <address addr="10.10.10.5" addrtype="ipv4" />
+        <hostnames><hostname name="lab-gateway-01" /></hostnames>
+        <ports>
+          <port protocol="tcp" portid="22">
+            <state state="open" />
+            <service name="ssh" />
+          </port>
+        </ports>
+      </host>
+    </nmaprun>
+    """.strip()
+
+    imported = client.post(
+        "/api/v1/integrations/nmap/import",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        files={"file": ("lab-nmap.xml", xml_payload, "application/xml")},
+    )
+    assert imported.status_code == 202
+
+    listed = client.get("/api/v1/integrations", headers={"Authorization": f"Bearer {admin_token}"})
+    assert listed.status_code == 200
+    assert any(item["slug"] == "nmap" for item in listed.json()["items"])
+
+    detail = client.get("/api/v1/integrations/nmap", headers={"Authorization": f"Bearer {admin_token}"})
+    assert detail.status_code == 200
+    assert detail.json()["configuration"]["lab_only_import"] is True
+
+    history = client.get("/api/v1/integrations/nmap/history", headers={"Authorization": f"Bearer {admin_token}"})
+    assert history.status_code == 200
+    assert history.json()["total"] >= 1
+    assert history.json()["items"][0]["mode"] == "import"
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # In-memory rate limiter fallback
 # ──────────────────────────────────────────────────────────────────────────────
@@ -474,6 +515,31 @@ def test_alert_status_update(client, analyst_token):
     assert r.json()["status"] == "triaged"
 
 
+def test_alert_assignment_can_be_set_and_cleared(client, analyst_token):
+    """PATCH /alerts/{id} should support assigning and clearing an analyst owner."""
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {analyst_token}"})
+    assert me.status_code == 200
+    analyst_id = me.json()["id"]
+
+    alert = _create_alert_with_asset(client, analyst_token, "assignment-test-host")
+
+    assign = client.patch(
+        f"/api/v1/alerts/{alert['id']}",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"assigned_to_id": analyst_id},
+    )
+    assert assign.status_code == 200
+    assert assign.json()["assignee"]["id"] == analyst_id
+
+    clear = client.patch(
+        f"/api/v1/alerts/{alert['id']}",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"assigned_to_id": None},
+    )
+    assert clear.status_code == 200
+    assert clear.json()["assignee"] is None
+
+
 def test_incident_status_update_and_timeline_event(client, analyst_token):
     """PATCH /incidents/{id} with status change should record a timeline event."""
     alert = _create_alert_with_asset(client, analyst_token, "incident-status-host")
@@ -496,3 +562,50 @@ def test_incident_status_update_and_timeline_event(client, analyst_token):
     events = r.json()["timeline_events"]
     status_events = [e for e in events if e["event_type"] == "status-change"]
     assert len(status_events) >= 1
+
+
+def test_incident_resolution_notes_and_assignee_can_be_updated(client, analyst_token):
+    """PATCH /incidents/{id} should support resolution notes and nullable assignee updates."""
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {analyst_token}"})
+    assert me.status_code == 200
+    analyst_id = me.json()["id"]
+
+    alert = _create_alert_with_asset(client, analyst_token, "incident-resolution-host")
+    inc = client.post(
+        "/api/v1/incidents",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={
+            "title": "Resolution notes test",
+            "priority": "P2",
+            "assignee_id": analyst_id,
+            "linked_alert_ids": [alert["id"]],
+            "evidence": [],
+        },
+    )
+    assert inc.status_code == 201
+    inc_id = inc.json()["id"]
+
+    update = client.patch(
+        f"/api/v1/incidents/{inc_id}",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"resolution_notes": "Containment validated and monitoring continues.", "assignee_id": None},
+    )
+    assert update.status_code == 200
+    assert update.json()["resolution_notes"] == "Containment validated and monitoring continues."
+    assert update.json()["assignee"] is None
+
+
+def test_asset_detail_returns_expected_context(client, analyst_token):
+    """GET /assets/{id} should return the asset created from alert telemetry."""
+    alert = _create_alert_with_asset(client, analyst_token, "asset-detail-host", "10.20.30.40")
+    asset_id = alert["asset"]["id"]
+
+    asset = client.get(
+        f"/api/v1/assets/{asset_id}",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+    )
+    assert asset.status_code == 200
+    body = asset.json()
+    assert body["id"] == asset_id
+    assert body["hostname"] == "asset-detail-host"
+    assert body["ip_address"] == "10.20.30.40"

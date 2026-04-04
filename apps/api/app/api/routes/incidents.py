@@ -113,7 +113,7 @@ def patch_incident(
     if incident is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
 
-    updated = update_incident(db, incident, payload.model_dump(exclude_none=True), current_user, ip_address)
+    updated = update_incident(db, incident, payload.model_dump(exclude_unset=True), current_user, ip_address)
     return IncidentRead.model_validate(updated)
 
 

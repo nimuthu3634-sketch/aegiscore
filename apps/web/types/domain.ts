@@ -154,6 +154,8 @@ export interface ResponseActionResult {
   alert_id: string;
   action: ResponseActionType | string;
   status: "recorded";
+  execution_mode: "recorded" | "enforced";
+  execution_provider?: string | null;
   message: string;
   executed_at: string;
   target: Record<string, string | null>;

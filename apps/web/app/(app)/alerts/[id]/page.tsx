@@ -70,6 +70,8 @@ export default function AlertDetailPage() {
   const usersQuery = useQuery({
     queryKey: ["users", "assignable"],
     queryFn: () => api.get<PageResult<User>>(`/users${createQueryString({ page: 1, page_size: 50 })}`),
+    enabled: canManageAlert,
+    retry: false,
   });
 
   const commentForm = useForm<z.infer<typeof commentSchema>>({
@@ -135,7 +137,13 @@ export default function AlertDetailPage() {
   }
 
   const alert = alertQuery.data;
-  const assignableUsers = usersQuery.data?.items?.length ? usersQuery.data.items : currentUser ? [currentUser] : [];
+  const assignableUsers = canManageAlert
+    ? usersQuery.data?.items?.length
+      ? usersQuery.data.items
+      : currentUser
+        ? [currentUser]
+        : []
+    : [];
 
   return (
     <div className="space-y-6">
@@ -293,8 +301,8 @@ export default function AlertDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="rounded-[1.25rem] border bg-[#fff7f1] p-4 text-sm leading-6 text-[#8a4e16]">
-                    These actions are recorded and audited inside AegisCore. They do not directly push firewall or host controls yet,
-                    but they create a real containment trail and prepare the app for SOAR-style execution.
+                    These actions are recorded and audited inside AegisCore. They do not directly enforce firewall,
+                    identity, or host controls yet, but they create a clear containment trail and leave room for future enforcement integrations.
                   </div>
 
                   <div className="grid gap-3">
@@ -322,12 +330,18 @@ export default function AlertDetailPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge tone="high">{responseMutation.data.action}</Badge>
                         <Badge tone="medium">{responseMutation.data.status}</Badge>
+                        <Badge tone="low">{responseMutation.data.execution_mode === "recorded" ? "Workflow action" : "Enforced action"}</Badge>
                         <span className="text-xs uppercase tracking-[0.24em] text-[#8f8f8f]">
                           {formatDate(responseMutation.data.executed_at)}
                         </span>
                       </div>
 
                       <p className="mt-3 text-sm leading-6 text-[#5f5f5f]">{responseMutation.data.message}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.22em] text-[#8f8f8f]">
+                        {responseMutation.data.execution_provider
+                          ? `Provider ${responseMutation.data.execution_provider}`
+                          : "Recorded for analyst follow-through"}
+                      </p>
 
                       {Object.keys(responseMutation.data.target).length ? (
                         <div className="mt-4 grid gap-2">

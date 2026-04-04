@@ -247,7 +247,7 @@ export default function ReportsPage() {
               </div>
               <p className="font-semibold text-[#111111]">Analyst handoff</p>
             </div>
-            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Use incident summaries when handing a case between lab analysts or presenting containment progress.</p>
+            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Use incident summaries when handing a case between analysts or sharing current containment progress.</p>
           </div>
           <div className="rounded-[1.25rem] border bg-white p-4">
             <div className="flex items-center gap-3">
@@ -265,7 +265,7 @@ export default function ReportsPage() {
               </div>
               <p className="font-semibold text-[#111111]">Evidence pack</p>
             </div>
-            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Alert CSV exports capture the fields most useful for triage evidence and post-lab reporting.</p>
+            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Alert CSV exports capture the fields most useful for triage evidence, escalation records, and operational review.</p>
           </div>
         </CardContent>
       </Card>

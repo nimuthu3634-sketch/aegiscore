@@ -26,6 +26,18 @@ def test_logout_clears_session_cookie(client, login_as):
     assert client.cookies.get("auth_role") is None
 
 
+def test_logout_clears_invalid_session_cookie(client):
+    client.cookies.set("auth_token", "invalid-token")
+    client.cookies.set("auth_role", "Admin")
+
+    logout = client.post("/api/v1/auth/logout")
+
+    assert logout.status_code == 204
+    set_cookie_headers = logout.headers.get_list("set-cookie")
+    assert any("auth_token=" in header and ("Max-Age=0" in header or "expires=" in header.lower()) for header in set_cookie_headers)
+    assert any("auth_role=" in header and ("Max-Age=0" in header or "expires=" in header.lower()) for header in set_cookie_headers)
+
+
 def test_login_and_me(client):
     response = client.post("/api/v1/auth/login", json={"email": "admin@example.com", "password": "Admin123!"})
 

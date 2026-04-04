@@ -111,6 +111,7 @@ export default function IncidentsPage() {
   const usersQuery = useQuery({
     queryKey: ["users", "incident-assignees"],
     queryFn: () => api.get<PageResult<User>>(`/users${createQueryString({ page: 1, page_size: 50 })}`),
+    enabled: canManageCases,
     retry: false,
   });
 
@@ -131,7 +132,13 @@ export default function IncidentsPage() {
     },
   });
 
-  const assignableUsers = usersQuery.data?.items?.length ? usersQuery.data.items : currentUser ? [currentUser] : [];
+  const assignableUsers = canManageCases
+    ? usersQuery.data?.items?.length
+      ? usersQuery.data.items
+      : currentUser
+        ? [currentUser]
+        : []
+    : [];
 
   return (
     <div className="space-y-6">

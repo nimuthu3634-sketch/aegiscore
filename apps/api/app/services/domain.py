@@ -318,7 +318,7 @@ def execute_alert_response(
         }
         message = (
             f"Recorded a defensive block request for source IP {ip_target}. "
-            "This is tracked inside AegisCore for analyst follow-through or future SOAR integration."
+            "This workflow action is tracked inside AegisCore for analyst follow-through or future enforcement integrations."
         )
         follow_up = [
             "Apply the block in your firewall, Wazuh active response, or upstream gateway.",
@@ -333,7 +333,7 @@ def execute_alert_response(
         }
         message = (
             f"Recorded host isolation for {alert.asset.hostname}. "
-            "Use your endpoint tooling or lab workflow to disconnect the host from the network."
+            "Use your endpoint tooling or approved containment workflow to disconnect the host from the network."
         )
         follow_up = [
             "Confirm the endpoint is quarantined or otherwise segmented.",
@@ -405,6 +405,8 @@ def execute_alert_response(
             alert_id=alert.id,
             action=action,
             status="recorded",
+            execution_mode="recorded",
+            execution_provider=None,
             message=message,
             executed_at=executed_at,
             target=target,
@@ -659,8 +661,9 @@ def add_incident_note(
 
 def update_incident(db: Session, incident: Incident, payload: dict, actor: User, ip_address: str | None) -> Incident:
     previous_status = incident.status
+    nullable_fields = {"assignee_id", "resolution_notes"}
     for field, value in payload.items():
-        if value is None:
+        if value is None and field not in nullable_fields:
             continue
         setattr(incident, field, value)
     if incident.status == IncidentStatus.RESOLVED and incident.resolved_at is None:

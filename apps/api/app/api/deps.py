@@ -25,34 +25,48 @@ def get_optional_ip(
     return request.client.host if request.client else None
 
 
+def _resolve_user_from_request(request: Request, token: str | None, db: Session) -> User | None:
+    settings = get_settings()
+    access_token = token or request.cookies.get(settings.auth_cookie_name)
+    if not access_token:
+        return None
+
+    try:
+        payload = decode_access_token(access_token)
+    except ValueError:
+        return None
+
+    subject = payload.get("sub")
+    if not subject:
+        return None
+
+    user = db.query(User).filter(User.id == subject, User.is_active.is_(True)).one_or_none()
+    if user is None:
+        return None
+    expected_role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if payload.get("role") and str(payload["role"]) != expected_role:
+        return None
+    return user
+
+
 def get_current_user(request: Request, token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     credentials_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    settings = get_settings()
-    access_token = token or request.cookies.get(settings.auth_cookie_name)
-    if not access_token:
-        raise credentials_error
-
-    try:
-        payload = decode_access_token(access_token)
-    except ValueError as error:
-        raise credentials_error from error
-
-    subject = payload.get("sub")
-    if not subject:
-        raise credentials_error
-
-    user = db.query(User).filter(User.id == subject, User.is_active.is_(True)).one_or_none()
+    user = _resolve_user_from_request(request, token, db)
     if user is None:
         raise credentials_error
-    expected_role = user.role.value if hasattr(user.role, "value") else str(user.role)
-    if payload.get("role") and str(payload["role"]) != expected_role:
-        raise credentials_error
-
     return user
+
+
+def get_optional_current_user(
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    return _resolve_user_from_request(request, token, db)
 
 
 def require_roles(*roles: UserRole) -> Callable[[User], User]:

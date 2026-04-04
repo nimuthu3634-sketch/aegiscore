@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_optional_ip
+from app.api.deps import get_current_user, get_optional_current_user, get_optional_ip
 from app.core.config import get_settings
 from app.core.rate_limit import enforce_http_rate_limit, normalize_rate_limit_key, reset_rate_limit
 from app.core.security import clear_auth_cookies, create_access_token, hash_password, set_auth_cookies, verify_password
@@ -74,20 +74,21 @@ def me(response: Response, current_user: User = Depends(get_current_user)) -> Us
 def logout(
     response: Response,
     ip_address: str | None = Depends(get_optional_ip),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
     clear_auth_cookies(response)
     response.headers["Cache-Control"] = "no-store"
-    record_audit(
-        db,
-        actor=current_user,
-        action="auth.logout",
-        entity_type="user",
-        entity_id=current_user.id,
-        details={"email": current_user.email},
-        ip_address=ip_address,
-    )
+    if current_user is not None:
+        record_audit(
+            db,
+            actor=current_user,
+            action="auth.logout",
+            entity_type="user",
+            entity_id=current_user.id,
+            details={"email": current_user.email},
+            ip_address=ip_address,
+        )
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 

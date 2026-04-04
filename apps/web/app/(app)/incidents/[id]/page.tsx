@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -40,7 +41,10 @@ export default function IncidentDetailPage() {
   const usersQuery = useQuery({
     queryKey: ["users", "incident-detail"],
     queryFn: () => api.get<PageResult<User>>(`/users${createQueryString({ page: 1, page_size: 50 })}`),
+    enabled: canManageCases,
+    retry: false,
   });
+  const [resolutionNotesDraft, setResolutionNotesDraft] = useState("");
 
   const noteForm = useForm<z.infer<typeof noteSchema>>({
     resolver: zodResolver(noteSchema),
@@ -70,6 +74,10 @@ export default function IncidentDetailPage() {
     },
   });
 
+  useEffect(() => {
+    setResolutionNotesDraft(incidentQuery.data?.resolution_notes ?? "");
+  }, [incidentQuery.data?.resolution_notes]);
+
   if (incidentQuery.isLoading) {
     return <LoadingState lines={8} />;
   }
@@ -79,7 +87,13 @@ export default function IncidentDetailPage() {
   }
 
   const incident = incidentQuery.data;
-  const assignableUsers = usersQuery.data?.items?.length ? usersQuery.data.items : currentUser ? [currentUser] : [];
+  const assignableUsers = canManageCases
+    ? usersQuery.data?.items?.length
+      ? usersQuery.data.items
+      : currentUser
+        ? [currentUser]
+        : []
+    : [];
 
   return (
     <div className="space-y-6">
@@ -244,9 +258,36 @@ export default function IncidentDetailPage() {
               <CardTitle>Resolution notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm leading-6 text-[#5f5f5f]">
-                {incident.resolution_notes ?? "Resolution notes will appear here once the incident is closed or updated."}
-              </p>
+              {canManageCases ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={resolutionNotesDraft}
+                    onChange={(event) => setResolutionNotesDraft(event.target.value)}
+                    placeholder="Summarize containment, validation, and closure context for this incident."
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setResolutionNotesDraft(incident.resolution_notes ?? "")}
+                      disabled={updateMutation.isPending}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => updateMutation.mutate({ resolution_notes: resolutionNotesDraft || null })}
+                      disabled={updateMutation.isPending || resolutionNotesDraft === (incident.resolution_notes ?? "")}
+                    >
+                      {updateMutation.isPending ? "Saving notes..." : "Save resolution notes"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-[#5f5f5f]">
+                  {incident.resolution_notes ?? "Resolution notes will appear here once the incident is closed or updated."}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
