@@ -8,7 +8,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_optional_current_user, get_optional_ip
 from app.core.config import get_settings
 from app.core.rate_limit import enforce_http_rate_limit, normalize_rate_limit_key, reset_rate_limit
-from app.core.security import clear_auth_cookies, create_access_token, hash_password, set_auth_cookies, verify_password
+from app.core.security import (
+    clear_auth_cookies,
+    create_access_token,
+    hash_password,
+    password_needs_rehash,
+    set_auth_cookies,
+    verify_password,
+)
 from app.db.session import get_db
 from app.models.entities import User
 from app.schemas.domain import LoginRequest, ProfileUpdate, TokenResponse, UserRead
@@ -46,6 +53,8 @@ def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     reset_rate_limit("auth-login", rate_limit_key)
+    if password_needs_rehash(user.password_hash):
+        user.password_hash = hash_password(payload.password)
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from app.core.security import hash_password
-from app.db.base import Base
 from app.db.init_db import ensure_default_integrations
-from app.db.session import SessionLocal, engine
+from app.db.migrate import ensure_database_schema
+from app.db.session import SessionLocal
 from app.ml.scoring import train_model
 from app.models.entities import Alert, Incident, AlertSeverity, IncidentPriority, ModelMetadata, User, UserRole
 from app.services.domain import create_alert, create_incident, rescore_alerts
 
 
 def run_seed() -> None:
-    Base.metadata.create_all(bind=engine)
+    ensure_database_schema()
     db = SessionLocal()
     try:
         ensure_default_integrations(db)

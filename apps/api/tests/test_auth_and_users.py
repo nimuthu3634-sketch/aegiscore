@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from passlib.hash import pbkdf2_sha256
+
+from app.db.session import SessionLocal
+from app.models.entities import User, UserRole
+
 
 def test_login_sets_secure_session_cookie_and_me_supports_cookie_auth(client, login_as):
     response = login_as("admin@example.com", "Admin123!")
@@ -48,6 +53,31 @@ def test_login_and_me(client):
     me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {payload['access_token']}"})
     assert me.status_code == 200
     assert me.json()["email"] == "admin@example.com"
+
+
+def test_login_supports_legacy_pbkdf2_hash_and_rehashes_password(client):
+    with SessionLocal() as db:
+        user = User(
+            email="legacy-analyst@example.com",
+            full_name="Legacy Analyst",
+            role=UserRole.ANALYST,
+            password_hash=pbkdf2_sha256.hash("Legacy123!"),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        user_id = user.id
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "legacy-analyst@example.com", "password": "Legacy123!"},
+    )
+
+    assert response.status_code == 200
+    with SessionLocal() as db:
+        migrated_user = db.get(User, user_id)
+        assert migrated_user is not None
+        assert migrated_user.password_hash.startswith("$2")
 
 
 def test_admin_can_create_user(client, admin_token):

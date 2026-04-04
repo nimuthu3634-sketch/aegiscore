@@ -74,10 +74,12 @@ The production-style compose stack includes:
 Startup order is health-aware:
 
 - `postgres` and `redis` must become healthy first
-- `migrate` runs `alembic upgrade head`
+- `migrate` runs `python -m app.db.migrate`
 - `api` and `worker` wait for `migrate`
 - `web` waits for `api`
 - `nginx` waits for both `api` and `web`
+
+The migration bootstrap also handles older pre-Alembic Postgres volumes. If it detects the legacy schema, it preserves the old tables under `legacy_*`, upgrades the current schema under Alembic, and imports the legacy data forward.
 
 ## URLs
 
@@ -129,10 +131,10 @@ Run migrations explicitly:
 docker compose run --rm migrate
 ```
 
-Alternative against a running API container:
+Equivalent API-container command:
 
 ```bash
-docker compose exec api alembic upgrade head
+docker compose exec api python -m app.db.migrate
 ```
 
 ### Seed commands
@@ -190,7 +192,7 @@ These commands assume PostgreSQL and Redis are already running and reachable at 
 ```bash
 cd apps/api
 python -m pip install -r requirements.txt
-python -m alembic upgrade head
+python -m app.db.migrate
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
