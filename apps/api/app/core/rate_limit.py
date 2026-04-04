@@ -167,3 +167,18 @@ def reset_rate_limit(namespace: str, key: str) -> None:
 def reset_rate_limits() -> None:
     """Clear all in-memory buckets (test helper; does not flush Redis)."""
     _fallback.clear()
+
+
+# ---------------------------------------------------------------------------
+# Object-style limiter (used by WebSocket route)
+# ---------------------------------------------------------------------------
+
+class _RateLimiter:
+    """Thin wrapper that delegates to the Redis or in-memory backend."""
+
+    @staticmethod
+    def hit(namespace: str, key: str, *, limit: int, window_seconds: int) -> int | None:
+        return _redis_hit(namespace, key, limit=limit, window_seconds=window_seconds)
+
+
+rate_limiter = _RateLimiter()

@@ -52,7 +52,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
               <div>
                 <h2 className="text-[1.65rem] font-semibold tracking-[-0.05em] text-[#111111]">{routeLabel}</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6d635a]">
-                  Track defensive telemetry, analyst workload, and lab-safe imports from one polished operational surface.
+                  Track defensive telemetry, analyst workload, and controlled imports from one unified operational surface.
                 </p>
               </div>
             </div>

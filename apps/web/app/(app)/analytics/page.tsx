@@ -15,40 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, createQueryString } from "@/lib/api";
 import { formatDate, formatPercent, scoreTone, toTitleCase } from "@/lib/format";
 import { useAuth } from "@/hooks/use-auth";
-import type { Alert, DashboardSummary, JobRecord, PageResult, RiskModelMetadata } from "@/types/domain";
-
-function buildRiskDistribution(alerts: Alert[]) {
-  const groups = alerts.reduce<Record<string, number>>((accumulator, alert) => {
-    const bucket = alert.risk_score >= 85 ? "Critical" : alert.risk_score >= 65 ? "High" : alert.risk_score >= 35 ? "Medium" : "Low";
-    accumulator[bucket] = (accumulator[bucket] ?? 0) + 1;
-    return accumulator;
-  }, {});
-  return Object.entries(groups).map(([name, value]) => ({ name, value }));
-}
-
-function buildSourceComparison(alerts: Alert[]) {
-  const groups = alerts.reduce<Record<string, { label: string; average: number; count: number; total: number }>>((accumulator, alert) => {
-    accumulator[alert.source] = accumulator[alert.source] ?? { label: alert.source, average: 0, count: 0, total: 0 };
-    accumulator[alert.source].count += 1;
-    accumulator[alert.source].total += alert.risk_score;
-    accumulator[alert.source].average = accumulator[alert.source].total / accumulator[alert.source].count;
-    return accumulator;
-  }, {});
-  return Object.values(groups).map((entry) => ({ label: entry.label, average: Number(entry.average.toFixed(1)) }));
-}
-
-function buildExplainabilityView(alerts: Alert[]) {
-  const groups = alerts.reduce<Record<string, number>>((accumulator, alert) => {
-    for (const factor of alert.explainability) {
-      accumulator[factor.factor] = (accumulator[factor.factor] ?? 0) + Math.abs(factor.impact);
-    }
-    return accumulator;
-  }, {});
-  return Object.entries(groups)
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 6)
-    .map(([label, total]) => ({ label: toTitleCase(label), total: Number(total.toFixed(2)) }));
-}
+import type { DashboardSummary, JobRecord, PageResult, RiskModelMetadata, RiskOverview } from "@/types/domain";
 
 export default function AnalyticsPage() {
   const { data: currentUser } = useAuth();
@@ -64,9 +31,9 @@ export default function AnalyticsPage() {
     queryKey: ["ml", "models"],
     queryFn: () => api.get<PageResult<RiskModelMetadata>>(`/ml/models${createQueryString({ page: 1, page_size: 8 })}`),
   });
-  const alertsQuery = useQuery({
-    queryKey: ["alerts", "analytics"],
-    queryFn: () => api.get<PageResult<Alert>>(`/alerts${createQueryString({ page: 1, page_size: 100 })}`),
+  const overviewQuery = useQuery({
+    queryKey: ["ml", "overview"],
+    queryFn: () => api.get<RiskOverview>("/ml/overview"),
   });
 
   const retrainMutation = useMutation({
@@ -82,12 +49,12 @@ export default function AnalyticsPage() {
 
   const noModelYet = modelQuery.isError && (modelQuery.error as { status?: number } | null)?.status === 404;
 
-  if (summaryQuery.isLoading || modelQuery.isLoading || alertsQuery.isLoading) {
+  if (summaryQuery.isLoading || modelQuery.isLoading || overviewQuery.isLoading) {
     return <LoadingState lines={8} />;
   }
 
-  if (summaryQuery.isError || alertsQuery.isError || !summaryQuery.data || !alertsQuery.data) {
-    return <ErrorState description="Analytics data could not be loaded from the connected APIs." onRetry={() => { summaryQuery.refetch(); modelQuery.refetch(); alertsQuery.refetch(); }} />;
+  if (summaryQuery.isError || overviewQuery.isError || !summaryQuery.data || !overviewQuery.data) {
+    return <ErrorState description="Analytics data could not be loaded from the connected APIs." onRetry={() => { summaryQuery.refetch(); modelQuery.refetch(); overviewQuery.refetch(); }} />;
   }
 
   if (noModelYet) {
@@ -127,10 +94,10 @@ export default function AnalyticsPage() {
 
   const summary = summaryQuery.data;
   const model = modelQuery.data!;
-  const alerts = alertsQuery.data.items;
-  const riskDistribution = buildRiskDistribution(alerts);
-  const sourceComparison = buildSourceComparison(alerts);
-  const explainability = buildExplainabilityView(alerts);
+  const overview = overviewQuery.data;
+  const riskDistribution = overview.risk_distribution.map((item) => ({ name: item.band, value: item.count }));
+  const sourceComparison = overview.source_comparison.map((item) => ({ label: item.source, average: item.average_risk_score }));
+  const explainability = overview.top_explanations.map((item) => ({ label: toTitleCase(item.factor), total: item.total_impact }));
 
   return (
     <div className="space-y-6">

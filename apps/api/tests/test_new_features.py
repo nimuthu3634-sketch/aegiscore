@@ -261,3 +261,137 @@ def test_retrain_queued_creates_audit_entry(client, admin_token):
         )
         assert audit.status_code == 200
         assert audit.json()["total"] >= 1
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Asset-scoped alert and incident filtering
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _create_alert_with_asset(client, token, hostname, ip="10.0.0.1"):
+    """Helper: create an alert that auto-creates or reuses an asset."""
+    r = client.post(
+        "/api/v1/alerts",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": f"Alert for {hostname}",
+            "source": "wazuh",
+            "severity": "high",
+            "asset_hostname": hostname,
+            "asset_ip": ip,
+            "tags": [],
+            "raw_payload": {},
+            "parsed_payload": {},
+        },
+    )
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def test_alerts_filter_by_asset_id(client, analyst_token):
+    """GET /alerts?asset_id=... should return only alerts for that asset."""
+    a1 = _create_alert_with_asset(client, analyst_token, "host-alpha", "10.0.0.1")
+    _create_alert_with_asset(client, analyst_token, "host-beta", "10.0.0.2")
+
+    asset_id = a1["asset"]["id"]
+    r = client.get(
+        "/api/v1/alerts",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        params={"asset_id": asset_id},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) >= 1
+    assert all(item["asset"]["id"] == asset_id for item in items)
+
+
+def test_incidents_filter_by_linked_asset_id(client, analyst_token):
+    """GET /incidents?linked_asset_id=... should return only incidents linked to that asset."""
+    a1 = _create_alert_with_asset(client, analyst_token, "host-gamma", "10.0.0.3")
+    a2 = _create_alert_with_asset(client, analyst_token, "host-delta", "10.0.0.4")
+
+    # Create incident linked to alert on host-gamma
+    inc1 = client.post(
+        "/api/v1/incidents",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"title": "Incident gamma", "priority": "P2", "linked_alert_ids": [a1["id"]], "evidence": []},
+    )
+    assert inc1.status_code == 201
+
+    # Create incident linked to alert on host-delta
+    inc2 = client.post(
+        "/api/v1/incidents",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"title": "Incident delta", "priority": "P3", "linked_alert_ids": [a2["id"]], "evidence": []},
+    )
+    assert inc2.status_code == 201
+
+    asset_id = a1["asset"]["id"]
+    r = client.get(
+        "/api/v1/incidents",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        params={"linked_asset_id": asset_id},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["title"] == "Incident gamma"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Profile update flow
+# ──────────────────────────────────────────────────────────────────────────────
+
+def test_profile_update_and_me_reflects_change(client, analyst_token):
+    """PATCH /auth/profile should update full_name; GET /auth/me should reflect it."""
+    r = client.patch(
+        "/api/v1/auth/profile",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"full_name": "Updated Analyst Name"},
+    )
+    assert r.status_code == 200
+    assert r.json()["full_name"] == "Updated Analyst Name"
+
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {analyst_token}"})
+    assert me.status_code == 200
+    assert me.json()["full_name"] == "Updated Analyst Name"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Alert and incident status updates
+# ──────────────────────────────────────────────────────────────────────────────
+
+def test_alert_status_update(client, analyst_token):
+    """PATCH /alerts/{id} should update status and return the updated alert."""
+    alert = _create_alert_with_asset(client, analyst_token, "status-test-host")
+
+    r = client.patch(
+        f"/api/v1/alerts/{alert['id']}",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"status": "triaged"},
+    )
+    assert r.status_code == 200
+    assert r.json()["status"] == "triaged"
+
+
+def test_incident_status_update_and_timeline_event(client, analyst_token):
+    """PATCH /incidents/{id} with status change should record a timeline event."""
+    alert = _create_alert_with_asset(client, analyst_token, "incident-status-host")
+    inc = client.post(
+        "/api/v1/incidents",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"title": "Status transition test", "priority": "P3", "linked_alert_ids": [alert["id"]], "evidence": []},
+    )
+    assert inc.status_code == 201
+    inc_id = inc.json()["id"]
+
+    r = client.patch(
+        f"/api/v1/incidents/{inc_id}",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        json={"status": "contained"},
+    )
+    assert r.status_code == 200
+    assert r.json()["status"] == "contained"
+    # A status-change timeline event should exist
+    events = r.json()["timeline_events"]
+    status_events = [e for e in events if e["event_type"] == "status-change"]
+    assert len(status_events) >= 1

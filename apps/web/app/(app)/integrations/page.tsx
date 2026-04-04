@@ -415,7 +415,7 @@ export default function IntegrationsPage() {
           <CardContent className="space-y-4">
             <div className="rounded-[1.25rem] border bg-[#fff7f1] p-4 text-sm leading-6 text-[#8a4e16]">
               Wazuh and Suricata are defensive telemetry sources. Nmap and Hydra are supported only as
-              lab-safe imported result files — they are never executed by AegisCore.
+              imported result files — they are never executed by AegisCore.
             </div>
 
             {canImport ? (

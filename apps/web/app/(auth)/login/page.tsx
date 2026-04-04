@@ -43,17 +43,17 @@ const capabilities = [
   {
     icon: ShieldCheck,
     title: "Guardrail-first monitoring",
-    text: "Lab-safe workflows for Wazuh, Suricata, and import-only Nmap and Hydra result review.",
+    text: "Ingest telemetry from Wazuh, Suricata, and lab-imported Nmap and Hydra results in a controlled defensive workflow.",
   },
   {
     icon: Radar,
     title: "Clear operational signal",
-    text: "A dashboard-first experience that helps teams explain alert pressure and incident posture quickly.",
+    text: "A dashboard-first experience that helps analysts explain alert pressure and incident posture at a glance.",
   },
   {
     icon: Workflow,
-    title: "Presentation-ready flow",
-    text: "Move from seeded access to triage, incidents, analytics, and reporting in a single walkthrough.",
+    title: "End-to-end triage workflow",
+    text: "Move from alert intake through triage, incident management, analytics, and reporting in one integrated workspace.",
   },
 ];
 
@@ -85,7 +85,7 @@ export default function LoginPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Logo tone="light" />
               <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/70">
-                Local academic demo
+                Defensive SOC platform
               </span>
             </div>
 
@@ -114,11 +114,11 @@ export default function LoginPage() {
 
             <div className="mt-auto grid gap-4 pt-8 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-[28px] border border-white/10 bg-white/[0.05] p-5">
-                <p className="text-[11px] uppercase tracking-[0.3em] text-[#ffb37f]">Demo path</p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">Walk reviewers from access to action in minutes.</h2>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-[#ffb37f]">Operational readiness</p>
+                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">From sign-in to triage in under a minute.</h2>
                 <p className="mt-3 text-sm leading-6 text-white/68">
-                  Seeded data, explainable scoring, responsive charts, and incident workflows make the platform easy to present
-                  and defend academically.
+                  Pre-configured telemetry sources, explainable risk scoring, real-time alert feeds, and incident workflows
+                  give analysts a complete operational surface immediately.
                 </p>
               </div>
 
@@ -126,7 +126,7 @@ export default function LoginPage() {
                 {[
                   { label: "Roles", value: "3", detail: "Admin, Analyst, Viewer" },
                   { label: "Sources", value: "4", detail: "Wazuh, Suricata, Nmap, Hydra" },
-                  { label: "Mode", value: "Safe", detail: "Import-only classroom flow" },
+                  { label: "Mode", value: "Safe", detail: "Controlled defensive ingestion" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-[24px] border border-white/10 bg-[#0f0d0c]/55 p-4">
                     <p className="text-[11px] uppercase tracking-[0.24em] text-white/42">{item.label}</p>
@@ -143,16 +143,16 @@ export default function LoginPage() {
           <Card className="w-full max-w-[560px] border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(251,246,240,0.9))]">
             <CardContent className="space-y-8 px-6 py-8 sm:px-8">
               <div className="space-y-3">
-                <Badge tone="medium">Classroom-ready access</Badge>
+                <Badge tone="medium">Secure access</Badge>
                 <h2 className="text-3xl font-semibold tracking-[-0.05em] text-[#111111]">Enter the operations workspace</h2>
                 <p className="text-sm leading-7 text-[#6d635a]">
-                  Sign in with one of the seeded roles below or continue with an API-backed account for your local environment.
+                  Sign in with your credentials or select a pre-configured account to begin working.
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  { label: "Seeded roles", value: "3" },
+                  { label: "Operator roles", value: "3" },
                   { label: "Live dashboard", value: "Ready" },
                   { label: "Policy mode", value: "Defensive" },
                 ].map((item) => (
@@ -168,7 +168,7 @@ export default function LoginPage() {
                   <Input {...form.register("email")} autoComplete="email" placeholder="analyst@example.com" />
                 </FormField>
 
-                <FormField label="Password" hint="Use the seeded credentials below" error={form.formState.errors.password?.message}>
+                <FormField label="Password" hint="Select a quick-access account or enter your own" error={form.formState.errors.password?.message}>
                   <Input
                     {...form.register("password")}
                     autoComplete="current-password"
@@ -192,8 +192,8 @@ export default function LoginPage() {
 
               <div className="rounded-[24px] border border-black/8 bg-white/65 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#8a7d72]">Seeded accounts</p>
-                  <span className="text-xs text-[#8a7d72]">One-click classroom access</span>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#8a7d72]">Quick access</p>
+                  <span className="text-xs text-[#8a7d72]">Pre-configured accounts</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {authDemoUsers.map((email) => (

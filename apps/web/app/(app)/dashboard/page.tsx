@@ -128,7 +128,7 @@ export default function DashboardPage() {
               <span className="inline-flex rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#ffbf92]">
                 Operational overview
               </span>
-              <span className="text-[11px] uppercase tracking-[0.3em] text-white/42">Presentation-ready command deck</span>
+              <span className="text-[11px] uppercase tracking-[0.3em] text-white/42">Real-time command deck</span>
             </div>
 
             <div className="mt-6 max-w-4xl space-y-4">
@@ -136,8 +136,8 @@ export default function DashboardPage() {
                 Stay ahead of noisy telemetry without losing analyst focus.
               </h1>
               <p className="max-w-3xl text-base leading-7 text-white/72">
-                AegisCore turns alerts, incidents, assets, and import-only lab telemetry into one calm defensive surface with
-                explainable scoring and presentation-friendly workflows.
+                AegisCore turns alerts, incidents, assets, and ingested telemetry into one calm defensive surface with
+                explainable AI scoring and structured analyst workflows.
               </p>
             </div>
 
@@ -443,7 +443,7 @@ export default function DashboardPage() {
             </Badge>
             <Badge tone="medium">
               <Radar className="mr-1 h-3.5 w-3.5" />
-              Presentation ready
+              Source analysis
             </Badge>
           </div>
         </CardHeader>

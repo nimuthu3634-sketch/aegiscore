@@ -42,6 +42,7 @@ def list_alerts(
     status_filter: str | None = Query(default=None, alias="status"),
     assignee_id: str | None = Query(default=None),
     incident_id: str | None = Query(default=None),
+    asset_id: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(get_current_user),
@@ -73,6 +74,8 @@ def list_alerts(
         query = query.filter(Alert.tags.contains([tag]))
     if incident_id:
         query = query.join(Alert.incident_links).filter(IncidentAlertLink.incident_id == incident_id)
+    if asset_id:
+        query = query.filter(Alert.asset_id == asset_id)
 
     total = query.count()
     items = query.order_by(Alert.detected_at.desc()).offset((page - 1) * page_size).limit(page_size).all()

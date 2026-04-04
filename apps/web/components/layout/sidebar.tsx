@@ -66,7 +66,7 @@ export function Sidebar({
           <div className="flex items-start justify-between gap-3">
             <div>
               <Logo href="/dashboard" tone="light" />
-              <p className="mt-4 text-[11px] uppercase tracking-[0.32em] text-white/42">Local deployment mode</p>
+              <p className="mt-4 text-[11px] uppercase tracking-[0.32em] text-white/42">Defensive operations</p>
             </div>
             <Button variant="ghost" size="icon" className="text-white lg:hidden" onClick={onNavigate}>
               <X className="h-5 w-5" />
@@ -77,10 +77,10 @@ export function Sidebar({
             <p className="text-[11px] uppercase tracking-[0.32em] text-[#ffb37f]">Command posture</p>
             <h2 className="mt-3 text-lg font-semibold tracking-[-0.03em] text-white">Calm operations for noisy defensive telemetry.</h2>
             <p className="mt-3 text-sm leading-6 text-white/68">
-              AegisCore keeps analysts inside a lab-safe, explainable workspace for triage, incidents, and import-only telemetry review.
+              AegisCore keeps analysts inside an explainable, guardrail-first workspace for triage, incident response, and telemetry review.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["Lab-safe only", "Demo ready", "Orange response rail"].map((label) => (
+              {["Guardrail-first", "Operational", "Orange response rail"].map((label) => (
                 <span key={label} className="rounded-full border border-white/12 bg-white/[0.03] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/70">
                   {label}
                 </span>
@@ -155,11 +155,11 @@ export function Sidebar({
             <div className="mt-4 grid gap-3">
               <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Telemetry scope</p>
-                <p className="mt-2 text-sm text-white/72">Wazuh, Suricata, and lab-only Nmap/Hydra imports.</p>
+                <p className="mt-2 text-sm text-white/72">Wazuh, Suricata, and import-only Nmap/Hydra telemetry.</p>
               </div>
               <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Presentation mode</p>
-                <p className="mt-2 text-sm text-white/72">Built for walkthroughs, lecturer demos, and explainable analyst flow.</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/38">Analyst workflow</p>
+                <p className="mt-2 text-sm text-white/72">Explainable triage, structured incident response, and auditable containment actions.</p>
               </div>
             </div>
           </div>

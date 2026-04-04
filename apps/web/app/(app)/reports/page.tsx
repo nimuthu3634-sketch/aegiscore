@@ -83,7 +83,7 @@ export default function ReportsPage() {
       <PageHeader
         eyebrow="Export center"
         title="Reports"
-        description="Generate CSV exports and printable incident summaries for analyst handoff, lecturer review, and portfolio-ready walkthroughs."
+        description="Generate CSV exports and printable incident summaries for analyst handoff, shift reports, and operational review."
         actions={<Badge tone="medium">CSV and printable text exports</Badge>}
       />
 
@@ -101,7 +101,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[1.25rem] border bg-[#fcfcfc] p-4 text-sm leading-6 text-[#5f5f5f]">
-              Use these exports for dashboard reviews, demo walkthroughs, or evidence packs. Data is pulled from the live API at download time so exports reflect the current SOC state.
+              Use these exports for operational reviews, shift handoffs, or evidence packs. Data is pulled from the live API at download time so exports reflect the current SOC state.
             </div>
 
             <div className="grid gap-3">
@@ -254,9 +254,9 @@ export default function ReportsPage() {
               <div className="rounded-full bg-[#fff4eb] p-3 text-[#FF7A1A]">
                 <FileDown className="h-5 w-5" />
               </div>
-              <p className="font-semibold text-[#111111]">Lecturer review</p>
+              <p className="font-semibold text-[#111111]">Operational review</p>
             </div>
-            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Dashboard CSV exports provide a fast way to discuss KPI movement and ingestion activity during demonstrations.</p>
+            <p className="mt-4 text-sm leading-6 text-[#6f6f6f]">Dashboard CSV exports provide a fast way to review KPI movement and ingestion activity across shifts.</p>
           </div>
           <div className="rounded-[1.25rem] border bg-white p-4">
             <div className="flex items-center gap-3">

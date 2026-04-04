@@ -27,6 +27,7 @@ def list_incidents(
     priority: str | None = Query(default=None),
     assignee_id: str | None = Query(default=None),
     linked_alert_id: str | None = Query(default=None),
+    linked_asset_id: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     _: User = Depends(get_current_user),
@@ -48,6 +49,8 @@ def list_incidents(
         query = query.filter(Incident.assignee_id == assignee_id)
     if linked_alert_id:
         query = query.join(Incident.alert_links).filter(IncidentAlertLink.alert_id == linked_alert_id)
+    if linked_asset_id:
+        query = query.join(Incident.alert_links).join(IncidentAlertLink.alert).filter(Alert.asset_id == linked_asset_id)
 
     total = query.count()
     items = query.order_by(Incident.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()

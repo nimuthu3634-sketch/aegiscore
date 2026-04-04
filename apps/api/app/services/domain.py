@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 
-from sqlalchemy import desc, func, text as sa_text
+from sqlalchemy import case, desc, func, literal_column, text as sa_text
 from sqlalchemy.orm import Session, joinedload
 
 from app.ml.scoring import AlertRiskAssessment, score_alert
@@ -724,14 +724,20 @@ def build_dashboard_summary(db: Session) -> DashboardSummary:
     logs_today = db.query(func.count(LogEntry.id)).filter(LogEntry.created_at >= today_start).scalar() or 0
 
     # Trend: one GROUP BY query for the 7-day window
+    # Use strftime for SQLite compat; date_trunc for PostgreSQL
+    dialect_name = db.bind.dialect.name if db.bind else "sqlite"
+    if dialect_name == "sqlite":
+        day_expr = func.strftime("%Y-%m-%d", Alert.detected_at)
+    else:
+        day_expr = func.date_trunc("day", Alert.detected_at)
     trend_rows = (
         db.query(
-            func.date_trunc("day", Alert.detected_at).label("day"),
+            day_expr.label("day"),
             Alert.severity,
             func.count(Alert.id).label("cnt"),
         )
         .filter(Alert.detected_at >= window_start)
-        .group_by(func.date_trunc("day", Alert.detected_at), Alert.severity)
+        .group_by(day_expr, Alert.severity)
         .all()
     )
     trend_by_day: dict[str, dict[str, int]] = {}

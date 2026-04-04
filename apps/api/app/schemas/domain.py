@@ -290,7 +290,7 @@ class ResponseActionRequest(BaseModel):
 class ResponseActionResult(BaseModel):
     alert_id: str
     action: str
-    status: Literal["recorded", "simulated"]
+    status: Literal["recorded"]
     message: str
     executed_at: datetime
     target: dict[str, str | None] = Field(default_factory=dict)

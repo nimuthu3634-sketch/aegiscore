@@ -21,11 +21,11 @@ export default function AssetDetailPage() {
   });
   const alertsQuery = useQuery({
     queryKey: ["alerts", "asset-detail", params.id],
-    queryFn: () => api.get<PageResult<Alert>>(`/alerts${createQueryString({ page: 1, page_size: 100 })}`),
+    queryFn: () => api.get<PageResult<Alert>>(`/alerts${createQueryString({ asset_id: params.id, page: 1, page_size: 100 })}`),
   });
   const incidentsQuery = useQuery({
     queryKey: ["incidents", "asset-detail", params.id],
-    queryFn: () => api.get<PageResult<Incident>>(`/incidents${createQueryString({ page: 1, page_size: 100 })}`),
+    queryFn: () => api.get<PageResult<Incident>>(`/incidents${createQueryString({ linked_asset_id: params.id, page: 1, page_size: 100 })}`),
   });
 
   if (assetQuery.isLoading) {
@@ -37,10 +37,8 @@ export default function AssetDetailPage() {
   }
 
   const asset = assetQuery.data;
-  const linkedAlerts = (alertsQuery.data?.items ?? []).filter((alert) => alert.asset?.id === params.id);
-  const linkedIncidents = (incidentsQuery.data?.items ?? []).filter((incident) =>
-    incident.linked_alerts.some((alert) => alert.asset?.id === params.id),
-  );
+  const linkedAlerts = alertsQuery.data?.items ?? [];
+  const linkedIncidents = incidentsQuery.data?.items ?? [];
 
   return (
     <div className="space-y-6">
