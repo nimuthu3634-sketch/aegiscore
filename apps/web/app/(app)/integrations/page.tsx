@@ -329,7 +329,7 @@ function IntegrationCard({
 
         {/* Recent run history */}
         <div className="space-y-3">
-          <p className="text-sm font-semibold text-[#111111]">Recent sync history</p>
+          <p className="text-sm font-semibold text-[#111111]">Recent run history</p>
           {integration.runs.length ? (
             integration.runs.slice(0, 4).map((run) => (
               <div key={run.id} className="rounded-[1.25rem] border bg-white p-4">
@@ -350,7 +350,7 @@ function IntegrationCard({
               </div>
             ))
           ) : (
-            <p className="text-sm text-[#6f6f6f]">No sync history recorded yet.</p>
+            <p className="text-sm text-[#6f6f6f]">No run history recorded yet.</p>
           )}
         </div>
       </CardContent>

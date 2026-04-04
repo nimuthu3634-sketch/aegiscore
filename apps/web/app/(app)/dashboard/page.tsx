@@ -83,6 +83,10 @@ export default function DashboardPage() {
     queryKey: ["alerts", "dashboard-open"],
     queryFn: () => api.get<PageResult<Alert>>(`/alerts${createQueryString({ status: "open", page: 1, page_size: 40 })}`),
   });
+  const highRiskAlertsQuery = useQuery({
+    queryKey: ["alerts", "dashboard-high-risk"],
+    queryFn: () => api.get<PageResult<Alert>>(`/alerts${createQueryString({ status: "open", risk_min: 65, page: 1, page_size: 1 })}`),
+  });
   const incidentsQuery = useQuery({
     queryKey: ["incidents", "dashboard-open"],
     queryFn: () => api.get<PageResult<Incident>>(`/incidents${createQueryString({ page: 1, page_size: 40 })}`),
@@ -114,7 +118,7 @@ export default function DashboardPage() {
   const userExposure = buildUserExposure(alerts, incidents);
   const sourceComparison = buildSourceComparison(alerts);
   const healthyIntegrationCount = integrations.filter((integration) => integration.health_status === "healthy").length;
-  const highRiskAlerts = alerts.filter((alert) => alert.risk_score >= 65).length;
+  const highRiskAlerts = highRiskAlertsQuery.data?.total ?? alerts.filter((alert) => alert.risk_score >= 65).length;
   const topAlerts = alerts.slice(0, 4);
 
   return (

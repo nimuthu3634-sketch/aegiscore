@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api, createQueryString } from "@/lib/api";
 import { formatDate, formatPercent, scoreTone, toTitleCase } from "@/lib/format";
 import { useAuth } from "@/hooks/use-auth";
-import type { DashboardSummary, JobRecord, PageResult, RiskModelMetadata, RiskOverview } from "@/types/domain";
+import type { DashboardSummary, HealthResponse, JobRecord, PageResult, RiskModelMetadata, RiskOverview } from "@/types/domain";
 
 export default function AnalyticsPage() {
   const { data: currentUser } = useAuth();
@@ -35,6 +35,11 @@ export default function AnalyticsPage() {
     queryKey: ["ml", "overview"],
     queryFn: () => api.get<RiskOverview>("/ml/overview"),
   });
+  const healthQuery = useQuery({
+    queryKey: ["health", "analytics"],
+    queryFn: () => api.get<HealthResponse>("/health"),
+    retry: false,
+  });
 
   const retrainMutation = useMutation({
     mutationFn: () => api.post<{ job_id: string; status: string }>("/ml/retrain"),
@@ -48,6 +53,13 @@ export default function AnalyticsPage() {
   });
 
   const noModelYet = modelQuery.isError && (modelQuery.error as { status?: number } | null)?.status === 404;
+  const queueUnavailableDetail =
+    healthQuery.data && healthQuery.data.redis.status !== "ok"
+      ? healthQuery.data.redis.detail ?? "Redis-backed background processing is unavailable."
+      : null;
+  const retrainBlockedReason = queueUnavailableDetail
+    ? `${queueUnavailableDetail} Start Redis and the worker before queueing retraining.`
+    : undefined;
 
   if (summaryQuery.isLoading || modelQuery.isLoading || overviewQuery.isLoading) {
     return <LoadingState lines={8} />;
@@ -66,15 +78,25 @@ export default function AnalyticsPage() {
           description="No trained model found. Import telemetry data and queue a retrain job to activate AI risk scoring."
           actions={
             currentUser?.role === "Admin" ? (
-              <Button onClick={() => retrainMutation.mutate()} disabled={retrainMutation.isPending}>
+              <Button onClick={() => retrainMutation.mutate()} disabled={retrainMutation.isPending || Boolean(queueUnavailableDetail)} title={retrainBlockedReason}>
                 {retrainMutation.isPending ? "Queueing retrain..." : "Queue retrain job"}
               </Button>
             ) : null
           }
         />
         <Card>
-          <CardContent className="py-12 text-center text-sm text-[#6f6f6f]">
-            No risk model has been trained yet. An Admin can queue the first training run above.
+          <CardContent className="space-y-4 py-12 text-center text-sm text-[#6f6f6f]">
+            <p>No risk model has been trained yet. An Admin can queue the first training run above.</p>
+            {queueUnavailableDetail ? (
+              <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
+                Background training is currently unavailable. {retrainBlockedReason}
+              </div>
+            ) : null}
+            {retrainMutation.error instanceof Error ? (
+              <div className="rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-700">
+                {retrainMutation.error.message}
+              </div>
+            ) : null}
             {retrainJobQuery.data ? (
               <div className="mt-4">
                 <Badge tone={retrainJobQuery.data.status === "succeeded" ? "healthy" : retrainJobQuery.data.status === "failed" ? "critical" : "medium"}>
@@ -107,7 +129,7 @@ export default function AnalyticsPage() {
         description="Inspect active model metadata, compare sources, monitor anomaly pressure, and understand the factors that drive alert prioritization."
         actions={
           currentUser?.role === "Admin" ? (
-            <Button onClick={() => retrainMutation.mutate()} disabled={retrainMutation.isPending}>
+            <Button onClick={() => retrainMutation.mutate()} disabled={retrainMutation.isPending || Boolean(queueUnavailableDetail)} title={retrainBlockedReason}>
               {retrainMutation.isPending ? "Queueing retrain..." : "Queue retrain job"}
             </Button>
           ) : null
@@ -155,6 +177,16 @@ export default function AnalyticsPage() {
             <CardTitle>Queued training job</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {queueUnavailableDetail ? (
+              <div className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+                Retraining depends on Redis-backed background processing. {retrainBlockedReason}
+              </div>
+            ) : null}
+            {retrainMutation.error instanceof Error ? (
+              <div className="rounded-[1.25rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {retrainMutation.error.message}
+              </div>
+            ) : null}
             {retrainJobQuery.data ? (
               <>
                 <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border bg-[#fcfcfc] p-4">
@@ -171,7 +203,7 @@ export default function AnalyticsPage() {
                 </pre>
               </>
             ) : (
-              <p className="text-sm text-[#6f6f6f]">Queue a retrain job to watch job state and model output here.</p>
+              <p className="text-sm text-[#6f6f6f]">Queue a retrain job to watch the background job state and model output here.</p>
             )}
           </CardContent>
         </Card>

@@ -38,6 +38,7 @@ def list_alerts(
     source_type: str | None = Query(default=None),
     event_type: str | None = Query(default=None),
     severity: str | None = Query(default=None),
+    risk_min: float | None = Query(default=None, ge=0, le=100),
     tag: str | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     assignee_id: str | None = Query(default=None),
@@ -66,6 +67,8 @@ def list_alerts(
         query = query.filter(Alert.event_type == event_type)
     if severity:
         query = query.filter(Alert.severity == severity)
+    if risk_min is not None:
+        query = query.filter(Alert.risk_score >= risk_min)
     if status_filter:
         query = query.filter(Alert.status == status_filter)
     if assignee_id:

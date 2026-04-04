@@ -405,6 +405,15 @@ def test_retrain_queued_creates_audit_entry(client, admin_token):
         assert audit.json()["total"] >= 1
 
 
+def test_retrain_returns_service_unavailable_when_queue_is_offline(client, admin_token):
+    """POST /ml/retrain should fail cleanly when the background queue is unavailable."""
+    with patch("app.services.jobs.get_queue", side_effect=RuntimeError("redis unavailable")):
+        response = client.post("/api/v1/ml/retrain", headers={"Authorization": f"Bearer {admin_token}"})
+
+    assert response.status_code == 503
+    assert "background processing" in response.json()["detail"].lower()
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Asset-scoped alert and incident filtering
 # ──────────────────────────────────────────────────────────────────────────────
@@ -444,6 +453,30 @@ def test_alerts_filter_by_asset_id(client, analyst_token):
     items = r.json()["items"]
     assert len(items) >= 1
     assert all(item["asset"]["id"] == asset_id for item in items)
+
+
+def test_alerts_filter_by_risk_min(client, analyst_token):
+    """GET /alerts?risk_min=... should return only alerts at or above the requested score."""
+    high = _create_alert_with_asset(client, analyst_token, "host-risk-high", "10.0.0.10")
+    low = _create_alert_with_asset(client, analyst_token, "host-risk-low", "10.0.0.11")
+
+    with SessionLocal() as db:
+        high_alert = db.query(Alert).filter(Alert.id == high["id"]).one()
+        low_alert = db.query(Alert).filter(Alert.id == low["id"]).one()
+        high_alert.risk_score = 82.0
+        low_alert.risk_score = 24.0
+        db.commit()
+
+    response = client.get(
+        "/api/v1/alerts",
+        headers={"Authorization": f"Bearer {analyst_token}"},
+        params={"risk_min": 65},
+    )
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert any(item["id"] == high["id"] for item in items)
+    assert all(item["risk_score"] >= 65 for item in items)
+    assert all(item["id"] != low["id"] for item in items)
 
 
 def test_incidents_filter_by_linked_asset_id(client, analyst_token):

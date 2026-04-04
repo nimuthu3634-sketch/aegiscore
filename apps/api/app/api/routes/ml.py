@@ -17,7 +17,7 @@ from app.schemas.domain import (
 )
 from app.services.audit import record_audit
 from app.services.domain import rescore_alerts
-from app.services.jobs import enqueue_model_retrain
+from app.services.jobs import JobQueueUnavailableError, enqueue_model_retrain
 
 router = APIRouter()
 
@@ -67,7 +67,10 @@ def retrain(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ) -> RetrainResponse:
-    record = enqueue_model_retrain(db, current_user)
+    try:
+        record = enqueue_model_retrain(db, current_user)
+    except JobQueueUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return RetrainResponse(job_id=record.id, status=record.status)
 
 
